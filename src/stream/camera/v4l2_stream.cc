@@ -63,7 +63,7 @@ V4L2MediaCtl::~V4L2MediaCtl() {}
 
 V4L2Stream::V4L2Stream(const char *param)
     : use_libv4l2(false), camera_id(0), fd(-1),
-      capture_type(V4L2_BUF_TYPE_VIDEO_CAPTURE) {
+      capture_type(V4L2_BUF_TYPE_VIDEO_CAPTURE), plane_cnt(1) {
   memset(&vio, 0, sizeof(vio));
   std::map<std::string, std::string> params;
   std::list<std::pair<const std::string, std::string &>> req_list;

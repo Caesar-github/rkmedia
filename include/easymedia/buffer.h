@@ -49,13 +49,14 @@ public:
 
   MediaBuffer()
       : ptr(nullptr), size(0), fd(-1), valid_size(0), type(Type::None),
-        user_flag(0), ustimestamp(0), eof(false), tsvc_level(-1) {}
+        user_flag(0), ustimestamp(0), eof(false), tsvc_level(-1),
+        dbg_info(nullptr) {}
   // Set userdata and delete function if you want free resource when destrut.
   MediaBuffer(void *buffer_ptr, size_t buffer_size, int buffer_fd = -1,
               void *user_data = nullptr, DeleteFun df = nullptr)
       : ptr(buffer_ptr), size(buffer_size), fd(buffer_fd), valid_size(0),
         type(Type::None), user_flag(0), ustimestamp(0), eof(false),
-        tsvc_level(-1) {
+        tsvc_level(-1), dbg_info(nullptr) {
     SetUserData(user_data, df);
   }
   virtual ~MediaBuffer() = default;
@@ -147,6 +148,11 @@ public:
   static std::shared_ptr<MediaBuffer>
   Clone(MediaBuffer &src, MemType dst_type = MemType::MEM_COMMON);
 
+  void *GetDbgInfo() const { return dbg_info; }
+  void SetDbgInfo(void *addr) { dbg_info = addr; }
+  size_t GetDbgInfoSize() const { return dbg_info_size; }
+  void SetDbgInfoSize(size_t s) { dbg_info_size = s; }
+
 private:
   // copy attributs except buffer
   void CopyAttribute(MediaBuffer &src_attr);
@@ -161,6 +167,8 @@ private:
   int64_t atomic_clock;
   bool eof;
   int tsvc_level; // for avc/hevc encoder
+  void *dbg_info; // Point to extra info to debug buffer. Note: user release.
+  size_t dbg_info_size; // Debug info size.
   std::shared_ptr<void> userdata;
   std::vector<std::shared_ptr<void>> related_sptrs;
 };

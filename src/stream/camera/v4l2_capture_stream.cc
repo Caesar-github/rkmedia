@@ -9,6 +9,8 @@
 #include "utils.h"
 #include "v4l2_stream.h"
 
+#define FMT_NUM_PLANES 2
+
 namespace easymedia {
 
 class V4L2CaptureStream : public V4L2Stream {
@@ -103,10 +105,14 @@ public:
       close(dmafd);
     if (ptr && ptr != MAP_FAILED && munmap_f)
       munmap_f(ptr, length);
+    if (ptr1 && ptr1 != MAP_FAILED && munmap_f)
+      munmap_f(ptr1, length1);
   }
   int dmafd;
   void *ptr;
   size_t length;
+  void *ptr1;
+  size_t length1;
   int (*munmap_f)(void *_start, size_t length);
 };
 
@@ -129,49 +135,62 @@ int V4L2CaptureStream::Open() {
   struct v4l2_capability cap;
   memset(&cap, 0, sizeof(cap));
   if (v4l2_ctx->IoCtrl(VIDIOC_QUERYCAP, &cap) < 0) {
-    RKMEDIA_LOGI("Failed to ioctl(VIDIOC_QUERYCAP): %m\n");
+    RKMEDIA_LOGE("Failed to ioctl(VIDIOC_QUERYCAP): %m\n");
     return -1;
   }
-  if ((capture_type == V4L2_BUF_TYPE_VIDEO_CAPTURE) &&
-      !(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
-    RKMEDIA_LOGI("%s, Not a video capture device.\n", dev);
+  if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) &&
+      !(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)) {
+    RKMEDIA_LOGE("%s, Not a video capture device.\n", dev);
     return -1;
   }
   if (!(cap.capabilities & V4L2_CAP_STREAMING)) {
-    RKMEDIA_LOGI("%s does not support the streaming I/O method.\n", dev);
+    RKMEDIA_LOGE("%s does not support the streaming I/O method.\n", dev);
     return -1;
   }
   const char *data_type_str = data_type.c_str();
   struct v4l2_format fmt;
   memset(&fmt, 0, sizeof(fmt));
-  fmt.type = capture_type;
-  fmt.fmt.pix.width = width;
-  fmt.fmt.pix.height = height;
-  fmt.fmt.pix.pixelformat = GetV4L2FmtByString(data_type_str);
-  fmt.fmt.pix.field = V4L2_FIELD_ANY;
-  if (quantization >= 0) {
-    fmt.fmt.pix.priv = V4L2_PIX_FMT_PRIV_MAGIC;
-    fmt.fmt.pix.quantization = quantization;
+  if (cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) {
+    RKMEDIA_LOGD("#RKMedia: V4L2: capture_type=V4L2_CAP_VIDEO_CAPTURE\n");
+    capture_type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  } else if (cap.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE) {
+    RKMEDIA_LOGD("#RKMedia: V4L2: capture_type=V4L2_CAP_VIDEO_CAPTURE_MPLANE\n");
+    capture_type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+    // update new cap type.
+    v4l2_ctx->SetCapType(capture_type);
+    if (memory_type == V4L2_MEMORY_DMABUF) {
+      RKMEDIA_LOGE("V4L2: MPLANE not support DMA Buffer yet.\n");
+      return -1;
+    }
   }
-  if (colorspace >= 0)
-    fmt.fmt.pix.colorspace = colorspace;
+  fmt.type = capture_type;
+  fmt.fmt.pix_mp.width = width;
+  fmt.fmt.pix_mp.height = height;
+  fmt.fmt.pix_mp.pixelformat = GetV4L2FmtByString(data_type_str);
+  fmt.fmt.pix_mp.field = V4L2_FIELD_INTERLACED;
+  fmt.fmt.pix_mp.quantization = V4L2_QUANTIZATION_FULL_RANGE;
   if (fmt.fmt.pix.pixelformat == 0) {
-    RKMEDIA_LOGI("unsupport input format : %s\n", data_type_str);
+    RKMEDIA_LOGE("unsupport input format : %s\n", data_type_str);
     return -1;
   }
   if (v4l2_ctx->IoCtrl(VIDIOC_S_FMT, &fmt) < 0) {
-    RKMEDIA_LOGI("%s, s fmt failed(cap type=%d, %c%c%c%c), %m\n", dev,
+    RKMEDIA_LOGE("%s, s fmt failed(cap type=%d, %c%c%c%c), %m\n", dev,
                  capture_type, DUMP_FOURCC(fmt.fmt.pix.pixelformat));
     return -1;
   }
+
+  if (V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE == capture_type)
+    plane_cnt = fmt.fmt.pix_mp.num_planes;
+  RKMEDIA_LOGD("#RKMedia: V4L2: capture plane cnt:%d\n", plane_cnt);
+
   if (GetV4L2FmtByString(data_type_str) != fmt.fmt.pix.pixelformat) {
-    RKMEDIA_LOGI("%s, expect %s, return %c%c%c%c\n", dev, data_type_str,
+    RKMEDIA_LOGE("%s, expect %s, return %c%c%c%c\n", dev, data_type_str,
                  DUMP_FOURCC(fmt.fmt.pix.pixelformat));
     return -1;
   }
   pix_fmt = StringToPixFmt(data_type_str);
   if (width != (int)fmt.fmt.pix.width || height != (int)fmt.fmt.pix.height) {
-    RKMEDIA_LOGI("%s change res from %dx%d to %dx%d\n", dev, width, height,
+    RKMEDIA_LOGE("%s change res from %dx%d to %dx%d\n", dev, width, height,
                  fmt.fmt.pix.width, fmt.fmt.pix.height);
     width = fmt.fmt.pix.width;
     height = fmt.fmt.pix.height;
@@ -185,7 +204,7 @@ int V4L2CaptureStream::Open() {
   req.count = loop_num;
   req.memory = memory_type;
   if (v4l2_ctx->IoCtrl(VIDIOC_REQBUFS, &req) < 0) {
-    RKMEDIA_LOGI("%s, count=%d, ioctl(VIDIOC_REQBUFS): %m\n", dev, loop_num);
+    RKMEDIA_LOGE("%s, count=%d, ioctl(VIDIOC_REQBUFS): %m\n", dev, loop_num);
     return -1;
   }
   int w = UPALIGNTO16(width);
@@ -213,15 +232,18 @@ int V4L2CaptureStream::Open() {
       buf.m.fd = buffer.GetFD();
       buf.length = buffer.GetSize();
       if (v4l2_ctx->IoCtrl(VIDIOC_QBUF, &buf) < 0) {
-        RKMEDIA_LOGI("%s ioctl(VIDIOC_QBUF): %m\n", dev);
+        RKMEDIA_LOGE("%s ioctl(VIDIOC_QBUF): %m\n", dev);
         return -1;
       }
     }
   } else if (memory_type == V4L2_MEMORY_MMAP) {
     for (size_t i = 0; i < req.count; i++) {
       struct v4l2_buffer buf;
-      void *ptr = MAP_FAILED;
-
+      struct v4l2_plane planes[FMT_NUM_PLANES];
+      void *ptr_lane0 = MAP_FAILED;
+      void *ptr_lane1 = MAP_FAILED;
+      size_t len_lane0 = 0;
+      size_t len_lane1 = 0;
       V4L2Buffer *buffer = new V4L2Buffer();
       if (!buffer) {
         errno = ENOMEM;
@@ -230,44 +252,84 @@ int V4L2CaptureStream::Open() {
       buffer_vec.push_back(
           MediaBuffer(nullptr, 0, -1, buffer, __free_v4l2buffer));
       memset(&buf, 0, sizeof(buf));
+      memset(&planes, 0, sizeof(planes));
+
       buf.type = req.type;
       buf.index = i;
       buf.memory = req.memory;
+      if (V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE == capture_type) {
+        buf.m.planes = planes;
+        buf.length = FMT_NUM_PLANES;
+      }
       if (v4l2_ctx->IoCtrl(VIDIOC_QUERYBUF, &buf) < 0) {
-        RKMEDIA_LOGI("%s ioctl(VIDIOC_QUERYBUF): %m\n", dev);
+        RKMEDIA_LOGE("%s ioctl(VIDIOC_QUERYBUF): %m\n", dev);
         return -1;
       }
-      ptr = v4l2_mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, fd,
-                      buf.m.offset);
-      if (ptr == MAP_FAILED) {
-        RKMEDIA_LOGI("%s v4l2_mmap (%d): %m\n", dev, (int)i);
+
+      if (V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE == capture_type) {
+        len_lane0 = buf.m.planes[0].length;
+        ptr_lane0 = mmap(NULL, buf.m.planes[0].length,
+                         PROT_READ | PROT_WRITE /* required */,
+                         MAP_SHARED /* recommended */,
+                         fd, buf.m.planes[0].m.mem_offset);
+        if (plane_cnt > 1) {
+          len_lane1 = buf.m.planes[1].length;
+          ptr_lane1 = mmap(NULL, buf.m.planes[1].length,
+                           PROT_READ | PROT_WRITE /* required */,
+                           MAP_SHARED /* recommended */,
+                           fd, buf.m.planes[1].m.mem_offset);
+          if (ptr_lane1 == MAP_FAILED) {
+            ptr_lane1 = nullptr;
+            RKMEDIA_LOGW("V4L2: Mplane: lane1 mmap failed!\n");
+          }
+        }
+      } else {
+        len_lane0 = buf.length;
+        ptr_lane0 = v4l2_mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, fd,
+                              buf.m.offset);
+        len_lane1 = 0;
+        ptr_lane1 = nullptr;
+      }
+
+      if (ptr_lane0 == MAP_FAILED) {
+        RKMEDIA_LOGE("%s v4l2_mmap (%d): %m\n", dev, (int)i);
         return -1;
       }
       MediaBuffer &mb = buffer_vec[i];
       buffer->munmap_f = vio.munmap_f;
-      buffer->ptr = ptr;
-      mb.SetPtr(ptr);
-      buffer->length = buf.length;
-      mb.SetSize(buf.length);
-      RKMEDIA_LOGD("query buf.length=%d\n", (int)buf.length);
-    }
-    for (size_t i = 0; i < req.count; ++i) {
-      struct v4l2_buffer buf;
-      int dmafd = -1;
-
-      memset(&buf, 0, sizeof(buf));
-      buf.type = req.type;
-      buf.memory = req.memory;
-      buf.index = i;
-      if (v4l2_ctx->IoCtrl(VIDIOC_QBUF, &buf) < 0) {
-        RKMEDIA_LOGI("%s, ioctl(VIDIOC_QBUF): %m\n", dev);
-        return -1;
+      buffer->ptr = ptr_lane0;
+      mb.SetPtr(ptr_lane0);
+      buffer->length = len_lane0;
+      mb.SetSize(len_lane0);
+      if (ptr_lane1) {
+        mb.SetDbgInfo(ptr_lane1);
+        mb.SetDbgInfoSize(len_lane1);
+        buffer->ptr1 = ptr_lane1;
+        buffer->length1 = len_lane1;
       }
+
+      RKMEDIA_LOGD("query buf.length=%zu\n", len_lane0);
+      int dmafd = -1;
       if (!BufferExport(capture_type, i, &dmafd)) {
-        MediaBuffer &mb = buffer_vec[i];
-        V4L2Buffer *buffer = static_cast<V4L2Buffer *>(mb.GetUserData().get());
         buffer->dmafd = dmafd;
         mb.SetFD(dmafd);
+      }
+    }
+
+    for (size_t i = 0; i < req.count; ++i) {
+      struct v4l2_buffer qbuf;
+      struct v4l2_plane qplanes[FMT_NUM_PLANES];
+      memset(&qbuf, 0, sizeof(qbuf));
+      qbuf.type = req.type;
+      qbuf.memory = req.memory;
+      qbuf.index = i;
+      if (V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE == capture_type) {
+        qbuf.m.planes = qplanes;
+        qbuf.length = FMT_NUM_PLANES;
+      }
+      if (v4l2_ctx->IoCtrl(VIDIOC_QBUF, &qbuf) < 0) {
+        RKMEDIA_LOGE("%s, ioctl(VIDIOC_QBUF): %m\n", dev);
+        return -1;
       }
     }
   }
@@ -284,14 +346,21 @@ class V4L2AutoQBUF {
 public:
   V4L2AutoQBUF(std::shared_ptr<V4L2Context> ctx, struct v4l2_buffer buf)
       : v4l2_ctx(ctx), v4l2_buf(buf) {}
+
+  void SetPlanes(struct v4l2_plane *plane_ptr, int plane_size) {
+    memcpy(planes, plane_ptr, plane_size);
+    v4l2_buf.m.planes = planes;
+  }
+
   ~V4L2AutoQBUF() {
     if (v4l2_ctx->IoCtrl(VIDIOC_QBUF, &v4l2_buf) < 0)
-      RKMEDIA_LOGI("index=%d, ioctl(VIDIOC_QBUF): %m\n", v4l2_buf.index);
+      RKMEDIA_LOGE("index=%d, ioctl(VIDIOC_QBUF): %m\n", v4l2_buf.index);
   }
 
 private:
   std::shared_ptr<V4L2Context> v4l2_ctx;
   struct v4l2_buffer v4l2_buf;
+  struct v4l2_plane planes[FMT_NUM_PLANES];
 };
 
 class AutoQBUFMediaBuffer : public MediaBuffer {
@@ -299,6 +368,10 @@ public:
   AutoQBUFMediaBuffer(const MediaBuffer &mb, std::shared_ptr<V4L2Context> ctx,
                       struct v4l2_buffer buf)
       : MediaBuffer(mb), auto_qbuf(ctx, buf) {}
+
+  void SetPlanes(struct v4l2_plane *plane_ptr, int plane_size) {
+    auto_qbuf.SetPlanes(plane_ptr, plane_size);
+  }
 
 private:
   V4L2AutoQBUF auto_qbuf;
@@ -310,6 +383,10 @@ public:
                       std::shared_ptr<V4L2Context> ctx, struct v4l2_buffer buf)
       : ImageBuffer(mb, info), auto_qbuf(ctx, buf) {}
 
+  void SetPlanes(struct v4l2_plane *plane_ptr, int plane_size) {
+    auto_qbuf.SetPlanes(plane_ptr, plane_size);
+  }
+
 private:
   V4L2AutoQBUF auto_qbuf;
 };
@@ -320,9 +397,17 @@ std::shared_ptr<MediaBuffer> V4L2CaptureStream::Read() {
     started = true;
 
   struct v4l2_buffer buf;
+  struct v4l2_plane planes[FMT_NUM_PLANES];
+
   memset(&buf, 0, sizeof(buf));
+  memset(planes, 0, sizeof(planes));
   buf.type = capture_type;
   buf.memory = memory_type;
+  if (V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE == capture_type) {
+    buf.m.planes = planes;
+    buf.length = FMT_NUM_PLANES;
+  }
+
   int ret = v4l2_ctx->IoCtrl(VIDIOC_DQBUF, &buf);
   if (ret < 0) {
     RKMEDIA_LOGI("%s, ioctl(VIDIOC_DQBUF): %m\n", dev);
@@ -331,14 +416,32 @@ std::shared_ptr<MediaBuffer> V4L2CaptureStream::Read() {
   struct timeval buf_ts = buf.timestamp;
   MediaBuffer &mb = buffer_vec[buf.index];
   std::shared_ptr<MediaBuffer> ret_buf;
-  if (buf.bytesused > 0) {
+  int bytes_used = 0;
+  int bytes_used_plane1 = 0;
+
+  if (V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE == capture_type) {
+    bytes_used = buf.m.planes[0].bytesused;
+    bytes_used_plane1 = buf.m.planes[1].bytesused;
+  } else {
+    bytes_used = buf.bytesused;
+    bytes_used_plane1 = 0;
+  }
+
+  if (bytes_used > 0) {
     if (pix_fmt != PIX_FMT_NONE) {
       ImageInfo info{pix_fmt, width, height, width, height};
-      ret_buf = std::make_shared<AutoQBUFImageBuffer>(mb, info, v4l2_ctx, buf);
+      auto tmp_buf = std::make_shared<AutoQBUFImageBuffer>(mb, info, v4l2_ctx, buf);
+      if (V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE == capture_type)
+        tmp_buf->SetPlanes(planes, FMT_NUM_PLANES * sizeof(struct v4l2_plane));
+      ret_buf = tmp_buf;
     } else {
-      ret_buf = std::make_shared<AutoQBUFMediaBuffer>(mb, v4l2_ctx, buf);
+      auto tmp_buf = std::make_shared<AutoQBUFMediaBuffer>(mb, v4l2_ctx, buf);
+      if (V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE == capture_type)
+        tmp_buf->SetPlanes(planes, FMT_NUM_PLANES * sizeof(struct v4l2_plane));
+      ret_buf = tmp_buf;
     }
   }
+
   if (ret_buf) {
     assert(ret_buf->GetFD() == mb.GetFD());
     if (buf.memory == V4L2_MEMORY_DMABUF) {
@@ -346,7 +449,9 @@ std::shared_ptr<MediaBuffer> V4L2CaptureStream::Read() {
     }
     ret_buf->SetAtomicTimeVal(buf_ts);
     ret_buf->SetTimeVal(buf_ts);
-    ret_buf->SetValidSize(buf.bytesused);
+    ret_buf->SetValidSize(bytes_used);
+    if (V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE == capture_type)
+      ret_buf->SetDbgInfoSize(bytes_used_plane1);
   } else {
     if (v4l2_ctx->IoCtrl(VIDIOC_QBUF, &buf) < 0)
       RKMEDIA_LOGI("%s, index=%d, ioctl(VIDIOC_QBUF): %m\n", dev, buf.index);

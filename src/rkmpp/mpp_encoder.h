@@ -104,7 +104,8 @@ private:
   uint16_t userdata_len;
   uint16_t userdata_frame_id;
   uint8_t userdata_all_frame_en;
-  MppEncUserData mpp_ud;
+  MppEncUserDataSet ud_set;
+  MppEncUserDataFull ud_datas[2];
 
   friend class MPPMJPEGConfig;
   friend class MPPCommonConfig;

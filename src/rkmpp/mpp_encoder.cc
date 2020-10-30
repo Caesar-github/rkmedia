@@ -159,6 +159,8 @@ int MPPEncoder::PrepareMppFrame(const std::shared_ptr<MediaBuffer> &input,
   }
 #endif // MPP_SUPPORT_HW_OSD
 
+  int ud_idx = 0;
+
   if (userdata_len) {
     RKMEDIA_LOGD("MPP Encoder: set userdata(%dBytes) to frame\n", userdata_len);
     bool skip_frame = false;
@@ -174,10 +176,24 @@ int MPPEncoder::PrepareMppFrame(const std::shared_ptr<MediaBuffer> &input,
     }
 
     if (!skip_frame) {
-      mpp_ud.pdata = userdata;
-      mpp_ud.len = userdata_len;
-      mpp_meta_set_ptr(meta, KEY_USER_DATA, &mpp_ud);
+      ud_datas[ud_idx].pdata = userdata;
+      ud_datas[ud_idx].len = userdata_len;
+      ud_idx++;
     }
+  }
+
+  if (input->GetDbgInfo() && input->GetDbgInfoSize()) {
+    ud_datas[ud_idx].pdata = input->GetDbgInfo();
+    ud_datas[ud_idx].len = input->GetDbgInfoSize();
+    ud_idx++;
+  }
+
+  if (ud_idx) {
+    ud_set.count = ud_idx;
+    ud_set.datas = ud_datas;
+    RKMEDIA_LOGD("MPP Encoder: userdata: ud_set.count:%d, ud_set.datas:%p...\n",
+         ud_set.count, ud_set.datas);
+    mpp_meta_set_ptr(meta, KEY_USER_DATAS, &ud_set);
   }
 
   MPP_RET ret = init_mpp_buffer_with_content(pic_buf, input);

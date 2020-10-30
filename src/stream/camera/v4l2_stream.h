@@ -27,6 +27,7 @@ public:
               const std::string device);
   ~V4L2Context();
   int GetDeviceFd() { return fd; }
+  void SetCapType(enum v4l2_buf_type type) { capture_type = type; }
   // val: if true, VIDIOC_STREAMON, else VIDIOC_STREAMOFF
   bool SetStarted(bool val);
   int IoCtrl(unsigned long int request, void *arg);
@@ -91,6 +92,7 @@ protected:
   int fd; // just for convenience
   // static sub_device_controller;
   enum v4l2_buf_type capture_type;
+  int plane_cnt;
   std::shared_ptr<V4L2Context> v4l2_ctx;
   std::shared_ptr<V4L2MediaCtl> v4l2_medctl;
 };

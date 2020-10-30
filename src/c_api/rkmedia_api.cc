@@ -27,6 +27,8 @@
 
 using namespace easymedia;
 
+#define VI_DEBUG_PATH "/sys/module/video_rkispp/parameters/sendreg_withstream"
+
 typedef enum rkCHN_OUT_CB_STATUS {
   CHN_OUT_CB_INIT, // out_cb enable by chn init
   CHN_OUT_CB_USER, // out_cb enable by user set
@@ -1255,24 +1257,45 @@ RK_S32 RK_MPI_VI_EnableChn(VI_PIPE ViPipe, VI_CHN ViChn) {
                g_vi_chns[ViChn].vi_attr.attr.u32Width,
                g_vi_chns[ViChn].vi_attr.attr.u32Height);
 
+  // For debug VI
+  RK_U8 u8DbgFlag = 0;
+  FILE *DbgFile = fopen(VI_DEBUG_PATH, "r");
+  if (DbgFile) {
+    RK_CHAR chrValue = 0;
+    fread(&chrValue, 1, 1, DbgFile);
+    if ((chrValue == 'y') || (chrValue == 'Y')) {
+      RKMEDIA_LOGI("VI[%d:%d] enable debug mode(with ispp reg info)\n",
+                   ViPipe, ViChn);
+      u8DbgFlag = 1;
+    }
+    fclose(DbgFile);
+  }
+
   // Reading yuv from camera
   std::string flow_name = "source_stream";
   std::string flow_param;
   PARAM_STRING_APPEND(flow_param, KEY_NAME, "v4l2_capture_stream");
   std::string stream_param;
-  PARAM_STRING_APPEND_TO(stream_param, KEY_USE_LIBV4L2, 1);
   PARAM_STRING_APPEND_TO(stream_param, KEY_CAMERA_ID, ViPipe);
   PARAM_STRING_APPEND(stream_param, KEY_DEVICE,
                       g_vi_chns[ViChn].vi_attr.attr.pcVideoNode);
   PARAM_STRING_APPEND(stream_param, KEY_V4L2_CAP_TYPE,
                       KEY_V4L2_C_TYPE(VIDEO_CAPTURE));
-  if (g_vi_chns[ViChn].vi_attr.attr.enBufType == VI_CHN_BUF_TYPE_MMAP) {
+  if (u8DbgFlag) {
+    PARAM_STRING_APPEND_TO(stream_param, KEY_USE_LIBV4L2, 0);
     PARAM_STRING_APPEND(stream_param, KEY_V4L2_MEM_TYPE,
                         KEY_V4L2_M_TYPE(MEMORY_MMAP));
   } else {
-    PARAM_STRING_APPEND(stream_param, KEY_V4L2_MEM_TYPE,
-                        KEY_V4L2_M_TYPE(MEMORY_DMABUF));
+    PARAM_STRING_APPEND_TO(stream_param, KEY_USE_LIBV4L2, 1);
+    if (g_vi_chns[ViChn].vi_attr.attr.enBufType == VI_CHN_BUF_TYPE_MMAP) {
+      PARAM_STRING_APPEND(stream_param, KEY_V4L2_MEM_TYPE,
+                          KEY_V4L2_M_TYPE(MEMORY_MMAP));
+    } else {
+      PARAM_STRING_APPEND(stream_param, KEY_V4L2_MEM_TYPE,
+                          KEY_V4L2_M_TYPE(MEMORY_DMABUF));
+    }
   }
+
   PARAM_STRING_APPEND_TO(stream_param, KEY_FRAMES,
                          g_vi_chns[ViChn].vi_attr.attr.u32BufCnt);
   PARAM_STRING_APPEND(
