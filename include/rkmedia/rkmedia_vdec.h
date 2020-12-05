@@ -28,7 +28,7 @@ typedef struct rkVDEC_ATTR_VIDEO_S {
 
 typedef struct rkVDEC_CHN_ATTR_S {
   CODEC_TYPE_E enCodecType;           // RW; video type to be decoded
-  IMAGE_TYPE_E enImageType;           // RW; image type to be outputed
+  // IMAGE_TYPE_E enImageType;           // RW; image type to be outputed
   VIDEO_MODE_E enMode;                // RW; send by stream or by frame
   VIDEO_DECODEC_MODE_E enDecodecMode; // RW; hardware or software
   union {

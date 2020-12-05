@@ -641,6 +641,7 @@ static MB_TYPE_E GetBufferType(RkmediaChannel *target_chn) {
   switch (target_chn->mode_id) {
   case RK_ID_VI:
   case RK_ID_RGA:
+  case RK_ID_VDEC:
     type = MB_TYPE_IMAGE;
     break;
   case RK_ID_VENC:
@@ -5117,6 +5118,27 @@ RK_S32 RK_MPI_VO_DestroyChn(VO_CHN VoChn) {
   return RK_ERR_SYS_OK;
 }
 
+/********************************************************************
+ * VDEC api
+ ********************************************************************/
+static RK_S32 ParaseSplitAttr(VIDEO_MODE_E enVideoMode) {
+  RK_S32 split = 0;
+
+  switch (enVideoMode) {
+  case VIDEO_MODE_STREAM:
+    split = 1;
+    break;
+  case VIDEO_MODE_FRAME:
+    split = 0;
+    break;
+  case VIDEO_MODE_COMPAT:
+  default:
+    split = -1;
+  }
+
+  return split;
+}
+
 RK_S32 RK_MPI_VDEC_CreateChn(VDEC_CHN VdChn, const VDEC_CHN_ATTR_S *pstAttr) {
   if ((VdChn < 0) || (VdChn >= VDEC_MAX_CHN_NUM))
     return -RK_ERR_VDEC_INVALID_CHNID;
@@ -5124,66 +5146,69 @@ RK_S32 RK_MPI_VDEC_CreateChn(VDEC_CHN VdChn, const VDEC_CHN_ATTR_S *pstAttr) {
   if (!pstAttr)
     return -RK_ERR_VDEC_ILLEGAL_PARAM;
 
+  std::string flow_name;
+  std::string flow_param;
+  std::shared_ptr<easymedia::Flow> video_decoder_flow;
+
+  int split = 0;
+  int timeout = 0;
+  flow_name = "video_dec";
+  flow_param = "";
+  if (pstAttr->enDecodecMode == VIDEO_DECODEC_HADRWARE) {
+    PARAM_STRING_APPEND(flow_param, KEY_NAME, "rkmpp");
+  } else if (pstAttr->enDecodecMode == VIDEO_DECODEC_SOFTWARE) {
+    PARAM_STRING_APPEND(flow_param, KEY_NAME, "ffmpeg_vid");
+    PARAM_STRING_APPEND(flow_param, KEK_THREAD_SYNC_MODEL, KEY_SYNC);
+  } else {
+    return -RK_ERR_VDEC_ILLEGAL_PARAM;
+  }
+
+  switch (pstAttr->enCodecType) {
+    case RK_CODEC_TYPE_H264:
+    case RK_CODEC_TYPE_H265:
+      split = ParaseSplitAttr(pstAttr->enMode);
+      break;
+    case RK_CODEC_TYPE_JPEG:
+    case RK_CODEC_TYPE_MJPEG:
+      if (pstAttr->enMode == VIDEO_MODE_STREAM) {
+        RKMEDIA_LOGE("JPEG/MJPEG only support VIDEO_MODE_FRAME!\n");
+        return -RK_ERR_VDEC_ILLEGAL_PARAM;
+      }
+      split = ParaseSplitAttr(pstAttr->enMode);
+      break;
+    default:
+      RKMEDIA_LOGE("Not support CodecType:%d!\n", pstAttr->enCodecType);
+      return -RK_ERR_VDEC_ILLEGAL_PARAM;
+  }
+
+  if (split < 0) {
+    RKMEDIA_LOGE("Not support split mode:%d!\n", pstAttr->enMode);
+    return -RK_ERR_VDEC_ILLEGAL_PARAM;
+  } else if (split == 0) {
+    timeout = -1;
+  }
+
+  PARAM_STRING_APPEND(flow_param, KEY_INPUTDATATYPE,
+                      CodecToString(pstAttr->enCodecType));
+  // PARAM_STRING_APPEND(flow_param, KEY_OUTPUTDATATYPE,
+  //                    ImageTypeToString(pstAttr->enImageType));
+  std::string dec_param = "";
+  PARAM_STRING_APPEND(dec_param, KEY_INPUTDATATYPE,
+                      CodecToString(pstAttr->enCodecType));
+
+  PARAM_STRING_APPEND_TO(dec_param, KEY_MPP_SPLIT_MODE, split);
+  PARAM_STRING_APPEND_TO(dec_param, KEY_OUTPUT_TIMEOUT, timeout);
+
   g_vdec_mtx.lock();
   if (g_vdec_chns[VdChn].status != CHN_STATUS_CLOSED) {
     g_vdec_mtx.unlock();
     return -RK_ERR_VDEC_EXIST;
   }
-
   RKMEDIA_LOGI("%s: Enable VDEC[%d] Start...\n", __func__, VdChn);
-  std::string flow_name;
-  std::string flow_param;
-  std::shared_ptr<easymedia::Flow> video_decoder_flow;
-
   memcpy(&g_vdec_chns[VdChn].vdec_attr.attr, pstAttr, sizeof(VDEC_CHN_ATTR_S));
 
-  int split = 0;
-  int timeout = -1;
-  flow_name = "video_dec";
-  flow_param = "";
-  if (pstAttr->enDecodecMode == VIDEO_DECODEC_HADRWARE) {
-    PARAM_STRING_APPEND(flow_param, KEY_NAME, "rkmpp");
-    if (pstAttr->enCodecType == RK_CODEC_TYPE_H264) {
-      // if timeout is MPP_POLL_BLOCK, some codec need a whole key frame with
-      // extradata, such as, h264 need spspps+I frame as once input
-      timeout = 0;
-    }
-  } else if (pstAttr->enDecodecMode == VIDEO_DECODEC_SOFTWARE) {
-    PARAM_STRING_APPEND(flow_param, KEY_NAME, "ffmpeg_vid");
-    PARAM_STRING_APPEND(flow_param, KEK_THREAD_SYNC_MODEL, KEY_SYNC);
-  }
-
-  PARAM_STRING_APPEND(flow_param, KEY_INPUTDATATYPE,
-                      CodecToString(pstAttr->enCodecType));
-  PARAM_STRING_APPEND(flow_param, KEY_OUTPUTDATATYPE,
-                      ImageTypeToString(pstAttr->enImageType));
-  std::string dec_param = "";
-  PARAM_STRING_APPEND(dec_param, KEY_INPUTDATATYPE,
-                      CodecToString(pstAttr->enCodecType));
-
-  switch (pstAttr->enMode) {
-  case VIDEO_MODE_STREAM:
-    if (pstAttr->enCodecType == RK_CODEC_TYPE_MJPEG) {
-      split = 0;
-    } else {
-      split = 1;
-    }
-    break;
-  case VIDEO_MODE_FRAME:
-    split = 0;
-    break;
-  case VIDEO_MODE_COMPAT:
-    RKMEDIA_LOGI("VIDEO_MODE_COMPAT not support now.\n");
-    break;
-  default:
-    break;
-  }
-
-  PARAM_STRING_APPEND_TO(dec_param, KEY_MPP_SPLIT_MODE, split);
-  PARAM_STRING_APPEND_TO(dec_param, KEY_OUTPUT_TIMEOUT, timeout);
-
   flow_param = easymedia::JoinFlowParam(flow_param, 1, dec_param);
-  RKMEDIA_LOGI("#VDEC: flow param:\n%s\n", flow_param.c_str());
+  RKMEDIA_LOGD("#VDEC: flow param:\n%s\n", flow_param.c_str());
   video_decoder_flow = easymedia::REFLECTOR(Flow)::Create<easymedia::Flow>(
       flow_name.c_str(), flow_param.c_str());
   if (!video_decoder_flow) {

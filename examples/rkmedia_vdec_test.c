@@ -17,13 +17,10 @@
 #include "rkmedia_api.h"
 #include "rkmedia_vdec.h"
 
-char *g_filename = "/userdata/test.h264";
-RK_U32 g_disp1_width = 720;
-RK_U32 g_disp1_height = 480;
-RK_U32 g_is_hardware = 1;
-IMAGE_TYPE_E g_enPixFmt = IMAGE_TYPE_NV12;
-CODEC_TYPE_E g_enCodecType = RK_CODEC_TYPE_H264;
 #define INBUF_SIZE 4096
+
+#define SCREEN_WIDTH 720
+#define SCREEN_HEIGHT 1280
 
 static bool quit = false;
 static void sigterm_handler(int sig) {
@@ -31,38 +28,132 @@ static void sigterm_handler(int sig) {
   quit = true;
 }
 
-static RK_CHAR optstr[] = "?:p:f:w:h:t:";
+static void *GetMediaBuffer(void *arg) {
+  (void) arg;
+  MEDIA_BUFFER mb = NULL;
+  int ret = 0;
+
+  MPP_CHN_S VdecChn, VoChn;
+  VdecChn.enModId = RK_ID_VDEC;
+  VdecChn.s32DevId = 0;
+  VdecChn.s32ChnId = 0;
+  VoChn.enModId = RK_ID_VO;
+  VoChn.s32DevId = 0;
+  VoChn.s32ChnId = 0;
+
+  mb = RK_MPI_SYS_GetMediaBuffer(RK_ID_VDEC, 0, 5000);
+  if (!mb) {
+    printf("RK_MPI_SYS_GetMediaBuffer get null buffer in 5s...\n");
+    return NULL;
+  }
+
+  MB_IMAGE_INFO_S stImageInfo = {0};
+  ret = RK_MPI_MB_GetImageInfo(mb, &stImageInfo);
+  if (ret) {
+    printf("Get image info failed! ret = %d\n", ret);
+    RK_MPI_MB_ReleaseBuffer(mb);
+    return NULL;
+  }
+
+  printf("Get Frame:ptr:%p, fd:%d, size:%zu, mode:%d, channel:%d, "
+          "timestamp:%lld, ImgInfo:<wxh %dx%d, fmt 0x%x>\n",
+          RK_MPI_MB_GetPtr(mb), RK_MPI_MB_GetFD(mb), RK_MPI_MB_GetSize(mb),
+          RK_MPI_MB_GetModeID(mb), RK_MPI_MB_GetChannelID(mb),
+          RK_MPI_MB_GetTimestamp(mb), stImageInfo.u32Width,
+          stImageInfo.u32Height, stImageInfo.enImgType);
+  RK_MPI_MB_ReleaseBuffer(mb);
+
+  VO_CHN_ATTR_S stVoAttr = {0};
+  memset(&stVoAttr, 0, sizeof(stVoAttr));
+  stVoAttr.pcDevNode = "/dev/dri/card0";
+  stVoAttr.emPlaneType = VO_PLANE_OVERLAY;
+  stVoAttr.enImgType = stImageInfo.enImgType;
+  stVoAttr.u16Zpos = 1;
+  stVoAttr.u32Width = SCREEN_WIDTH;
+  stVoAttr.u32Height = SCREEN_HEIGHT;
+  stVoAttr.stImgRect.s32X = 0;
+  stVoAttr.stImgRect.s32Y = 0;
+  stVoAttr.stImgRect.u32Width = stImageInfo.u32Width;
+  stVoAttr.stImgRect.u32Height = stImageInfo.u32Height;
+  stVoAttr.stDispRect.s32X = 0;
+  stVoAttr.stDispRect.s32Y = 0;
+  stVoAttr.stDispRect.u32Width = stImageInfo.u32Width;
+  stVoAttr.stDispRect.u32Height = stImageInfo.u32Height;
+  ret = RK_MPI_VO_CreateChn(0, &stVoAttr);
+  if (ret) {
+    printf("Create VO[0] failed! ret=%d\n", ret);
+    quit = false;
+    return NULL;
+  }
+
+  // VDEC->VO
+  ret = RK_MPI_SYS_Bind(&VdecChn, &VoChn);
+  if (ret) {
+    printf("Bind VDEC[0] to VO[0] failed! ret=%d\n", ret);
+    quit = false;
+    return NULL;
+  }
+
+  while (!quit) {
+    usleep(500000);
+  }
+
+  ret = RK_MPI_SYS_UnBind(&VdecChn, &VoChn);
+  if (ret)
+    printf("UnBind VDECp[0] to VO[0] failed! ret=%d\n", ret);
+
+  ret = RK_MPI_VO_DestroyChn(VoChn.s32ChnId);
+  if (ret)
+    printf("Destroy VO[0] failed! ret=%d\n", ret);
+
+  return NULL;
+}
+
+static RK_CHAR optstr[] = "?::i:o:f:w:h:t:l:";
 static void print_usage() {
-  printf("usage example: rkmedia_vdec_test -w 720 -h 480 -p /userdata/out.jpeg "
+  printf("usage example: rkmedia_vdec_test -w 720 -h 480 -i /userdata/out.jpeg "
          "-f 0 -t JPEG.\n");
-  printf("\t-w: width, Default: 1280\n");
-  printf("\t-h: height, Default: 720\n");
-  printf("\t-p: file path, Default: /userdata/test.h264\n");
-  printf("\t-f: 1:hardware 0:software, Default:hardware\n");
-  printf("\t-t: codec type, Default H264, support JPEG and H264.\n");
+  printf("\t-w: DisplayWidth, Default: 720\n");
+  printf("\t-h: DisplayHeight, Default: 1280\n");
+  printf("\t-i: InputFilePath, Default: NULL\n");
+  printf("\t-f: 1:hardware; 0:software. Default:hardware\n");
+  printf("\t-l: LoopSwitch; 0:NoLoop; 1:Loop. Default: 0.\n");
+  printf("\t-t: codec type, Default H264, support H264/H265/JPEG.\n");
 }
 
 int main(int argc, char *argv[]) {
-  int c;
+  RK_CHAR *pcFileName = NULL;
+  RK_U32 u32DispWidth = 720;
+  RK_U32 u32DispHeight = 1280;
+  RK_BOOL bIsHardware = RK_TRUE;
+  RK_U32 u32Loop = 0;
+  CODEC_TYPE_E enCodecType = RK_CODEC_TYPE_H264;
+  int c, ret;
+
   while ((c = getopt(argc, argv, optstr)) != -1) {
     switch (c) {
     case 'w':
-      g_disp1_width = atoi(optarg);
+      u32DispWidth = atoi(optarg);
       break;
     case 'h':
-      g_disp1_height = atoi(optarg);
+      u32DispHeight = atoi(optarg);
       break;
-    case 'p':
-      g_filename = optarg;
+    case 'i':
+      pcFileName = optarg;
       break;
     case 'f':
-      g_is_hardware = atoi(optarg);
+      bIsHardware = atoi(optarg) ? RK_TRUE : RK_FALSE;
+      break;
+    case 'l':
+      u32Loop = atoi(optarg);
       break;
     case 't':
       if (strcmp(optarg, "H264") == 0) {
-        g_enCodecType = RK_CODEC_TYPE_H264;
+        enCodecType = RK_CODEC_TYPE_H264;
+      } else if (strcmp(optarg, "H265") == 0) {
+        enCodecType = RK_CODEC_TYPE_H265;
       } else if (strcmp(optarg, "JPEG") == 0) {
-        g_enCodecType = RK_CODEC_TYPE_JPEG;
+        enCodecType = RK_CODEC_TYPE_JPEG;
       }
       break;
     case '?':
@@ -72,27 +163,24 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  signal(SIGINT, sigterm_handler);
-  RK_MPI_SYS_Init();
-  FILE *f = fopen(g_filename, "rb");
-  if (!f) {
-    fprintf(stderr, "Could not open %s\n", g_filename);
+  printf("#FileName: %s\n", pcFileName);
+  printf("#Display wxh: %dx%d\n", u32DispWidth, u32DispHeight);
+  printf("#Decode Mode: %s\n", bIsHardware ? "Hardware" : "Software");
+  printf("#Loop Cnt: %d\n", u32Loop);
+
+  FILE *infile = fopen(pcFileName, "rb");
+  if (!infile) {
+    fprintf(stderr, "Could not open %s\n", pcFileName);
     return 0;
   }
-  MPP_CHN_S VdecChn, VoChn;
-  VdecChn.enModId = RK_ID_VDEC;
-  VdecChn.s32DevId = 0;
-  VdecChn.s32ChnId = 0;
-  VoChn.enModId = RK_ID_VO;
-  VoChn.s32DevId = 0;
-  VoChn.s32ChnId = 0;
+
+  RK_MPI_SYS_Init();
 
   // VDEC
   VDEC_CHN_ATTR_S stVdecAttr;
-  stVdecAttr.enCodecType = g_enCodecType;
-  stVdecAttr.enImageType = g_enPixFmt;
+  stVdecAttr.enCodecType = enCodecType;
   stVdecAttr.enMode = VIDEO_MODE_FRAME;
-  if (g_is_hardware) {
+  if (bIsHardware) {
     if (stVdecAttr.enCodecType == RK_CODEC_TYPE_JPEG) {
       stVdecAttr.enMode = VIDEO_MODE_FRAME;
     } else {
@@ -104,62 +192,54 @@ int main(int argc, char *argv[]) {
     stVdecAttr.enDecodecMode = VIDEO_DECODEC_SOFTWARE;
   }
 
-  RK_MPI_VDEC_CreateChn(VdecChn.s32ChnId, &stVdecAttr);
+  ret = RK_MPI_VDEC_CreateChn(0, &stVdecAttr);
+  if (ret) {
+    printf("Create Vdec[0] failed! ret=%d\n", ret);
+    return -1;
+  }
 
-  // VO
-  VO_CHN_ATTR_S stVoAttr = {0};
-  memset(&stVoAttr, 0, sizeof(stVoAttr));
-  stVoAttr.pcDevNode = "/dev/dri/card0";
-  stVoAttr.emPlaneType = VO_PLANE_OVERLAY;
-  stVoAttr.enImgType = g_enPixFmt;
-  stVoAttr.u16Zpos = 1;
-  stVoAttr.stImgRect.s32X = 0;
-  stVoAttr.stImgRect.s32Y = 0;
-  stVoAttr.stImgRect.u32Width = g_disp1_width;
-  stVoAttr.stImgRect.u32Height = g_disp1_height;
-  stVoAttr.stDispRect.s32X = 0;
-  stVoAttr.stDispRect.s32Y = 0;
-  stVoAttr.stDispRect.u32Width = g_disp1_width;
-  stVoAttr.stDispRect.u32Height = g_disp1_height;
-  RK_MPI_VO_CreateChn(VoChn.s32ChnId, &stVoAttr);
-  // VDEC->VO
-  RK_MPI_SYS_Bind(&VdecChn, &VoChn);
+  pthread_t read_thread;
+  pthread_create(&read_thread, NULL, GetMediaBuffer, NULL);
 
+  int data_size;
+  int read_size;
   if (stVdecAttr.enMode == VIDEO_MODE_STREAM) {
-    size_t data_size;
-    MEDIA_BUFFER mb =
-        RK_MPI_MB_CreateBuffer(INBUF_SIZE + 64, RK_TRUE, MB_FLAG_NOCACHED);
-    while (!feof(f)) {
-      /* read raw data from the input file */
-      data_size = fread(RK_MPI_MB_GetPtr(mb), 1, INBUF_SIZE, f);
-      RK_MPI_MB_SetSzie(mb, data_size);
-      if (!data_size)
-        break;
-      printf("send on to vdec, %p.\n", RK_MPI_MB_GetPtr(mb));
-      RK_MPI_SYS_SendMediaBuffer(VdecChn.enModId, VdecChn.s32ChnId, mb);
-      usleep(30 * 1000);
-    }
-    RK_MPI_MB_ReleaseBuffer(mb);
+    data_size = INBUF_SIZE;
   } else if (stVdecAttr.enMode == VIDEO_MODE_FRAME) {
-    size_t data_size;
-    fseek(f, 0, SEEK_END);
-    long length = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    MEDIA_BUFFER mb = RK_MPI_MB_CreateBuffer(length, RK_TRUE, MB_FLAG_NOCACHED);
-    data_size = fread(RK_MPI_MB_GetPtr(mb), 1, length, f);
-    RK_MPI_MB_SetSzie(mb, data_size);
-    RK_MPI_SYS_SendMediaBuffer(VdecChn.enModId, VdecChn.s32ChnId, mb);
-    usleep(30 * 1000);
-    RK_MPI_MB_ReleaseBuffer(mb);
+    fseek(infile, 0, SEEK_END);
+    data_size = ftell(infile);
+    fseek(infile, 0, SEEK_SET);
   }
 
+  signal(SIGINT, sigterm_handler);
   while (!quit) {
-    usleep(10 * 1000);
+    MEDIA_BUFFER mb = RK_MPI_MB_CreateBuffer(data_size, RK_FALSE, 0);
+RETRY:
+    /* read raw data from the input file */
+    read_size = fread(RK_MPI_MB_GetPtr(mb), 1, data_size, infile);
+    if (!read_size || feof(infile)) {
+      if (u32Loop) {
+        fseek(infile, 0, SEEK_SET);
+        goto RETRY;
+      } else {
+        RK_MPI_MB_ReleaseBuffer(mb);
+        break;
+      }
+    }
+    RK_MPI_MB_SetSzie(mb, read_size);
+    printf("#Send packet(%p, %zuBytes) to VDEC[0].\n",
+           RK_MPI_MB_GetPtr(mb), RK_MPI_MB_GetSize(mb));
+    ret = RK_MPI_SYS_SendMediaBuffer(RK_ID_VDEC, 0, mb);
+    RK_MPI_MB_ReleaseBuffer(mb);
+
+    usleep(30 * 1000);
   }
-  RK_MPI_SYS_UnBind(&VdecChn, &VoChn);
-  RK_MPI_VDEC_DestroyChn(VdecChn.s32ChnId);
-  RK_MPI_VO_DestroyChn(VoChn.s32ChnId);
-  fclose(f);
+
+  quit = true;
+  pthread_join(read_thread, NULL);
+
+  RK_MPI_VDEC_DestroyChn(0);
+  fclose(infile);
 
   return 0;
 }
