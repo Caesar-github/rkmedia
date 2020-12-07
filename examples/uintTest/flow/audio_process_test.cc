@@ -153,13 +153,13 @@ std::shared_ptr<easymedia::Flow> create_file_write_flow(std::string path) {
 }
 
 void usage(char *name) {
-  RKMEDIA_LOGI("\nUsage: %s -i alsa:default -o /tmp/aec_out.pcm -p AEC -r 8000",
+  RKMEDIA_LOGI("Usage: %s -i alsa:default -o /tmp/aec_out.pcm -p AEC -r 8000",
                name);
-  RKMEDIA_LOGI("\nUsage: %s -i /tmp/in.pcm -o /tmp/aec_out.pcm -p AEC -r 8000",
+  RKMEDIA_LOGI("Usage: %s -i /tmp/in.pcm -o /tmp/aec_out.pcm -p AEC -r 8000",
                name);
-  RKMEDIA_LOGI("\nNOTICE: process: -p [AEC | ANR]\n");
-  RKMEDIA_LOGI("\nNOTICE: samplerate AEC: -r [8000 | 16000]\n");
-  RKMEDIA_LOGI("\nNOTICE: samplerate ANR: -r [8000 | 16000 | 32000 | 48000]\n");
+  RKMEDIA_LOGI("NOTICE: process: -p [AEC | ANR]\n");
+  RKMEDIA_LOGI("NOTICE: samplerate AEC: -r [8000 | 16000]\n");
+  RKMEDIA_LOGI("NOTICE: samplerate ANR: -r [8000 | 16000 | 32000 | 48000]\n");
   exit(EXIT_FAILURE);
 }
 

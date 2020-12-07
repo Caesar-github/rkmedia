@@ -62,17 +62,17 @@ namespace easymedia {
 #if DEBUG_IO_PROCESS
 static void dump_buffer(std::shared_ptr<MediaBuffer> mb, const char *tag) {
   if (!mb) {
-    RKMEDIA_LOGI("\nDUMP BUFF:: [%s] size:0\n", tag);
+    RKMEDIA_LOGI("DUMP BUFF:: [%s] size:0\n", tag);
     return;
   }
 
-  RKMEDIA_LOGI("\nDUMP BUFF:: [%s] size:%zu\n", tag, mb->GetValidSize());
+  RKMEDIA_LOGI("DUMP BUFF:: [%s] size:%zu\n", tag, mb->GetValidSize());
   for (size_t i = 0; i < mb->GetValidSize(); i++) {
     RKMEDIA_LOGI("%02x ", *((char *)mb->GetPtr() + i));
     if (i && !((i + 1) % 8))
-      RKMEDIA_LOGI("\n");
+      RKMEDIA_LOGI("");
   }
-  RKMEDIA_LOGI("\n");
+  RKMEDIA_LOGI("");
 }
 #endif
 
@@ -209,7 +209,7 @@ void MockSourceFlow::ReadThreadRun() {
     buffer->SetUSTimeStamp(easymedia::gettimeofday());
     SendInput(buffer, 0);
     easymedia::msleep(1000);
-    RKMEDIA_LOGI("\n");
+    RKMEDIA_LOGI("");
     continue;
 #endif
 
@@ -652,7 +652,7 @@ static int file_compare(std::string src, std::string dst) {
   char dst_buf[1024] = {0};
   FILE *srcf, *dstf;
 
-  RKMEDIA_LOGI("\n## Compare %s with %s ...\n", src.c_str(), dst.c_str());
+  RKMEDIA_LOGI("## Compare %s with %s ...\n", src.c_str(), dst.c_str());
   srcf = fopen(src.c_str(), "r");
   dstf = fopen(dst.c_str(), "r");
   if (!srcf || !dstf) {

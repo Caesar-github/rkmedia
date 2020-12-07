@@ -9,4 +9,5 @@ std::string ImageTypeToString(IMAGE_TYPE_E type);
 IMAGE_TYPE_E StringToImageType(std::string type);
 std::string CodecToString(CODEC_TYPE_E type);
 std::string SampleFormatToString(Sample_Format_E type);
+char *ModIdToString(MOD_ID_E mod_id);
 #endif // #ifndef __RKMEDIA_UTILS_

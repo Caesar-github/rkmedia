@@ -37,26 +37,28 @@ extern char mod_tag_list[][LOG_MOD_MAX_LEN];
 #define RKMEDIA_LOGE(format, ...)                                              \
   do {                                                                         \
     LOG_LEVEL_JUDGE(LOG_LEVEL_ERROR);                                          \
-    minilog_error("[%s][Error]:" format, mod_tag_list[MOD_TAG],                \
+    minilog_error("[RKMEDIA][%s][Error]:" format, mod_tag_list[MOD_TAG],       \
                   ##__VA_ARGS__);                                              \
   } while (0)
 
 #define RKMEDIA_LOGW(format, ...)                                              \
   do {                                                                         \
     LOG_LEVEL_JUDGE(LOG_LEVEL_WARN);                                           \
-    minilog_warn("[%s][Warn]:" format, mod_tag_list[MOD_TAG], ##__VA_ARGS__);  \
+    minilog_warn("[RKMEDIA][%s][Warn]:" format, mod_tag_list[MOD_TAG],         \
+                 ##__VA_ARGS__);                                               \
   } while (0)
 
 #define RKMEDIA_LOGI(format, ...)                                              \
   do {                                                                         \
     LOG_LEVEL_JUDGE(LOG_LEVEL_INFO);                                           \
-    minilog_info("[%s][Info]:" format, mod_tag_list[MOD_TAG], ##__VA_ARGS__);  \
+    minilog_info("[RKMEDIA][%s][Info]:" format, mod_tag_list[MOD_TAG],         \
+                 ##__VA_ARGS__);                                               \
   } while (0)
 
 #define RKMEDIA_LOGD(format, ...)                                              \
   do {                                                                         \
     LOG_LEVEL_JUDGE(LOG_LEVEL_DBG);                                            \
-    minilog_debug("[%s][Debug]:" format, mod_tag_list[MOD_TAG],                \
+    minilog_debug("[RKMEDIA][%s][Debug]:" format, mod_tag_list[MOD_TAG],       \
                   ##__VA_ARGS__);                                              \
   } while (0)
 
@@ -65,28 +67,28 @@ extern char mod_tag_list[][LOG_MOD_MAX_LEN];
 #define RKMEDIA_LOGE(format, ...)                                              \
   do {                                                                         \
     LOG_LEVEL_JUDGE(LOG_LEVEL_ERROR);                                          \
-    fprintf(stderr, "[%s][Error]:" format, mod_tag_list[MOD_TAG],              \
+    fprintf(stderr, "[RKMEDIA][%s][Error]:" format, mod_tag_list[MOD_TAG],     \
             ##__VA_ARGS__);                                                    \
   } while (0)
 
 #define RKMEDIA_LOGW(format, ...)                                              \
   do {                                                                         \
     LOG_LEVEL_JUDGE(LOG_LEVEL_WARN);                                           \
-    fprintf(stderr, "[%s][Warn]:" format, mod_tag_list[MOD_TAG],               \
+    fprintf(stderr, "[RKMEDIA][%s][Warn]:" format, mod_tag_list[MOD_TAG],      \
             ##__VA_ARGS__);                                                    \
   } while (0)
 
 #define RKMEDIA_LOGI(format, ...)                                              \
   do {                                                                         \
     LOG_LEVEL_JUDGE(LOG_LEVEL_INFO);                                           \
-    fprintf(stderr, "[%s][Info]:" format, mod_tag_list[MOD_TAG],               \
+    fprintf(stderr, "[RKMEDIA][%s][Info]:" format, mod_tag_list[MOD_TAG],      \
             ##__VA_ARGS__);                                                    \
   } while (0)
 
 #define RKMEDIA_LOGD(format, ...)                                              \
   do {                                                                         \
     LOG_LEVEL_JUDGE(LOG_LEVEL_DBG);                                            \
-    fprintf(stderr, "[%s][Debug]:" format, mod_tag_list[MOD_TAG],              \
+    fprintf(stderr, "[RKMEDIA][%s][Debug]:" format, mod_tag_list[MOD_TAG],     \
             ##__VA_ARGS__);                                                    \
   } while (0)
 #endif // RKMEDIA_SUPPORT_MINILOG

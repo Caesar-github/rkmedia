@@ -171,7 +171,7 @@ std::shared_ptr<easymedia::Flow> create_file_reader_flow(std::string path) {
   PARAM_STRING_APPEND_TO(flow_param, KEY_MEM_SIZE_PERTIME, 1152);
   PARAM_STRING_APPEND_TO(flow_param, KEY_FPS, 6000);
   PARAM_STRING_APPEND_TO(flow_param, KEY_LOOP_TIME, 0);
-  RKMEDIA_LOGI("\n#FileRead flow param:\n%s\n", flow_param.c_str());
+  RKMEDIA_LOGI("#FileRead flow param:\n%s\n", flow_param.c_str());
 
   auto audio_read_flow = easymedia::REFLECTOR(Flow)::Create<easymedia::Flow>(
       flow_name.c_str(), flow_param.c_str());

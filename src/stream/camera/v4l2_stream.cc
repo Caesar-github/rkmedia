@@ -133,7 +133,7 @@ int V4L2Stream::Close() {
   if (v4l2_ctx) {
     v4l2_ctx->SetStarted(false);
     v4l2_ctx = nullptr; // release reference
-    RKMEDIA_LOGI("\n#V4L2Stream: v4l2 ctx reset to nullptr!\n");
+    RKMEDIA_LOGI("#V4L2Stream: v4l2 ctx reset to nullptr!\n");
   }
   fd = -1;
   return 0;
