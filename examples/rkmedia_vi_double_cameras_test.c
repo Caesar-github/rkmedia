@@ -310,7 +310,7 @@ int main(int argc, char *argv[]) {
     printf("create GetIrBuffer thread failed!\n");
     return -1;
   }
-  ret = RK_MPI_VI_StartStream(0, 1);
+  ret = RK_MPI_VI_StartStream(1, 1);
   if (ret) {
     printf("Start Vi[1] failed! ret=%d\n", ret);
     return -1;
