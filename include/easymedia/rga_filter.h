@@ -25,8 +25,16 @@ public:
 
   void SetRects(std::vector<ImageRect> vec_rect);
   static RockchipRga gRkRga;
+  virtual int IoCtrl(unsigned long int request _UNUSED, ...) override;
 
 private:
+  // After initialization, these parameters cannot be changed.
+  // Rect must be within the maximum range.
+  unsigned int src_max_width;
+  unsigned int src_max_height;
+  unsigned int dst_max_width;
+  unsigned int dst_max_height;
+  ConditionLockMutex param_mtx;
   std::vector<ImageRect> vec_rect;
   int rotate;
 };

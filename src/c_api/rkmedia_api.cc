@@ -4674,6 +4674,82 @@ RK_S32 RK_MPI_RGA_DestroyChn(RGA_CHN RgaChn) {
   return RK_ERR_SYS_OK;
 }
 
+RK_S32 RK_MPI_RGA_SetChnAttr(RGA_CHN RgaChn, const RGA_ATTR_S *pstAttr) {
+  if ((RgaChn < 0) || (RgaChn > RGA_MAX_CHN_NUM))
+    return -RK_ERR_RGA_INVALID_CHNID;
+
+  if (!pstAttr)
+    return -RK_ERR_RGA_ILLEGAL_PARAM;
+
+  g_rga_mtx.lock();
+  if (g_rga_chns[RgaChn].status < CHN_STATUS_OPEN) {
+    g_rga_mtx.unlock();
+    return -RK_ERR_RGA_NOTREADY;
+  }
+
+  if (!g_rga_chns[RgaChn].rkmedia_flow) {
+    g_rga_mtx.unlock();
+    return -RK_ERR_RGA_BUSY;
+  }
+
+  RgaConfig RkmediaRgaCfg;
+  RkmediaRgaCfg.src_rect.x = (int)pstAttr->stImgIn.u32X;
+  RkmediaRgaCfg.src_rect.y = (int)pstAttr->stImgIn.u32Y;
+  RkmediaRgaCfg.src_rect.w = (int)pstAttr->stImgIn.u32Width;
+  RkmediaRgaCfg.src_rect.h = (int)pstAttr->stImgIn.u32Height;
+  RkmediaRgaCfg.dst_rect.x = (int)pstAttr->stImgOut.u32X;
+  RkmediaRgaCfg.dst_rect.y = (int)pstAttr->stImgOut.u32Y;
+  RkmediaRgaCfg.dst_rect.w = (int)pstAttr->stImgOut.u32Width;
+  RkmediaRgaCfg.dst_rect.h = (int)pstAttr->stImgOut.u32Height;
+  RkmediaRgaCfg.rotation = (int)pstAttr->u16Rotaion;
+  int ret = g_rga_chns[RgaChn].rkmedia_flow->Control(S_RGA_CFG, &RkmediaRgaCfg);
+  g_rga_mtx.unlock();
+
+  return ret ? -RK_ERR_RGA_ILLEGAL_PARAM : RK_ERR_SYS_OK;
+}
+
+RK_S32 RK_MPI_RGA_GetChnAttr(RGA_CHN RgaChn, RGA_ATTR_S *pstAttr) {
+  if ((RgaChn < 0) || (RgaChn > RGA_MAX_CHN_NUM))
+    return -RK_ERR_RGA_INVALID_CHNID;
+
+  if (!pstAttr)
+    return -RK_ERR_RGA_ILLEGAL_PARAM;
+
+  g_rga_mtx.lock();
+  if (g_rga_chns[RgaChn].status < CHN_STATUS_OPEN) {
+    g_rga_mtx.unlock();
+    return -RK_ERR_RGA_NOTREADY;
+  }
+
+  if (!g_rga_chns[RgaChn].rkmedia_flow) {
+    g_rga_mtx.unlock();
+    return -RK_ERR_RGA_BUSY;
+  }
+
+  RgaConfig RkmediaRgaCfg;
+  int ret = g_rga_chns[RgaChn].rkmedia_flow->Control(G_RGA_CFG, &RkmediaRgaCfg);
+  if (ret) {
+    g_rga_mtx.unlock();
+    return -RK_ERR_RGA_ILLEGAL_PARAM;
+  }
+
+  g_rga_mtx.unlock();
+  pstAttr->stImgIn.u32X         = (RK_U32)RkmediaRgaCfg.src_rect.x;
+  pstAttr->stImgIn.u32Y         = (RK_U32)RkmediaRgaCfg.src_rect.y;
+  pstAttr->stImgIn.u32Width     = (RK_U32)RkmediaRgaCfg.src_rect.w;
+  pstAttr->stImgIn.u32Height    = (RK_U32)RkmediaRgaCfg.src_rect.h;
+  pstAttr->stImgOut.u32X        = (RK_U32)RkmediaRgaCfg.dst_rect.x;
+  pstAttr->stImgOut.u32Y        = (RK_U32)RkmediaRgaCfg.dst_rect.y;
+  pstAttr->stImgOut.u32Width    = (RK_U32)RkmediaRgaCfg.dst_rect.w;
+  pstAttr->stImgOut.u32Height   = (RK_U32)RkmediaRgaCfg.dst_rect.h;
+  pstAttr->u16Rotaion           = (RK_U32)RkmediaRgaCfg.rotation;
+  // The following two attributes do not support dynamic acquisition.
+  pstAttr->bEnBufPool = RK_FALSE;
+  pstAttr->u16BufPoolCnt = 0;
+
+  return RK_ERR_SYS_OK;
+}
+
 /********************************************************************
  * ADEC api
  ********************************************************************/

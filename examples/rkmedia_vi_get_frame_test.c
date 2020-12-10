@@ -31,6 +31,7 @@ static void *GetMediaBuffer(void *arg) {
   OutputArgs *outArgs = (OutputArgs *)arg;
   char *save_path = outArgs->file_path;
   int save_cnt = outArgs->frame_cnt;
+  int frame_id = 0;
   FILE *save_file = NULL;
   if (save_path) {
     save_file = fopen(save_path, "w");
@@ -60,16 +61,17 @@ static void *GetMediaBuffer(void *arg) {
 
     if (save_file) {
       fwrite(RK_MPI_MB_GetPtr(mb), 1, RK_MPI_MB_GetSize(mb), save_file);
-      printf("#Save frame-%d to %s\n", save_cnt, save_path);
-      save_cnt--;
+      printf("#Save frame-%d to %s\n", frame_id++, save_path);
     }
 
     RK_MPI_MB_ReleaseBuffer(mb);
 
+    if (save_cnt > 0)
+      save_cnt--;
+
     // exit when complete
-    if (save_cnt <= 0 && outArgs->frame_cnt > 0) {
+    if (!save_cnt) {
       quit = true;
-      printf("Output is completed!\n");
       break;
     }
   }
@@ -115,10 +117,9 @@ static void print_usage(const RK_CHAR *name) {
 #endif
   printf("\t-w | --width: VI width, Default:1920\n");
   printf("\t-h | --heght: VI height, Default:1080\n");
-  printf("\t-d | --device_name set pcDeviceName, Default:rkispp_scale0\n");
-  printf("\t-c | --frame_cnt: record frame, Default:-1, set -1 to unlimit\n");
-  printf("\t-o | --output: output path, Default:/tmp/1080p.nv12,"\
-          "nothing would be output without this\n");
+  printf("\t-d | --device_name: set device node(v4l2), Default:rkispp_scale0\n");
+  printf("\t-c | --frame_cnt: record frame, Default:-1(unlimit)\n");
+  printf("\t-o | --output: output path, Default:NULL\n");
   printf("Notice: fmt always NV12\n");
 }
 

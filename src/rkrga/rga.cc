@@ -10,6 +10,7 @@
 
 #include "buffer.h"
 #include "filter.h"
+#include "media_config.h"
 
 #ifdef MOD_TAG
 #undef MOD_TAG
@@ -20,6 +21,22 @@ namespace easymedia {
 
 RockchipRga RgaFilter::gRkRga;
 
+static int rga_rect_check(ImageRect *rect, int max_w, int max_h) {
+  if (!rect)
+    return -1;
+  // check x && w
+  if ((rect->x < 0) || (rect->w <= 0) ||
+      ((max_w > 0) && ((rect->x + rect->w) > max_w)))
+    return -1;
+
+  // check y && h
+  if ((rect->y < 0) || (rect->h <= 0) ||
+      ((max_h > 0) && ((rect->y + rect->h) > max_h)))
+    return -1;
+
+  return 0;
+}
+
 RgaFilter::RgaFilter(const char *param) : rotate(0) {
   std::map<std::string, std::string> params;
   if (!parse_media_param_map(param, params)) {
@@ -29,11 +46,29 @@ RgaFilter::RgaFilter(const char *param) : rotate(0) {
   const std::string &value = params[KEY_BUFFER_RECT];
   auto &&rects = StringToTwoImageRect(value);
   if (rects.empty()) {
-    RKMEDIA_LOGI("missing rects\n");
+    RKMEDIA_LOGE("Missing src and dst rects\n");
     SetError(-EINVAL);
     return;
   }
   vec_rect = std::move(rects);
+
+  if (rga_rect_check(&vec_rect[0], 0, 0) ||
+      rga_rect_check(&vec_rect[1], 0, 0)) {
+    RKMEDIA_LOGE("Invalid src rect:<%d,%d,%d,%d> or dst rect:<%d,%d,%d,%d>\n",
+                 vec_rect[0].x, vec_rect[0].y, vec_rect[0].w, vec_rect[0].h,
+                 vec_rect[1].x, vec_rect[1].y, vec_rect[1].w, vec_rect[1].h);
+    SetError(-EINVAL);
+    return;
+  }
+
+  // The initialized rectangular frame is the maximum range,
+  // and subsequent dynamic modification of the rectangular
+  // frame must be within this range.
+  src_max_width = vec_rect[0].w;
+  src_max_height = vec_rect[0].h;
+  dst_max_width = vec_rect[1].w;
+  dst_max_height = vec_rect[1].h;
+
   const std::string &v = params[KEY_BUFFER_ROTATE];
   if (!v.empty())
     rotate = std::stoi(v);
@@ -54,15 +89,26 @@ int RgaFilter::Process(std::shared_ptr<MediaBuffer> input,
     return -EINVAL;
 
   auto src = std::static_pointer_cast<easymedia::ImageBuffer>(input);
-  ImageRect *src_rect = nullptr;
-  if (vec_rect[0].w > 0 && vec_rect[0].h > 0)
-    src_rect = &vec_rect[0];
   auto dst = std::static_pointer_cast<easymedia::ImageBuffer>(output);
-  ImageRect *dst_rect = nullptr;
-  if (vec_rect[1].w > 0 && vec_rect[1].h > 0)
-    dst_rect = &vec_rect[1];
-  assert(!dst_rect || (dst_rect && dst->IsValid()));
-  if (!dst_rect && !dst->IsValid()) {
+  if (!src->IsValid() || !dst->IsValid()) {
+    RKMEDIA_LOGE("Src(%zuBytes) or Dst(%zuBytes) Buffer is invalid!\n",
+                 src->GetValidSize(), dst->GetValidSize());
+    return -EINVAL;
+  }
+
+  ImageRect src_rect;
+  ImageRect dst_rect;
+  int cur_rotate = 0;
+
+  memset(&src_rect, 0, sizeof(ImageRect));
+  memset(&dst_rect, 0, sizeof(ImageRect));
+  param_mtx.lock();
+  src_rect = vec_rect[0];
+  dst_rect = vec_rect[1];
+  cur_rotate = rotate;
+  param_mtx.unlock();
+
+  if ((!dst_rect.w || !dst_rect.h) && !dst->IsValid()) {
     // the same to src
     ImageInfo info = src->GetImageInfo();
     info.pix_fmt = dst->GetPixelFormat();
@@ -78,7 +124,7 @@ int RgaFilter::Process(std::shared_ptr<MediaBuffer> input,
     }
     assert(dst->IsValid());
   }
-  return rga_blit(src, dst, src_rect, dst_rect, rotate);
+  return rga_blit(src, dst, &src_rect, &dst_rect, cur_rotate);
 }
 RgaFilter::~RgaFilter() { RgaFilter::gRkRga.RkRgaDeInit(); }
 static int get_rga_format(PixelFormat f) {
@@ -101,6 +147,82 @@ static int get_rga_format(PixelFormat f) {
   if (it != rga_format_map.end())
     return it->second;
   return -1;
+}
+
+int RgaFilter::IoCtrl(unsigned long int request, ...) {
+  int ret = 0;
+  va_list vl;
+  va_start(vl, request);
+  void *arg = va_arg(vl, void *);
+  va_end(vl);
+
+  if (!arg) {
+    RKMEDIA_LOGE("Invalid IoCtrl args(request:%ld, args:NULL)\n",
+                 request);
+    return -1;
+  }
+
+  switch (request) {
+    case S_RGA_CFG: {
+      RgaConfig *new_rga_cfg = (RgaConfig *)arg;
+      ImageRect *new_src_rect = &(new_rga_cfg->src_rect);
+      ImageRect *new_dst_rect = &(new_rga_cfg->dst_rect);
+      int new_rotation = new_rga_cfg->rotation;
+      if (rga_rect_check(new_src_rect, (int)src_max_width, (int)src_max_height) ||
+          rga_rect_check(new_dst_rect, (int)src_max_width, (int)src_max_height)) {
+        RKMEDIA_LOGE("IoCtrl: Invalid srcRect:<%d,%d,%d,%d> or dstRect:<%d,%d,%d,%d>\n",
+                     new_src_rect->x, new_src_rect->y, new_src_rect->w, new_src_rect->h,
+                     new_dst_rect->x, new_dst_rect->y, new_dst_rect->w, new_dst_rect->h);
+        ret = -1;
+        break;
+      }
+
+      if ((new_rotation != 0) && (new_rotation != 90) &&
+          (new_rotation != 180) && (new_rotation != 270)) {
+        RKMEDIA_LOGE("IoCtrl: Invalid rotation:%d\n", new_rotation);
+        ret = -1;
+        break;
+      }
+
+      param_mtx.lock();
+      vec_rect[0].x = new_src_rect->x;
+      vec_rect[0].y = new_src_rect->y;
+      vec_rect[0].w = new_src_rect->w;
+      vec_rect[0].h = new_src_rect->h;
+      vec_rect[1].x = new_dst_rect->x;
+      vec_rect[1].y = new_dst_rect->y;
+      vec_rect[1].w = new_dst_rect->w;
+      vec_rect[1].h = new_dst_rect->h;
+      rotate = new_rotation;
+      param_mtx.unlock();
+      break;
+    }
+    case G_RGA_CFG: {
+      RgaConfig *rd_rga_cfg = (RgaConfig *)arg;
+      ImageRect *rd_src_rect = &(rd_rga_cfg->src_rect);
+      ImageRect *rd_dst_rect = &(rd_rga_cfg->dst_rect);
+      int *rd_rotation = &(rd_rga_cfg->rotation);
+
+      param_mtx.lock();
+      rd_src_rect->x = vec_rect[0].x;
+      rd_src_rect->y = vec_rect[0].y;
+      rd_src_rect->w = vec_rect[0].w;
+      rd_src_rect->h = vec_rect[0].h;
+      rd_dst_rect->x = vec_rect[1].x;
+      rd_dst_rect->y = vec_rect[1].y;
+      rd_dst_rect->w = vec_rect[1].w;
+      rd_dst_rect->h = vec_rect[1].h;
+      *rd_rotation = rotate;
+      param_mtx.unlock();
+      break;
+    }
+    default:
+      ret = -1;
+      RKMEDIA_LOGE("Not support IoCtrl cmd(%ld)\n", request);
+      break;
+  }
+
+  return ret;
 }
 
 #ifndef NDEBUG

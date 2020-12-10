@@ -259,6 +259,7 @@ enum {
   RK_ERR_RGA_NOT_CONFIG,
   /* at lease one parameter is illagal ,eg, an illegal enumeration value  */
   RK_ERR_RGA_ILLEGAL_PARAM,
+  RK_ERR_RGA_NOTREADY,
 
   /***********************************
    * ADEC::Audio decoder error types

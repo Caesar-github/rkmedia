@@ -221,8 +221,10 @@ _CAPI RK_S32 RK_MPI_ALGO_OD_EnableSwitch(ALGO_OD_CHN OdChn, RK_BOOL bEnable);
 /********************************************************************
  * Rga api
  ********************************************************************/
-_CAPI RK_S32 RK_MPI_RGA_CreateChn(RGA_CHN RgaChn, RGA_ATTR_S *pstRgaAttr);
+_CAPI RK_S32 RK_MPI_RGA_CreateChn(RGA_CHN RgaChn, RGA_ATTR_S *pstAttr);
 _CAPI RK_S32 RK_MPI_RGA_DestroyChn(RGA_CHN RgaChn);
+_CAPI RK_S32 RK_MPI_RGA_SetChnAttr(RGA_CHN RgaChn, const RGA_ATTR_S *pstAttr);
+_CAPI RK_S32 RK_MPI_RGA_GetChnAttr(RGA_CHN RgaChn, RGA_ATTR_S *pstAttr);
 
 /********************************************************************
  * Adec api

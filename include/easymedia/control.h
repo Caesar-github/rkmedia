@@ -61,28 +61,40 @@ typedef struct {
 } RockxFilterArg;
 
 enum {
+  /*********************************
+   *  Common Ctrls define
+   * *******************************/
   S_FIRST_CONTROL = 10000,
-  S_SUB_REQUEST, // many devices have their kernel controls
-
-  // DRM Display controls
-  // ImageRect
-  S_SOURCE_RECT = 10100,
+  // many devices have their kernel controls
+  S_SUB_REQUEST,
+  // ImageRect: Common Rect ctrl
+  S_SOURCE_RECT,
+  G_SOURCE_RECT,
   S_DESTINATION_RECT,
+  G_DESTINATION_RECT,
   S_SRC_DST_RECT,
   G_SRC_DST_RECT,
+
+  /*********************************
+   *  DRM Display Ctrls define
+   * *******************************/
   // ImageInfo
-  G_PLANE_IMAGE_INFO,
+  G_PLANE_IMAGE_INFO = 10100,
   // int
   G_PLANE_SUPPORT_SCALE,
   // DRMPropertyArg
   S_CRTC_PROPERTY,
   S_CONNECTOR_PROPERTY,
 
-  // V4L2 controls
+  /*********************************
+   *  V4L2 Ctrls define
+   * *******************************/
   // any type
   S_STREAM_OFF = 10200,
 
-  // ALSA controls
+  /*********************************
+   *  Alsa Ctrls define
+   * *******************************/
   // int
   S_ALSA_VOLUME = 10300,
   G_ALSA_VOLUME,
@@ -90,16 +102,22 @@ enum {
   S_VQE_ATTR,
   G_VQE_ATTR,
 
-  // Through Guard controls
+  /*********************************
+   *  Through Guard Ctrls define
+   * *******************************/
   // int
   S_ALLOW_THROUGH_COUNT = 10400,
 
-  // ANR controls
+  /*********************************
+   *  ANR Ctrls define
+   * *******************************/
   // int
   S_ANR_ON = 10500,
   G_ANR_ON,
 
-  // RKNN controls
+  /*********************************
+   *  RKNN Ctrls define
+   * *******************************/
   // any type
   S_NN_CALLBACK = 10600,
   G_NN_CALLBACK,
@@ -110,7 +128,9 @@ enum {
   S_NN_INFO,
   G_NN_INFO,
 
-  // Move Detection
+  /*********************************
+   *  MoveDetection Ctrls define
+   * *******************************/
   S_MD_ROI_ENABLE = 10700,
   G_MD_ROI_ENABLE,
   S_MD_ROI_RECTS,
@@ -118,7 +138,9 @@ enum {
   S_MD_SENSITIVITY,
   G_MD_SENSITIVITY,
 
-  // MUXER controls
+  /*********************************
+   *  Muxter Ctrls define
+   * *******************************/
   S_START_SRTEAM = 10800,
   S_STOP_SRTEAM,
   G_MUXER_GET_STATUS,
@@ -126,13 +148,22 @@ enum {
   S_MUXER_FILE_PATH,
   S_MUXER_FILE_PREFIX,
 
-  // Occlusion Detection
+  /*********************************
+   *  OcclusionDetection Ctrls define
+   * *******************************/
   S_OD_ROI_ENABLE = 10900,
   G_OD_ROI_ENABLE,
   S_OD_ROI_RECTS,
   G_OD_ROI_RECTS,
   S_OD_SENSITIVITY,
   G_OD_SENSITIVITY,
+
+  /*********************************
+   *  RGA Filter Ctrls define
+   * *******************************/
+  S_RGA_CFG = 11000,
+  G_RGA_CFG,
+
 };
 
 } // namespace easymedia

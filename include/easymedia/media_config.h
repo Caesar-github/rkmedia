@@ -165,6 +165,12 @@ typedef struct VencSuperFrmCfg_ {
   VencRcPriority RcPriority;
 } VencSuperFrmCfg;
 
+typedef struct RgaConfig_ {
+  ImageRect src_rect;
+  ImageRect dst_rect;
+  int rotation;
+} RgaConfig;
+
 #include <map>
 
 namespace easymedia {
