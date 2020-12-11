@@ -858,6 +858,8 @@ static void *GetMediaBuffer(void *arg) {
     RK_MPI_MB_ReleaseBuffer(buffer);
     if (rga_buffer)
       free(rga_buffer);
+    if (rga_buffer_model_input)
+      free(rga_buffer_model_input);
   }
   // release
   if (ctx)
