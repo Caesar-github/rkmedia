@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
                         "re"); // read and close-on-exec
     PARAM_STRING_APPEND_TO(flow_param, KEY_FPS, video_fps);
     PARAM_STRING_APPEND_TO(flow_param, KEY_LOOP_TIME, 0);
-    RKMEDIA_LOGI("\n#FileRead flow param:\n%s\n", flow_param.c_str());
+    RKMEDIA_LOGI("#FileRead flow param:\n%s\n", flow_param.c_str());
 
     video_read_flow = easymedia::REFLECTOR(Flow)::Create<easymedia::Flow>(
         flow_name.c_str(), flow_param.c_str());

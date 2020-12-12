@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
   std::string enc_param;
   enc_param.append(easymedia::to_param_string(enc_config, AUDIO_MP2));
   param = easymedia::JoinFlowParam(param, 1, enc_param);
-  RKMEDIA_LOGI("\nAudioEncoder flow param:\n%s\n", param.c_str());
+  RKMEDIA_LOGI("AudioEncoder flow param:\n%s\n", param.c_str());
   auto enc_flow = easymedia::REFLECTOR(Flow)::Create<easymedia::Flow>(
       flow_name.c_str(), param.c_str());
   if (!enc_flow) {
@@ -100,13 +100,13 @@ int main(int argc, char **argv) {
   if (read_size > 0) {
     nb_samples = read_size / GetSampleSize(aud_info);
     fps = aud_info.sample_rate / nb_samples;
-    RKMEDIA_LOGI("\nThe data block size(%d Byte) is specified by the codec.\n",
+    RKMEDIA_LOGI("The data block size(%d Byte) is specified by the codec.\n",
                  read_size);
   } else {
     nb_samples = aud_info.nb_samples;
     read_size = nb_samples * GetSampleSize(aud_info);
     fps = aud_info.sample_rate / nb_samples;
-    RKMEDIA_LOGI("\nThe data block size(%d Byte) is specified by the user.\n",
+    RKMEDIA_LOGI("The data block size(%d Byte) is specified by the user.\n",
                  read_size);
   }
 
@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
   PARAM_STRING_APPEND_TO(param, KEY_MEM_SIZE_PERTIME, read_size);
   PARAM_STRING_APPEND_TO(param, KEY_FPS, fps);
   PARAM_STRING_APPEND_TO(param, KEY_LOOP_TIME, 0);
-  RKMEDIA_LOGI("\nReadFile flow param:\n%s\n", param.c_str());
+  RKMEDIA_LOGI("ReadFile flow param:\n%s\n", param.c_str());
 
   auto file_flow = easymedia::REFLECTOR(Flow)::Create<easymedia::Flow>(
       flow_name.c_str(), param.c_str());
@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
   param = "";
   PARAM_STRING_APPEND(param, KEY_PATH, output_path.c_str());
   PARAM_STRING_APPEND(param, KEY_OPEN_MODE, "w+");
-  RKMEDIA_LOGI("\nFileWrite flow param:\n%s\n", param.c_str());
+  RKMEDIA_LOGI("FileWrite flow param:\n%s\n", param.c_str());
   auto save_flow = easymedia::REFLECTOR(Flow)::Create<easymedia::Flow>(
       flow_name.c_str(), param.c_str());
   if (!save_flow) {

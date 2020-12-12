@@ -160,7 +160,7 @@ int main(int argc, char **argv) {
                         "re"); // read and close-on-exec
     PARAM_STRING_APPEND_TO(flow_param, KEY_FPS, video_fps);
     PARAM_STRING_APPEND_TO(flow_param, KEY_LOOP_TIME, 0);
-    RKMEDIA_LOGI("\n#FileRead flow param:\n%s\n", flow_param.c_str());
+    RKMEDIA_LOGI("#FileRead flow param:\n%s\n", flow_param.c_str());
 
     video_read_flow = easymedia::REFLECTOR(Flow)::Create<easymedia::Flow>(
         flow_name.c_str(), flow_param.c_str());
@@ -268,10 +268,10 @@ int main(int argc, char **argv) {
     /*****************************************************
      * AVC/HEVC: RC test.
      *****************************************************/
-    RKMEDIA_LOGI("\n#Encoder in CBR MODE for 5s....\n");
+    RKMEDIA_LOGI("#Encoder in CBR MODE for 5s....\n");
     easymedia::msleep(5000);
 
-    RKMEDIA_LOGI("\n#Encoder with new qp for 5s....\n");
+    RKMEDIA_LOGI("#Encoder with new qp for 5s....\n");
     VideoEncoderQp qps;
     memset(&qps, 0, sizeof(qps));
     qps.qp_init = 30;
@@ -283,7 +283,7 @@ int main(int argc, char **argv) {
     easymedia::video_encoder_set_qp(video_encoder_flow, qps);
     easymedia::msleep(5000);
 
-    RKMEDIA_LOGI("\n#Encoder in VBR MODE for 5s....\n");
+    RKMEDIA_LOGI("#Encoder in VBR MODE for 5s....\n");
     easymedia::video_encoder_set_rc_mode(video_encoder_flow, KEY_VBR);
     easymedia::msleep(5000);
 
@@ -293,14 +293,14 @@ int main(int argc, char **argv) {
     for (int i = 0; !quit && (i < 30); i++) {
       srand((unsigned)time(NULL));
       int level_id = rand() % 7;
-      RKMEDIA_LOGI("\n#Encoder in [%s] Quality for 20s....\n",
+      RKMEDIA_LOGI("#Encoder in [%s] Quality for 20s....\n",
                    rc_level[level_id]);
       easymedia::video_encoder_set_rc_quality(video_encoder_flow,
                                               rc_level[level_id]);
       easymedia::msleep(20000);
     }
 
-    RKMEDIA_LOGI("\n#Encoder start bps change test....\n");
+    RKMEDIA_LOGI("#Encoder start bps change test....\n");
     bpsmax = video_width * video_height * video_fps / 4;
     int bpsmin = video_width * video_height * video_fps / 60;
     int bpsstep = (bpsmax - bpsmin / 4);

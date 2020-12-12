@@ -227,7 +227,7 @@ int RgaFilter::IoCtrl(unsigned long int request, ...) {
 
 #ifndef NDEBUG
 static void dummp_rga_info(rga_info_t info, std::string name) {
-  RKMEDIA_LOGD("\n### %s dummp info:\n", name.c_str());
+  RKMEDIA_LOGD("### %s dummp info:\n", name.c_str());
   RKMEDIA_LOGD("\t info.fd = %d\n", info.fd);
   RKMEDIA_LOGD("\t info.mmuFlag = %d\n", info.mmuFlag);
   RKMEDIA_LOGD("\t info.rotation = %d\n", info.rotation);
@@ -242,7 +242,6 @@ static void dummp_rga_info(rga_info_t info, std::string name) {
   RKMEDIA_LOGD("\t info.rect.hstride = %d\n", info.rect.hstride);
   RKMEDIA_LOGD("\t info.rect.format = %d\n", info.rect.format);
   RKMEDIA_LOGD("\t info.rect.size = %d\n", info.rect.size);
-  RKMEDIA_LOGD("\n");
 }
 #endif
 

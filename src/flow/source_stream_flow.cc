@@ -77,7 +77,7 @@ SourceStreamFlow::~SourceStreamFlow() {
   int stop = 1;
   if (stream && Control(S_STREAM_OFF, &stop))
     RKMEDIA_LOGI("Fail to stop source stream\n");
-  RKMEDIA_LOGI("\n#SourceStreamFlow[%s]: stream off....\n", GetFlowTag());
+  RKMEDIA_LOGI("#SourceStreamFlow[%s]: stream off....\n", GetFlowTag());
   if (read_thread) {
     source_start_cond_mtx->lock();
     loop = false;
@@ -86,10 +86,10 @@ SourceStreamFlow::~SourceStreamFlow() {
     read_thread->join();
     delete read_thread;
   }
-  RKMEDIA_LOGI("\n#SourceStreamFlow[%s]: read thread exit sucessfully!\n",
+  RKMEDIA_LOGI("#SourceStreamFlow[%s]: read thread exit sucessfully!\n",
                GetFlowTag());
   stream.reset();
-  RKMEDIA_LOGI("\n#SourceStreamFlow[%s]: stream reset sucessfully!\n",
+  RKMEDIA_LOGI("#SourceStreamFlow[%s]: stream reset sucessfully!\n",
                GetFlowTag());
 }
 

@@ -157,3 +157,12 @@ std::string SampleFormatToString(Sample_Format_E type) {
     return "";
   }
 }
+
+char *ModIdToString(MOD_ID_E mod_id) {
+  if ((mod_id < RK_ID_UNKNOW) || (mod_id > RK_ID_BUTT)) {
+    RKMEDIA_LOGE("%s: mod_id is incorrect\n", __func__);
+    return mod_tag_list[RK_ID_UNKNOW];
+  }
+
+  return mod_tag_list[mod_id];
+}
