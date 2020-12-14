@@ -47,7 +47,7 @@ void video_packet_cb(MEDIA_BUFFER mb) {
 #define TEST_ARGB32_YELLOW 0xFFFFFF00
 #define TEST_ARGB32_RED 0xFFFF0033
 #define TEST_ARGB32_BLUE 0xFF003399
-#define TEST_ARGB32_TRANS 0x00FFFFFF
+#define TEST_ARGB32_TRANS 0x00000000
 
 static void set_argb8888_buffer(RK_U32 *buf, RK_U32 size, RK_U32 color) {
   for (RK_U32 i = 0; buf && (i < size); i++)
@@ -69,25 +69,27 @@ static const struct option long_options[] = {
 static void print_usage(const RK_CHAR *name) {
   printf("usage example:\n");
 #ifdef RKAIQ
-  printf("\t%s [-a [iqfiles_dir]]" \
-          "[-H 1920] "\
-          "[-W 1080] "\
-          "[-h 720] "\
-          "[-w 480] "\
-          "[-o output_dir] "\
-          "\n", name);
-  printf("\t-a | --aiq: enable aiq with dirpath provided, eg:-a "\
-         "/oem/etc/iqfiles/, "\
-         "set dirpath empty to using path by default, without this option aiq "\
+  printf("\t%s [-a [iqfiles_dir]]"
+         "[-H 1920] "
+         "[-W 1080] "
+         "[-h 720] "
+         "[-w 480] "
+         "[-o output_dir] "
+         "\n",
+         name);
+  printf("\t-a | --aiq: enable aiq with dirpath provided, eg:-a "
+         "/oem/etc/iqfiles/, "
+         "set dirpath empty to using path by default, without this option aiq "
          "should run in other application\n");
 #else
-  printf("\t%s"\
-         "[-W 1080] "\
-         "[-H 1920] "\
-         "[-w 480] "\
-         "[-h 720] "\
-         "[-o output_dir] "\
-         "\n", name);
+  printf("\t%s"
+         "[-W 1080] "
+         "[-H 1920] "
+         "[-w 480] "
+         "[-h 720] "
+         "[-o output_dir] "
+         "\n",
+         name);
 #endif
   printf("\t-W | --Width: source width, Default:1920\n");
   printf("\t-H | --Height: source height, Default:1080\n");

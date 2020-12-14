@@ -560,17 +560,17 @@ int video_encoder_set_gop_size(std::shared_ptr<Flow> &enc_flow, int gop) {
 }
 
 int video_encoder_set_osd_region(std::shared_ptr<Flow> &enc_flow,
-                                 OsdRegionData *region_data) {
+                                 OsdRegionData *region_data, int plane_cnt) {
   if (!enc_flow || !region_data)
     return -EINVAL;
 
   if (region_data->enable &&
-      ((region_data->width % 16) || (region_data->height % 16))) {
-    RKMEDIA_LOGE("osd region size must be a multiple of 16x16.");
+      ((region_data->width % 2) || (region_data->height % 2))) {
+    RKMEDIA_LOGE("osd region size must be a multiple of 2x2.");
     return -EINVAL;
   }
 
-  int buffer_size = region_data->width * region_data->height;
+  int buffer_size = region_data->width * region_data->height * plane_cnt;
   OsdRegionData *rdata =
       (OsdRegionData *)malloc(sizeof(OsdRegionData) + buffer_size);
   memcpy((void *)rdata, (void *)region_data, sizeof(OsdRegionData));

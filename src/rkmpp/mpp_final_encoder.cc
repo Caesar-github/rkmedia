@@ -462,28 +462,48 @@ bool MPPMJPEGConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
     iconfig.qfactor = qfactor;
   } else if (change & VideoEncoder::kResolutionChange) {
     if (val->GetSize() < sizeof(VideoResolutionCfg)) {
-      RKMEDIA_LOGE("MPP Encoder: Incomplete Resolution params\n");
+      RKMEDIA_LOGE("MPP Encoder[JPEG]: Incomplete Resolution params\n");
       return false;
     }
     VideoResolutionCfg *vid_cfg = (VideoResolutionCfg *)val->GetPtr();
-    RKMEDIA_LOGI(
-        "MPP Encoder: width = %d, height = %d, vwidth = %d, vheight = %d.\n",
-        vid_cfg->width, vid_cfg->height, vid_cfg->vir_width,
-        vid_cfg->vir_height);
+    RKMEDIA_LOGI("MPP Encoder[JPEG]: width = %d, height = %d, vwidth = %d, "
+                 "vheight = %d.\n",
+                 vid_cfg->width, vid_cfg->height, vid_cfg->vir_width,
+                 vid_cfg->vir_height);
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:width", vid_cfg->width);
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:height", vid_cfg->height);
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:hor_stride", vid_cfg->vir_width);
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:ver_stride", vid_cfg->vir_height);
     ret = mpp_enc.EncodeControl(MPP_ENC_SET_CFG, enc_cfg);
     if (ret) {
-      RKMEDIA_LOGE("MPP Encoder: set resolution cfg failed ret %d\n", ret);
+      RKMEDIA_LOGE("MPP Encoder[JPEG]: set resolution cfg failed ret %d\n",
+                   ret);
       return false;
     }
     iconfig.image_info.width = vid_cfg->width;
     iconfig.image_info.height = vid_cfg->height;
     iconfig.image_info.vir_width = vid_cfg->vir_width;
     iconfig.image_info.vir_height = vid_cfg->vir_height;
-  } else {
+  }
+#ifdef JPEG_RGA_OSD_ENABLE
+  else if (change & VideoEncoder::kOSDDataChange) {
+    // type: OsdRegionData*
+    RKMEDIA_LOGD("MPP Encoder[JPEG]: config osd regions\n");
+    if (val->GetSize() < sizeof(OsdRegionData)) {
+      RKMEDIA_LOGE("MPP Encoder[JPEG]: invalid osd data\n");
+      return false;
+    }
+    if (!val->GetPtr()) {
+      RKMEDIA_LOGE("MPP Encoder[JPEG]: osd data is nullptr\n");
+      return false;
+    }
+    OsdRegionData *newRegion = (OsdRegionData *)val->GetPtr();
+
+    if (mpp_enc.RgaOsdRegionSet(newRegion))
+      return false;
+  }
+#endif // JPEG_RGA_OSD_ENABLE
+  else {
     RKMEDIA_LOGI("MPP Encoder[JPEG]: Unsupport request change 0x%08x!\n",
                  change);
     return false;

@@ -12,6 +12,18 @@
 
 namespace easymedia {
 
+#ifdef JPEG_RGA_OSD_ENABLE
+typedef struct RgaOsdData_ {
+  std::shared_ptr<MediaBuffer> data;
+  uint32_t pos_x;
+  uint32_t pos_y;
+  uint32_t width;
+  uint32_t height;
+  uint8_t enable;
+  uint32_t inverse;
+} RgaOsdData;
+#endif // JPEG_RGA_OSD_ENABLE
+
 // A encoder which call the mpp interface directly.
 // Mpp is always video process module.
 class MPPEncoder : public VideoEncoder {
@@ -44,6 +56,11 @@ public:
   int OsdRegionGet(OsdRegionData *region_data);
 #endif
 
+#ifdef JPEG_RGA_OSD_ENABLE
+  int RgaOsdRegionSet(OsdRegionData *rdata);
+  int RgaOsdRegionProcess(ImageBuffer *hw_buffer);
+#endif
+
   // Set sei info by userdata.
   int SetUserData(const char *data, uint16_t len);
   void ClearUserData();
@@ -62,7 +79,7 @@ protected:
   // call before Init()
   void SetMppCodeingType(MppCodingType type);
   virtual bool
-      CheckConfigChange(std::pair<uint32_t, std::shared_ptr<ParameterBuffer>>) {
+  CheckConfigChange(std::pair<uint32_t, std::shared_ptr<ParameterBuffer>>) {
     return true;
   }
   // Control before encoding.
@@ -95,6 +112,11 @@ private:
   MppBufferGroup osd_buf_grp;
   MppEncOSDData osd_data;
 #endif // MPP_SUPPORT_HW_OSD
+
+#ifdef JPEG_RGA_OSD_ENABLE
+  RgaOsdData rga_osd_data[OSD_REGIONS_CNT];
+  int rga_osd_cnt;
+#endif // JPEG_RGA_OSD_ENABLE
 
   // for roi regions config.
   MppEncROICfg roi_cfg;

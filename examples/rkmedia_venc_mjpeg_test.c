@@ -42,7 +42,7 @@ void video_packet_cb(MEDIA_BUFFER mb) {
 #define TEST_ARGB32_YELLOW 0xFFFFFF00
 #define TEST_ARGB32_RED 0xFFFF0033
 #define TEST_ARGB32_BLUE 0xFF003399
-#define TEST_ARGB32_TRANS 0x00FFFFFF
+#define TEST_ARGB32_TRANS 0x00000000
 
 static void set_argb8888_buffer(RK_U32 *buf, RK_U32 size, RK_U32 color) {
   for (RK_U32 i = 0; buf && (i < size); i++)

@@ -23,6 +23,16 @@ static void sigterm_handler(int sig) {
   quit = true;
 }
 
+#define TEST_ARGB32_YELLOW 0xFFFFFF00
+#define TEST_ARGB32_RED 0xFFFF0033
+#define TEST_ARGB32_BLUE 0xFF003399
+#define TEST_ARGB32_TRANS 0x00000000
+
+static void set_argb8888_buffer(RK_U32 *buf, RK_U32 size, RK_U32 color) {
+  for (RK_U32 i = 0; buf && (i < size); i++)
+    *(buf + i) = color;
+}
+
 void video_packet_cb(MEDIA_BUFFER mb) {
   static RK_U32 jpeg_id = 0;
   printf("Get JPEG packet[%d]:ptr:%p, fd:%d, size:%zu, mode:%d, channel:%d, "
@@ -162,6 +172,39 @@ int main(int argc, char *argv[]) {
   ret = RK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
   if (ret) {
     printf("Bind VI[0] to VENC[0]::JPEG failed! ret=%d\n", ret);
+    return -1;
+  }
+
+  RK_MPI_VENC_RGN_Init(0, NULL);
+
+  BITMAP_S BitMap;
+  BitMap.enPixelFormat = PIXEL_FORMAT_ARGB_8888;
+  BitMap.u32Width = 64;
+  BitMap.u32Height = 256;
+  BitMap.pData = malloc(BitMap.u32Width * 4 * BitMap.u32Height);
+  RK_U8 *ColorData = (RK_U8 *)BitMap.pData;
+  RK_U16 ColorBlockSize = BitMap.u32Height * BitMap.u32Width;
+  set_argb8888_buffer((RK_U32 *)ColorData, ColorBlockSize / 4,
+                      TEST_ARGB32_YELLOW);
+  set_argb8888_buffer((RK_U32 *)(ColorData + ColorBlockSize),
+                      ColorBlockSize / 4, TEST_ARGB32_TRANS);
+  set_argb8888_buffer((RK_U32 *)(ColorData + 2 * ColorBlockSize),
+                      ColorBlockSize / 4, TEST_ARGB32_RED);
+  set_argb8888_buffer((RK_U32 *)(ColorData + 3 * ColorBlockSize),
+                      ColorBlockSize / 4, TEST_ARGB32_BLUE);
+
+  // Case 1: Canvas and bitmap are equal in size
+  OSD_REGION_INFO_S RngInfo;
+  RngInfo.enRegionId = REGION_ID_0;
+  RngInfo.u32PosX = 0;
+  RngInfo.u32PosY = 0;
+  RngInfo.u32Width = 64;
+  RngInfo.u32Height = 256;
+  RngInfo.u8Enable = 1;
+  RngInfo.u8Inverse = 0;
+  ret = RK_MPI_VENC_RGN_SetBitMap(0, &RngInfo, &BitMap);
+  if (ret) {
+    printf("ERROR: SetBitMap failed! ret=%d\n", ret);
     return -1;
   }
 

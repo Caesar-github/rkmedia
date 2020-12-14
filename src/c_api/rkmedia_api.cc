@@ -48,20 +48,32 @@ typedef struct _RkmediaVencAttr {
   VENC_CHN_ATTR_S attr;
   VENC_RC_PARAM_S stRcPara;
   VENC_ROI_ATTR_S astRoiAttr[8];
-  RK_BOOL bFullFunc;
+  RK_BOOL bFullFunc; // Used to distinguish jpeg or jpeg light
 } RkmediaVencAttr;
 
-typedef struct _RkmediaVIAttr { VI_CHN_ATTR_S attr; } RkmediaVIAttr;
+typedef struct _RkmediaVIAttr {
+  VI_CHN_ATTR_S attr;
+} RkmediaVIAttr;
 
-typedef struct _RkmediaAIAttr { AI_CHN_ATTR_S attr; } RkmediaAIAttr;
+typedef struct _RkmediaAIAttr {
+  AI_CHN_ATTR_S attr;
+} RkmediaAIAttr;
 
-typedef struct _RkmediaAOAttr { AO_CHN_ATTR_S attr; } RkmediaAOAttr;
+typedef struct _RkmediaAOAttr {
+  AO_CHN_ATTR_S attr;
+} RkmediaAOAttr;
 
-typedef struct _RkmediaAENCAttr { AENC_CHN_ATTR_S attr; } RkmediaAENCAttr;
+typedef struct _RkmediaAENCAttr {
+  AENC_CHN_ATTR_S attr;
+} RkmediaAENCAttr;
 
-typedef struct _RkmediaADECAttr { ADEC_CHN_ATTR_S attr; } RkmediaADECAttr;
+typedef struct _RkmediaADECAttr {
+  ADEC_CHN_ATTR_S attr;
+} RkmediaADECAttr;
 
-typedef struct _RkmediaVDECAttr { VDEC_CHN_ATTR_S attr; } RkmediaVDECAttr;
+typedef struct _RkmediaVDECAttr {
+  VDEC_CHN_ATTR_S attr;
+} RkmediaVDECAttr;
 
 typedef ALGO_MD_ATTR_S RkmediaMDAttr;
 typedef ALGO_OD_ATTR_S RkmediaODAttr;
@@ -2530,7 +2542,6 @@ RK_S32 RK_MPI_VENC_CreateJpegLightChn(VENC_CHN VeChn,
 
   RKMEDIA_LOGI("%s: Enable VENC[%d], Type:%d Start...\n", __func__, VeChn,
                stVencChnAttr->stVencAttr.enType);
-
   std::shared_ptr<easymedia::Flow> video_jpeg_flow;
   RK_U32 u32InFpsNum = 1;
   RK_U32 u32InFpsDen = 1;
@@ -3336,6 +3347,18 @@ RK_S32 RK_MPI_VENC_RGN_Init(VENC_CHN VeChn, VENC_COLOR_TBL_S *stColorTbl) {
     return -RK_ERR_VENC_NOTREADY;
   }
 
+  // jpegLight does not need to configure the palette
+  CODEC_TYPE_E enCodecType =
+      g_venc_chns[VeChn].venc_attr.attr.stVencAttr.enType;
+  if (((enCodecType == RK_CODEC_TYPE_MJPEG) ||
+       (enCodecType == RK_CODEC_TYPE_JPEG)) &&
+      (!g_venc_chns[VeChn].venc_attr.bFullFunc)) {
+    g_venc_mtx.lock();
+    g_venc_chns[VeChn].bColorTblInit = RK_TRUE;
+    g_venc_mtx.unlock();
+    return RK_ERR_SYS_OK;
+  }
+
   int ret = 0;
   const RK_U32 *pu32ArgbColorTbl = NULL;
   RK_U32 u32AVUYColorTbl[VENC_RGN_COLOR_NUM] = {0};
@@ -3421,8 +3444,7 @@ static RK_VOID Argb8888_To_Region_Data(VENC_CHN VeChn,
 RK_S32 RK_MPI_VENC_RGN_SetBitMap(VENC_CHN VeChn,
                                  const OSD_REGION_INFO_S *pstRgnInfo,
                                  const BITMAP_S *pstBitmap) {
-  RK_U8 *rkmedia_osd_data;
-  RK_U32 total_pix_num = 0;
+  RK_U8 *rkmedia_osd_data = NULL;
   RK_S32 ret = RK_ERR_SYS_OK;
 
   if ((VeChn < 0) || (VeChn >= VENC_MAX_CHN_NUM))
@@ -3451,31 +3473,56 @@ RK_S32 RK_MPI_VENC_RGN_SetBitMap(VENC_CHN VeChn,
   if (!pstRgnInfo || !pstRgnInfo->u32Width || !pstRgnInfo->u32Height)
     return -RK_ERR_VENC_ILLEGAL_PARAM;
 
-  if ((pstRgnInfo->u32PosX % 16) || (pstRgnInfo->u32PosY % 16) ||
-      (pstRgnInfo->u32Width % 16) || (pstRgnInfo->u32Height % 16)) {
-    RKMEDIA_LOGE("<x, y, w, h> = <%d, %d, %d, %d> must be 16 aligned!\n",
+  RK_U8 u8Align = 16;
+  RK_BOOL bIsJpegLight = RK_FALSE;
+  RK_U8 u8PlaneCnt = 1; // for color palette buffer.
+  CODEC_TYPE_E enCodecType =
+      g_venc_chns[VeChn].venc_attr.attr.stVencAttr.enType;
+  if (((enCodecType == RK_CODEC_TYPE_MJPEG) ||
+       (enCodecType == RK_CODEC_TYPE_JPEG)) &&
+      (!g_venc_chns[VeChn].venc_attr.bFullFunc)) {
+    bIsJpegLight = RK_TRUE;
+    u8Align = 2;
+    u8PlaneCnt = 4; // for argb8888.
+  }
+
+  if ((pstRgnInfo->u32PosX % u8Align) || (pstRgnInfo->u32PosY % u8Align) ||
+      (pstRgnInfo->u32Width % u8Align) || (pstRgnInfo->u32Height % u8Align)) {
+    RKMEDIA_LOGE("<x, y, w, h> = <%d, %d, %d, %d> must be %u aligned!\n",
                  pstRgnInfo->u32PosX, pstRgnInfo->u32PosY, pstRgnInfo->u32Width,
-                 pstRgnInfo->u32Height);
+                 pstRgnInfo->u32Height, u8Align);
     return -RK_ERR_VENC_ILLEGAL_PARAM;
   }
 
-  total_pix_num = pstRgnInfo->u32Width * pstRgnInfo->u32Height;
-  rkmedia_osd_data = (RK_U8 *)malloc(total_pix_num);
-  if (!rkmedia_osd_data) {
-    RKMEDIA_LOGE("No space left! RgnInfo pixels(%d)\n", total_pix_num);
-    return -RK_ERR_VENC_NOMEM;
-  }
+  if (!bIsJpegLight) {
+    RK_U32 total_pix_num = pstRgnInfo->u32Width * pstRgnInfo->u32Height;
+    rkmedia_osd_data = (RK_U8 *)malloc(total_pix_num);
+    if (!rkmedia_osd_data) {
+      RKMEDIA_LOGE("No space left! RgnInfo pixels(%d)\n", total_pix_num);
+      return -RK_ERR_VENC_NOMEM;
+    }
 
-  switch (pstBitmap->enPixelFormat) {
-  case PIXEL_FORMAT_ARGB_8888:
-    Argb8888_To_Region_Data(VeChn, pstBitmap, rkmedia_osd_data,
-                            pstRgnInfo->u32Width, pstRgnInfo->u32Height);
-    break;
-  default:
-    RKMEDIA_LOGE("Not support bitmap pixel format:%d\n",
-                 pstBitmap->enPixelFormat);
-    ret = -RK_ERR_VENC_NOT_SUPPORT;
-    break;
+    switch (pstBitmap->enPixelFormat) {
+    case PIXEL_FORMAT_ARGB_8888:
+      Argb8888_To_Region_Data(VeChn, pstBitmap, rkmedia_osd_data,
+                              pstRgnInfo->u32Width, pstRgnInfo->u32Height);
+      break;
+    default:
+      RKMEDIA_LOGE("Not support bitmap pixel format:%d\n",
+                   pstBitmap->enPixelFormat);
+      ret = -RK_ERR_VENC_NOT_SUPPORT;
+      break;
+    }
+  } else {
+    if ((pstBitmap->u32Width != pstRgnInfo->u32Width) ||
+        (pstBitmap->u32Height != pstRgnInfo->u32Height)) {
+      RKMEDIA_LOGE(
+          "JpegLight:RgnInfo<%ux%u> should be equal to BitMap<%ux%u>\n",
+          pstRgnInfo->u32Width, pstRgnInfo->u32Height, pstBitmap->u32Width,
+          pstBitmap->u32Height);
+      return -RK_ERR_VENC_ILLEGAL_PARAM;
+    }
+    rkmedia_osd_data = (RK_U8 *)pstBitmap->pData;
   }
 
   OsdRegionData rkmedia_osd_rgn;
@@ -3488,7 +3535,7 @@ RK_S32 RK_MPI_VENC_RGN_SetBitMap(VENC_CHN VeChn,
   rkmedia_osd_rgn.inverse = pstRgnInfo->u8Inverse;
   rkmedia_osd_rgn.enable = pstRgnInfo->u8Enable;
   ret = easymedia::video_encoder_set_osd_region(g_venc_chns[VeChn].rkmedia_flow,
-                                                &rkmedia_osd_rgn);
+                                                &rkmedia_osd_rgn, u8PlaneCnt);
   if (ret)
     ret = -RK_ERR_VENC_NOT_PERM;
 
@@ -4748,15 +4795,15 @@ RK_S32 RK_MPI_RGA_GetChnAttr(RGA_CHN RgaChn, RGA_ATTR_S *pstAttr) {
   }
 
   g_rga_mtx.unlock();
-  pstAttr->stImgIn.u32X         = (RK_U32)RkmediaRgaCfg.src_rect.x;
-  pstAttr->stImgIn.u32Y         = (RK_U32)RkmediaRgaCfg.src_rect.y;
-  pstAttr->stImgIn.u32Width     = (RK_U32)RkmediaRgaCfg.src_rect.w;
-  pstAttr->stImgIn.u32Height    = (RK_U32)RkmediaRgaCfg.src_rect.h;
-  pstAttr->stImgOut.u32X        = (RK_U32)RkmediaRgaCfg.dst_rect.x;
-  pstAttr->stImgOut.u32Y        = (RK_U32)RkmediaRgaCfg.dst_rect.y;
-  pstAttr->stImgOut.u32Width    = (RK_U32)RkmediaRgaCfg.dst_rect.w;
-  pstAttr->stImgOut.u32Height   = (RK_U32)RkmediaRgaCfg.dst_rect.h;
-  pstAttr->u16Rotaion           = (RK_U32)RkmediaRgaCfg.rotation;
+  pstAttr->stImgIn.u32X = (RK_U32)RkmediaRgaCfg.src_rect.x;
+  pstAttr->stImgIn.u32Y = (RK_U32)RkmediaRgaCfg.src_rect.y;
+  pstAttr->stImgIn.u32Width = (RK_U32)RkmediaRgaCfg.src_rect.w;
+  pstAttr->stImgIn.u32Height = (RK_U32)RkmediaRgaCfg.src_rect.h;
+  pstAttr->stImgOut.u32X = (RK_U32)RkmediaRgaCfg.dst_rect.x;
+  pstAttr->stImgOut.u32Y = (RK_U32)RkmediaRgaCfg.dst_rect.y;
+  pstAttr->stImgOut.u32Width = (RK_U32)RkmediaRgaCfg.dst_rect.w;
+  pstAttr->stImgOut.u32Height = (RK_U32)RkmediaRgaCfg.dst_rect.h;
+  pstAttr->u16Rotaion = (RK_U32)RkmediaRgaCfg.rotation;
   // The following two attributes do not support dynamic acquisition.
   pstAttr->bEnBufPool = RK_FALSE;
   pstAttr->u16BufPoolCnt = 0;

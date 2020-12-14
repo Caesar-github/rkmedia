@@ -9,9 +9,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <string.h>
 
 #include "common/sample_common.h"
 #include "rkmedia_api.h"
@@ -20,7 +20,7 @@
 #define TEST_ARGB32_YELLOW 0xFFFFFF00
 #define TEST_ARGB32_RED 0xFFFF0033
 #define TEST_ARGB32_BLUE 0xFF003399
-#define TEST_ARGB32_TRANS 0x00FFFFFF
+#define TEST_ARGB32_TRANS 0x00000000
 
 static FILE *g_save_file;
 static FILE *g_save_file_sub0;

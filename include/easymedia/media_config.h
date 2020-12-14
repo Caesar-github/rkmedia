@@ -208,7 +208,8 @@ _API int video_encoder_set_fps(std::shared_ptr<Flow> &enc_flow, uint8_t out_num,
 _API int video_encoder_set_osd_plt(std::shared_ptr<Flow> &enc_flow,
                                    const uint32_t *yuv_plt);
 _API int video_encoder_set_osd_region(std::shared_ptr<Flow> &enc_flow,
-                                      OsdRegionData *region_data);
+                                      OsdRegionData *region_data,
+                                      int plane_cnt = 1);
 _API int video_encoder_set_move_detection(std::shared_ptr<Flow> &enc_flow,
                                           std::shared_ptr<Flow> &md_flow);
 _API int video_encoder_set_roi_regions(std::shared_ptr<Flow> &enc_flow,

@@ -11,6 +11,11 @@
 
 #include <memory>
 
+#ifdef JPEG_RGA_OSD_ENABLE
+#include <rga/im2d.h>
+#include <rga/rga.h>
+#endif // JPEG_RGA_OSD_ENABLE
+
 #include "buffer.h"
 #include "utils.h"
 
@@ -31,6 +36,21 @@ MPPEncoder::MPPEncoder()
   memset(&osd_data, 0, sizeof(osd_data));
   osd_buf_grp = NULL;
 #endif
+
+#ifdef JPEG_RGA_OSD_ENABLE
+  // reset jpeg osd data.
+  for (int i = 0; i < OSD_REGIONS_CNT; i++) {
+    rga_osd_data[i].data.reset();
+    rga_osd_data[i].pos_x = 0;
+    rga_osd_data[i].pos_y = 0;
+    rga_osd_data[i].width = 0;
+    rga_osd_data[i].height = 0;
+    rga_osd_data[i].enable = 0;
+    rga_osd_data[i].inverse = 0;
+  }
+  rga_osd_cnt = 0;
+#endif
+
   memset(&roi_cfg, 0, sizeof(roi_cfg));
   rc_api_brief_name = "default";
 }
@@ -48,6 +68,14 @@ MPPEncoder::~MPPEncoder() {
     osd_buf_grp = NULL;
   }
 #endif
+
+#ifdef JPEG_RGA_OSD_ENABLE
+  // reset jpeg osd data.
+  for (int i = 0; i < OSD_REGIONS_CNT; i++)
+    rga_osd_data[i].data.reset();
+  rga_osd_cnt = 0;
+#endif
+
   if (roi_cfg.regions) {
     RKMEDIA_LOGD("MPP Encoder: free enc roi region buff\n");
     free(roi_cfg.regions);
@@ -159,8 +187,12 @@ int MPPEncoder::PrepareMppFrame(const std::shared_ptr<MediaBuffer> &input,
   }
 #endif // MPP_SUPPORT_HW_OSD
 
-  int ud_idx = 0;
+#ifdef JPEG_RGA_OSD_ENABLE
+  if (rga_osd_cnt > 0)
+    RgaOsdRegionProcess(hw_buffer);
+#endif
 
+  int ud_idx = 0;
   if (userdata_len) {
     RKMEDIA_LOGD("MPP Encoder: set userdata(%dBytes) to frame\n", userdata_len);
     bool skip_frame = false;
@@ -802,6 +834,151 @@ int MPPEncoder::OsdRegionGet(OsdRegionData *rdata) {
   return 0;
 }
 #endif // MPP_SUPPORT_HW_OSD
+
+#ifdef JPEG_RGA_OSD_ENABLE
+#if 0
+static void OsdDummpRgaRegions(OsdRegionData *rdata) {
+  if (!rdata)
+    return;
+
+  RKMEDIA_LOGD("#RegionData:%p:\n", rdata->buffer);
+  RKMEDIA_LOGI("\t enable:%u\n", rdata->enable);
+  RKMEDIA_LOGI("\t region_id:%u\n", rdata->region_id);
+  RKMEDIA_LOGI("\t inverse:%u\n", rdata->inverse);
+  RKMEDIA_LOGI("\t pos_x:%u\n", rdata->pos_x);
+  RKMEDIA_LOGI("\t pos_y:%u\n", rdata->pos_y);
+  RKMEDIA_LOGI("\t width:%u\n", rdata->width);
+  RKMEDIA_LOGI("\t height:%u\n", rdata->height);
+}
+
+static void OsdDummpRgaOsd(RgaOsdData *osd, int valid_cnt) {
+  RKMEDIA_LOGD("#JPEG OsdData: cnt:%d\n", valid_cnt);
+  for (int i = 0; i < OSD_REGIONS_CNT; i++) {
+    printf("#JPEG OsdData[%d]:\n", i);
+    printf("\t enable:%u\n", osd[i].enable);
+    printf("\t inverse:%u\n", osd[i].inverse);
+    printf("\t pos_x:%u\n", osd[i].pos_x);
+    printf("\t pos_y:%u\n", osd[i].pos_y);
+    printf("\t width:%u\n", osd[i].width);
+    printf("\t height:%u\n", osd[i].height);
+    if (osd[i].data) {
+      printf("\t buf ptr:%p\n", osd[i].data->GetPtr());
+      printf("\t buf size:%zuBytes\n", osd[i].data->GetValidSize());
+    }
+  }
+}
+
+static void JpegSaveOsdImg(RgaOsdData *osdRgn, int index) {
+  if (!osdRgn || !osdRgn->data)
+    return;
+
+  char _path[64] = {0};
+  sprintf(_path, "/tmp/osd_img%d", index);
+  RKMEDIA_LOGD("MPP Encoder: save osd img to %s\n", _path);
+  int fd = open(_path, O_WRONLY | O_CREAT);
+  if (fd <= 0)
+    return;
+
+  int size = osdRgn->data->GetValidSize();
+  uint8_t *ptr = (uint8_t *)osdRgn->data->GetPtr();
+  if (ptr && size)
+    write(fd, ptr, size);
+  close(fd);
+}
+#endif // #ifndef NDEBUG
+
+int MPPEncoder::RgaOsdRegionSet(OsdRegionData *rdata) {
+  if (!rdata)
+    return -EINVAL;
+
+  RKMEDIA_LOGD("MPP Encoder[JPEG]: setting osd regions...\n");
+  if ((rdata->region_id >= OSD_REGIONS_CNT)) {
+    RKMEDIA_LOGE(
+        "MPP Encoder[JPEG]: invalid region id(%d), should be [0, %d).\n",
+        rdata->region_id, OSD_REGIONS_CNT);
+    return -EINVAL;
+  }
+
+  if (rdata->enable && !rdata->buffer) {
+    RKMEDIA_LOGE("MPP Encoder[JPEG]: invalid region data");
+    return -EINVAL;
+  }
+
+  int rid = rdata->region_id;
+  if (!rdata->enable) {
+    if (rga_osd_data[rid].enable)
+      rga_osd_cnt--;
+    if (rga_osd_cnt < 0) {
+      RKMEDIA_LOGW("[JPEG]: jpeg osd cnt incorrect!\n");
+      rga_osd_cnt = 0;
+    }
+    rga_osd_data[rid].enable = 0;
+    rga_osd_data[rid].data.reset();
+    return 0;
+  }
+
+  int total_size = rdata->width * rdata->height * 4; // rgab8888
+  rga_osd_data[rid].data =
+      MediaBuffer::Alloc(total_size, MediaBuffer::MemType::MEM_HARD_WARE);
+  if (!rga_osd_data[rid].data) {
+    RKMEDIA_LOGW("[JPEG]: jpeg osd: no space left!\n");
+    return -ENOMEM;
+    ;
+  }
+  rga_osd_data[rid].data->BeginCPUAccess(true);
+  memcpy(rga_osd_data[rid].data->GetPtr(), rdata->buffer, total_size);
+  rga_osd_data[rid].data->EndCPUAccess(true);
+  rga_osd_data[rid].data->SetValidSize(total_size);
+  if (!rga_osd_data[rid].enable)
+    rga_osd_cnt++;
+  if (rga_osd_cnt > OSD_REGIONS_CNT) {
+    RKMEDIA_LOGW("[JPEG]: Osd: rga osd cnt > OSD_REGIONS_CNT\n");
+    rga_osd_cnt = OSD_REGIONS_CNT;
+  }
+  rga_osd_data[rid].pos_x = rdata->pos_x;
+  rga_osd_data[rid].pos_y = rdata->pos_y;
+  rga_osd_data[rid].width = rdata->width;
+  rga_osd_data[rid].height = rdata->height;
+  rga_osd_data[rid].enable = rdata->enable;
+  rga_osd_data[rid].inverse = rdata->inverse;
+
+  return 0;
+}
+
+int MPPEncoder::RgaOsdRegionProcess(ImageBuffer *hw_buffer) {
+  rga_buffer_t pat;
+  rga_buffer_t src;
+  IM_STATUS STATUS;
+
+  if (!hw_buffer)
+    return 0;
+
+  ImageInfo imgInfo = hw_buffer->GetImageInfo();
+  im_rect pat_rect;
+  // ToDo: fmt check and convert
+
+  src = wrapbuffer_fd(hw_buffer->GetFD(), imgInfo.width, imgInfo.height,
+                      RK_FORMAT_YCbCr_420_SP);
+  for (int i = 0; i < OSD_REGIONS_CNT; i++) {
+    if (!rga_osd_data[i].enable)
+      continue;
+    pat = wrapbuffer_fd(rga_osd_data[i].data->GetFD(), rga_osd_data[i].width,
+                        rga_osd_data[i].height, RK_FORMAT_BGRA_8888);
+    pat_rect.x = rga_osd_data[i].pos_x;
+    pat_rect.y = rga_osd_data[i].pos_y;
+    pat_rect.width = rga_osd_data[i].width;
+    pat_rect.height = rga_osd_data[i].height;
+    STATUS = improcess(src, src, pat, pat_rect, pat_rect, pat_rect,
+                       IM_ALPHA_BLEND_DST_OVER);
+    if (STATUS != IM_STATUS_SUCCESS) {
+      RKMEDIA_LOGE("[JPEG]: osd: blend failed!\n");
+      break;
+    }
+  }
+
+  return 0;
+}
+#endif // JPEG_RGA_OSD_ENABLE
 
 int MPPEncoder::RoiUpdateRegions(EncROIRegion *regions, int region_cnt) {
   if (!regions || region_cnt == 0) {
