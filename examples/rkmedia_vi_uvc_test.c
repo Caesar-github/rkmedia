@@ -14,6 +14,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <linux/usb/video.h>
 #include <uvc/uvc_control.h>
 #include <uvc/uvc_video.h>
 
@@ -30,6 +31,43 @@ static void sigterm_handler(int sig) {
   fprintf(stderr, "signal %d\n", sig);
   quit = true;
 }
+
+#ifdef RKAIQ
+void camera_control(unsigned char cs, unsigned int val) {
+  switch (cs) {
+  case UVC_PU_BRIGHTNESS_CONTROL:
+    SAMPLE_COMM_ISP_SET_Brightness(val);
+    break;
+  case UVC_PU_CONTRAST_CONTROL:
+    SAMPLE_COMM_ISP_SET_Contrast(val);
+    break;
+  case UVC_PU_HUE_CONTROL:
+    break;
+  case UVC_PU_SATURATION_CONTROL:
+    SAMPLE_COMM_ISP_SET_Saturation(val);
+    break;
+  case UVC_PU_SHARPNESS_CONTROL:
+    SAMPLE_COMM_ISP_SET_Sharpness(val);
+    break;
+  case UVC_PU_GAMMA_CONTROL:
+    break;
+  case UVC_PU_WHITE_BALANCE_TEMPERATURE_CONTROL:
+    break;
+  case UVC_PU_WHITE_BALANCE_TEMPERATURE_AUTO_CONTROL:
+    break;
+  case UVC_PU_GAIN_CONTROL:
+    break;
+  case UVC_PU_HUE_AUTO_CONTROL:
+    break;
+  case UVC_PU_POWER_LINE_FREQUENCY_CONTROL:
+    break;
+  case UVC_PU_DIGITAL_MULTIPLIER_CONTROL:
+    break;
+  default:
+    break;
+  }
+}
+#endif
 
 static void *GetMediaBuffer(void *arg) {
   MEDIA_BUFFER mb = NULL;
@@ -91,6 +129,8 @@ int camera_start(int id, int width, int height, int fps, int format, int eptz) {
     SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, pIqfilesPath);
     SAMPLE_COMM_ISP_Run();
     SAMPLE_COMM_ISP_SetFrameRate(fps);
+
+    register_uvc_pu_control_callback(camera_control);
 #endif
   }
 
@@ -131,8 +171,10 @@ void camera_stop(void) {
     pthread_join(th, NULL);
     RK_MPI_VI_DisableChn(0, 0);
 #ifdef RKAIQ
-    if (pIqfilesPath)
+    if (pIqfilesPath) {
+      register_uvc_pu_control_callback(NULL);
       SAMPLE_COMM_ISP_Stop();
+    }
 #endif
   }
 }
