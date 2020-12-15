@@ -25,12 +25,12 @@ static int rga_rect_check(ImageRect *rect, int max_w, int max_h) {
   if (!rect)
     return -1;
   // check x && w
-  if ((rect->x < 0) || (rect->w <= 0) ||
+  if ((rect->x < 0) || (rect->w < 0) ||
       ((max_w > 0) && ((rect->x + rect->w) > max_w)))
     return -1;
 
   // check y && h
-  if ((rect->y < 0) || (rect->h <= 0) ||
+  if ((rect->y < 0) || (rect->h < 0) ||
       ((max_h > 0) && ((rect->y + rect->h) > max_h)))
     return -1;
 
