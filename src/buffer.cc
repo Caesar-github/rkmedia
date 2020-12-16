@@ -209,8 +209,10 @@ static int drm_device_open(const char *device = nullptr) {
     device = drm_dev;
   }
   int fd = open(device, O_RDWR);
-  if (fd < 0)
+  if (fd < 0) {
+    RKMEDIA_LOGE("Failed to open %s,please enable display_subsystem in the dts\n", device);
     return fd;
+  }
   version = drmGetVersion(fd);
   if (!version) {
     RKMEDIA_LOGI("Failed to get version information "
