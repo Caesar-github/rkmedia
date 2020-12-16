@@ -23,6 +23,7 @@
 static pthread_t th;
 static int start;
 static RK_CHAR *pDeviceName = "rkispp_scale0";
+RK_CHAR *pIqfilesPath = NULL;
 
 static bool quit = false;
 static void sigterm_handler(int sig) {
@@ -82,6 +83,17 @@ int camera_start(int id, int width, int height, int fps, int format, int eptz) {
   (void)fps;
   (void)format;
   (void)eptz;
+
+  if (pIqfilesPath) {
+#ifdef RKAIQ
+    rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
+    RK_BOOL fec_enable = RK_FALSE;
+    SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, pIqfilesPath);
+    SAMPLE_COMM_ISP_Run();
+    SAMPLE_COMM_ISP_SetFrameRate(fps);
+#endif
+  }
+
   VI_CHN_ATTR_S vi_chn_attr;
   memset(&vi_chn_attr, 0, sizeof(vi_chn_attr));
   vi_chn_attr.pcVideoNode = pDeviceName;
@@ -118,12 +130,15 @@ void camera_stop(void) {
     start = 0;
     pthread_join(th, NULL);
     RK_MPI_VI_DisableChn(0, 0);
+#ifdef RKAIQ
+    if (pIqfilesPath)
+      SAMPLE_COMM_ISP_Stop();
+#endif
   }
 }
 
 int main(int argc, char *argv[]) {
   char *config = "uvc_config.sh";
-  RK_CHAR *pIqfilesPath = NULL;
   int c;
   while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
     const char *tmp_optarg = optarg;
@@ -154,17 +169,6 @@ int main(int argc, char *argv[]) {
   printf("#####Device: %s\n", pDeviceName);
   printf("#####Aiq xml dirpath: %s\n\n", pIqfilesPath);
 
-  if (pIqfilesPath) {
-#ifdef RKAIQ
-    rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-    RK_BOOL fec_enable = RK_FALSE;
-    int fps = 30;
-    SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, pIqfilesPath);
-    SAMPLE_COMM_ISP_Run();
-    SAMPLE_COMM_ISP_SetFrameRate(fps);
-#endif
-  }
-
   RK_MPI_SYS_Init();
 
   system(config);
@@ -184,11 +188,6 @@ int main(int argc, char *argv[]) {
 
   camera_stop();
   uvc_control_join(UVC_CONTROL_CAMERA);
-
-#ifdef RKAIQ
-  if (pIqfilesPath)
-    SAMPLE_COMM_ISP_Stop();
-#endif
 
   printf("%s exit!\n", __func__);
   return 0;
