@@ -14,7 +14,7 @@ LIB_FILES := -L../lib
 LD_FLAGS := -lpthread -leasymedia -ldrm -lrockchip_mpp \
 	        -lavformat -lavcodec -lswresample -lavutil \
 			-lasound -lv4l2 -lv4lconvert -lrga \
-			-lRKAP_ANR -lRKAP_Common -lRKAP_AEC \
+			-lRKAP_ANR -lRKAP_Common -lRKAP_3A \
 			-lmd_share -lrkaiq -lod_share
 
 CFLAGS += -DRKAIQ

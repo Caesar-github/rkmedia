@@ -11,8 +11,8 @@
 
 #ifdef AUDIO_ALGORITHM_ENABLE
 extern "C" {
-#include <AP_AEC.h>
-#include <AP_ANR.h>
+#include <RKAP_3A.h>
+#include <RKAP_ANR.h>
 }
 
 #define RK_AUDIO_BUFFER_MAX_SIZE 12288
@@ -114,8 +114,8 @@ int AI_TALKVQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {
       ALGO_FRAME_TIMS_MS * sample_info.sample_rate / 1000; // hard code 20ms
   state.pathPara = config->stAiTalkConfig.aParamFilePath;
   RKMEDIA_LOGI("AEC: param file = %s\n", state.pathPara);
-  AEC_DumpVersion();
-  handle->ap_handle = AEC_Init(&state, AEC_TX_TYPE);
+  RKAP_3A_DumpVersion();
+  handle->ap_handle = RKAP_3A_Init(&state, AEC_TX_TYPE);
   if (!handle->ap_handle) {
     RKMEDIA_LOGI("AEC: init failed\n");
     return -1;
@@ -124,7 +124,7 @@ int AI_TALKVQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {
 }
 
 int AI_TALKVQE_Deinit(AUDIO_VQE_S *handle) {
-  AEC_Destroy(handle->ap_handle);
+  RKAP_3A_Destroy(handle->ap_handle);
   return 0;
 }
 
@@ -153,7 +153,7 @@ static int AI_TALKVQE_Process(AUDIO_VQE_S *handle, unsigned char *in,
       sigin[i] = *((int16_t *)in + i * 2 + 1);
     }
   }
-  AEC_Process(handle->ap_handle, sigin, sigref, (int16_t *)sigout);
+  RKAP_3A_Process(handle->ap_handle, sigin, sigref, (int16_t *)sigout);
 
   int16_t *tmp2 = (int16_t *)sigout;
   int16_t *tmp1 = (int16_t *)out;
@@ -183,8 +183,8 @@ int AI_RECORDVQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {
   state.fGmin = config->stAiRecordConfig.stAnrConfig.fGmin;
   state.fPostAddGain = config->stAiRecordConfig.stAnrConfig.fPostAddGain;
   state.fNoiseFactor = config->stAiRecordConfig.stAnrConfig.fNoiseFactor;
-  ANR_DumpVersion();
-  handle->ap_handle = ANR_Init(&state);
+  RKAP_ANR_DumpVersion();
+  handle->ap_handle = RKAP_ANR_Init(&state);
   if (!handle->ap_handle) {
     RKMEDIA_LOGI("ANR: init failed\n");
     return -1;
@@ -193,13 +193,13 @@ int AI_RECORDVQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {
 }
 
 int AI_RECORDVQE_Deinit(AUDIO_VQE_S *handle) {
-  ANR_Destroy(handle->ap_handle);
+  RKAP_ANR_Destroy(handle->ap_handle);
   return 0;
 }
 
 static int AI_RECORDVQE_Process(AUDIO_VQE_S *handle, unsigned char *in,
                                 unsigned char *out) {
-  ANR_Process(handle->ap_handle, (int16_t *)in, (int16_t *)out);
+  RKAP_ANR_Process(handle->ap_handle, (int16_t *)in, (int16_t *)out);
   return 0;
 }
 
@@ -220,7 +220,7 @@ int AO_VQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {
       ALGO_FRAME_TIMS_MS * sample_info.sample_rate / 1000; // hard code 20ms
   state.pathPara = config->stAoConfig.aParamFilePath;
   RKMEDIA_LOGI("AEC: param file = %s\n", state.pathPara);
-  handle->ap_handle = AEC_Init(&state, AEC_RX_TYPE);
+  handle->ap_handle = RKAP_3A_Init(&state, AEC_RX_TYPE);
   if (!handle->ap_handle) {
     RKMEDIA_LOGI("AEC: init failed\n");
     return -1;
@@ -229,7 +229,7 @@ int AO_VQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {
 }
 
 int AO_VQE_Deinit(AUDIO_VQE_S *handle) {
-  AEC_Destroy(handle->ap_handle);
+  RKAP_3A_Destroy(handle->ap_handle);
   return 0;
 }
 
@@ -238,7 +238,7 @@ static int AO_VQE_Process(AUDIO_VQE_S *handle, unsigned char *in,
   SampleInfo sample_info = handle->sample_info;
 
   if (sample_info.channels == 1) {
-    AEC_Process(handle->ap_handle, (int16_t *)in, NULL, (int16_t *)out);
+    RKAP_3A_Process(handle->ap_handle, (int16_t *)in, NULL, (int16_t *)out);
     return 0;
   }
 
@@ -254,7 +254,7 @@ static int AO_VQE_Process(AUDIO_VQE_S *handle, unsigned char *in,
   for (int i = 0; i < nb_samples; i++) {
     left[i] = *((int16_t *)in + i * 2);
   }
-  AEC_Process(handle->ap_handle, left, NULL, (int16_t *)sigout);
+  RKAP_3A_Process(handle->ap_handle, left, NULL, (int16_t *)sigout);
 
   int16_t *tmp2 = (int16_t *)sigout;
   int16_t *tmp1 = (int16_t *)out;

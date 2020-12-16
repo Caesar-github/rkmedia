@@ -24,7 +24,7 @@ if (AEC)
       filter/aec.cc)
   set(EASY_MEDIA_FILTER_DEPENDENT_LIBS
       ${EASY_MEDIA_FILTER_DEPENDENT_LIBS}
-      RKAP_AEC
+      RKAP_3A
       RKAP_Common)
 endif()
 
