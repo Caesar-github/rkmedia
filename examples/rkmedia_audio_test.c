@@ -17,7 +17,7 @@
 #define MP2_NB_SAMPLES 1152
 //#define ALSA_PATH "default:CARD=rockchiprk809co" // get from "arecord -L"
 #define ALSA_PATH "default" // get from "arecord -L"
-#define VQEFILE "/usr/share/rkap_aec/para/16k/RKAP_AecPara.bin"
+#define VQEFILE "/usr/share/rkap_3a/para/16k/RKAP_3A_Para.bin"
 
 static bool quit = false;
 static void sigterm_handler(int sig) {

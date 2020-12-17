@@ -6,7 +6,7 @@
 #include "filter.h"
 #include <assert.h>
 extern "C" {
-#include <AP_AEC.h>
+#include <RKAP_3A.h>
 }
 
 #define DEBUG_FILE 0
@@ -77,9 +77,9 @@ AECFilter::AECFilter(const char *param) : aec_handle(nullptr), prebuf(nullptr) {
   assert(nb_samples > 0);
   if (param_path.empty()) {
     if (sample_rate == 8000)
-      param_path = "/usr/share/rkap_aec/para/8k/RKAP_AecPara.bin";
+      param_path = "/usr/share/rkap_3a/para/8k/RKAP_3A_Para.bin";
     else
-      param_path = "/usr/share/rkap_aec/para/16k/RKAP_AecPara.bin";
+      param_path = "/usr/share/rkap_3a/para/16k/RKAP_3A_Para.bin";
   }
 
   RKAP_AEC_State state;
@@ -89,7 +89,7 @@ AECFilter::AECFilter(const char *param) : aec_handle(nullptr), prebuf(nullptr) {
 
   RKMEDIA_LOGI("AEC: param file = %s\n", param_path.c_str());
 
-  aec_handle = AEC_Init(&state, AEC_TX_TYPE);
+  aec_handle = RKAP_3A_Init(&state, AEC_TX_TYPE);
   assert(aec_handle);
 
   if (format == SAMPLE_FMT_S16)
@@ -110,7 +110,7 @@ AECFilter::AECFilter(const char *param) : aec_handle(nullptr), prebuf(nullptr) {
 }
 
 AECFilter::~AECFilter() {
-  AEC_Destroy(aec_handle);
+  RKAP_3A_Destroy(aec_handle);
   if (prebuf)
     free(prebuf);
 #if DEBUG_FILE
@@ -149,7 +149,7 @@ int AECFilter::Process(std::shared_ptr<MediaBuffer> input,
     sigref = (short *)input->GetPtr() + nb_samples,
     sigout = (short *)dst->GetPtr();
   }
-  AEC_Process(aec_handle, sigin, sigref, sigout);
+  RKAP_3A_Process(aec_handle, sigin, sigref, sigout);
 
   dst->SetSamples(nb_samples);
   dst->SetUSTimeStamp(input->GetUSTimeStamp());
