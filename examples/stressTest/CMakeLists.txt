@@ -7,6 +7,17 @@
 if(V4L2_CAPTURE)
 if(RKMPP_ENCODER)
 #--------------------------
+#  rkmedia_venc_stress_test
+#--------------------------
+add_executable(rkmedia_venc_stress_test rkmedia_venc_stress_test.c)
+add_dependencies(rkmedia_venc_stress_test easymedia)
+target_link_libraries(rkmedia_venc_stress_test easymedia)
+target_include_directories(rkmedia_venc_stress_test PRIVATE
+                           ${CMAKE_SOURCE_DIR}/include
+                           ${PROJECT_SOURCE_DIR})
+install(TARGETS rkmedia_venc_stress_test RUNTIME DESTINATION "bin")
+
+#--------------------------
 #  rkmedia_vi_venc_change_resolution_test
 #--------------------------
 link_directories(${PROJECT_SOURCE_DIR}/librtsp/)
