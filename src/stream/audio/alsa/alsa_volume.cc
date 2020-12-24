@@ -22,9 +22,9 @@ static int mixer_control(const char *device, SUB_DEVICE subdev, OPS ops,
   int ret;
   snd_mixer_t *handle;
   snd_mixer_elem_t *elem;
-  snd_mixer_selem_id_t *sid;
+  //snd_mixer_selem_id_t *sid;
 
-  snd_mixer_selem_id_alloca(&sid);
+  //snd_mixer_selem_id_alloca(&sid);
   volMin = 0;
   volMax = 0;
   leftVal = 0;

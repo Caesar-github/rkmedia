@@ -3844,6 +3844,8 @@ RK_S32 RK_MPI_AI_SetChnAttr(AI_CHN AiChn, const AI_CHN_ATTR_S *pstAttr) {
 RK_S32 RK_MPI_AI_EnableChn(AI_CHN AiChn) {
   if ((AiChn < 0) || (AiChn >= AI_MAX_CHN_NUM))
     return RK_ERR_AI_INVALID_CHNID;
+
+  RKMEDIA_LOGI("%s: Enable AI[%d] Start...\n", __func__, AiChn);
   g_ai_mtx.lock();
   if (g_ai_chns[AiChn].status != CHN_STATUS_READY) {
     g_ai_mtx.unlock();
@@ -3866,8 +3868,9 @@ RK_S32 RK_MPI_AI_EnableChn(AI_CHN AiChn) {
   g_ai_chns[AiChn].rkmedia_flow->SetOutputCallBack(&g_ai_chns[AiChn],
                                                    FlowOutputCallback);
   g_ai_chns[AiChn].status = CHN_STATUS_OPEN;
-
   g_ai_mtx.unlock();
+  RKMEDIA_LOGI("%s: Enable AI[%d] End...\n", __func__, AiChn);
+
   return RK_ERR_SYS_OK;
 }
 
@@ -3875,6 +3878,7 @@ RK_S32 RK_MPI_AI_DisableChn(AI_CHN AiChn) {
   if ((AiChn < 0) || (AiChn > AI_MAX_CHN_NUM))
     return RK_ERR_AI_INVALID_CHNID;
 
+  RKMEDIA_LOGI("%s: Disable AI[%d] Start...\n", __func__, AiChn);
   g_ai_mtx.lock();
   if (g_ai_chns[AiChn].status == CHN_STATUS_BIND) {
     g_ai_mtx.unlock();
@@ -3885,6 +3889,7 @@ RK_S32 RK_MPI_AI_DisableChn(AI_CHN AiChn) {
   RkmediaChnClearBuffer(&g_ai_chns[AiChn]);
   g_ai_chns[AiChn].status = CHN_STATUS_CLOSED;
   g_ai_mtx.unlock();
+  RKMEDIA_LOGI("%s: Disable AI[%d] End...\n", __func__, AiChn);
 
   return RK_ERR_SYS_OK;
 }
@@ -4083,6 +4088,8 @@ RK_S32 RK_MPI_AO_EnableChn(AO_CHN AoChn) {
     return (g_ao_chns[AoChn].status > CHN_STATUS_READY) ? -RK_ERR_VO_EXIST
                                                         : -RK_ERR_VO_NOT_CONFIG;
   }
+
+  RKMEDIA_LOGI("%s: Enable AO[%d] Start...\n", __func__, AoChn);
   SampleInfo info;
   info.channels = g_ao_chns[AoChn].ao_attr.attr.u32Channels;
   info.fmt = (SampleFormat)g_ao_chns[AoChn].ao_attr.attr.enSampleFormat;
@@ -4098,6 +4105,8 @@ RK_S32 RK_MPI_AO_EnableChn(AO_CHN AoChn) {
   g_ao_chns[AoChn].status = CHN_STATUS_OPEN;
   RkmediaChnInitBuffer(&g_ao_chns[AoChn]);
   g_ao_mtx.unlock();
+  RKMEDIA_LOGI("%s: Enable AO[%d] End...\n", __func__, AoChn);
+
   return RK_ERR_SYS_OK;
 }
 
@@ -4110,10 +4119,12 @@ RK_S32 RK_MPI_AO_DisableChn(AO_CHN AoChn) {
     g_ao_mtx.unlock();
     return -RK_ERR_AO_BUSY;
   }
+  RKMEDIA_LOGI("%s: Disable AO[%d] Start...\n", __func__, AoChn);
   g_ao_chns[AoChn].rkmedia_flow.reset();
   RkmediaChnClearBuffer(&g_ao_chns[AoChn]);
   g_ao_chns[AoChn].status = CHN_STATUS_CLOSED;
   g_ao_mtx.unlock();
+  RKMEDIA_LOGI("%s: Disable AO[%d] End...\n", __func__, AoChn);
 
   return RK_ERR_SYS_OK;
 }
