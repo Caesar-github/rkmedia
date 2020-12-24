@@ -313,7 +313,7 @@ MEDIA_BUFFER RK_MPI_MB_ConvertToImgBuffer(MEDIA_BUFFER mb,
   RK_U32 buf_size = CalPixFmtSize(rkmediaPixFormat, pstImageInfo->u32HorStride,
                                   pstImageInfo->u32VerStride, 1);
   if (buf_size > mb_impl->rkmedia_mb->GetSize()) {
-    RKMEDIA_LOGE("%s: buffer size:%d do not match imgInfo(%dx%d, %s)!\n",
+    RKMEDIA_LOGE("%s: buffer size:%zu do not match imgInfo(%dx%d, %s)!\n",
                  __func__, mb_impl->rkmedia_mb->GetSize(),
                  pstImageInfo->u32HorStride, pstImageInfo->u32VerStride,
                  strPixFormat.c_str());

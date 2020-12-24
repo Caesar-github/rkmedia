@@ -44,10 +44,10 @@ void video_packet_cb(MEDIA_BUFFER mb) {
 
   if (g_output_file) {
     fwrite(RK_MPI_MB_GetPtr(mb), 1, RK_MPI_MB_GetSize(mb), g_output_file);
-    printf("#Write packet-%d, %s, size %d\n", packet_cnt, nalu_type,
+    printf("#Write packet-%d, %s, size %zu\n", packet_cnt, nalu_type,
            RK_MPI_MB_GetSize(mb));
   } else {
-    printf("#Get packet-%d, %s, size %d\n", packet_cnt, nalu_type,
+    printf("#Get packet-%d, %s, size %zu\n", packet_cnt, nalu_type,
            RK_MPI_MB_GetSize(mb));
   }
   RK_MPI_MB_ReleaseBuffer(mb);

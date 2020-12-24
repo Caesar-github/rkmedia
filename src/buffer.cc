@@ -623,12 +623,12 @@ void BufferPool::DumpInfo() {
   int id = 0;
   RKMEDIA_LOGI("##BufferPool DumpInfo:%p\n", this);
   RKMEDIA_LOGI("\tcnt:%d\n", buf_cnt);
-  RKMEDIA_LOGI("\tsize:%zu\n", buf_size);
-  RKMEDIA_LOGI("\tready buffers(%d):\n", ready_buffers.size());
+  RKMEDIA_LOGI("\tsize:%d\n", buf_size);
+  RKMEDIA_LOGI("\tready buffers(%zu):\n", ready_buffers.size());
   for (auto dev : ready_buffers)
     RKMEDIA_LOGI("\t  #%02d Pool:%p, mgb:%p, ptr:%p\n", id++, dev->pool, dev,
                  dev->GetPtr());
-  RKMEDIA_LOGI("\tbusy buffers(%d):\n", busy_buffers.size());
+  RKMEDIA_LOGI("\tbusy buffers(%zu):\n", busy_buffers.size());
   id = 0;
   for (auto dev : busy_buffers)
     RKMEDIA_LOGI("\t  #%02d Pool:%p, mgb:%p, ptr:%p\n", id++, dev->pool, dev,

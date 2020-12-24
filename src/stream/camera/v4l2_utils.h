@@ -12,7 +12,9 @@
 
 #include "key_string.h"
 #include "media_type.h"
+#ifdef RKAIQ
 #include "rkaiq/common/mediactl/mediactl.h"
+#endif
 #include "utils.h"
 
 #ifndef V4L2_PIX_FMT_FBC2

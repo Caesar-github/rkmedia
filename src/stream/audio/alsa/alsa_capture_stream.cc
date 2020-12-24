@@ -207,7 +207,7 @@ std::shared_ptr<MediaBuffer> AlsaCaptureStream::Read() {
       MediaBuffer::Alloc2(buffer_size), alsa_sample_info);
 
   if (!sample_buffer) {
-    RKMEDIA_LOGI("Alloc audio frame buffer failed:%d,%d!\n", buffer_size,
+    RKMEDIA_LOGI("Alloc audio frame buffer failed:%d,%zu!\n", buffer_size,
                  frame_size);
     return nullptr;
   }
