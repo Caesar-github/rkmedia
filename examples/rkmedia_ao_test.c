@@ -21,7 +21,7 @@ static void sigterm_handler(int sig) {
   quit = true;
 }
 
-static RK_CHAR optstr[] = "?::d:c:r:s:i:";
+static RK_CHAR optstr[] = "?::d:c:r:s:i:v:";
 static void print_usage(const RK_CHAR *name) {
   printf("usage example:\n");
   printf("\t%s [-d default] [-r 16000] [-c 2] [-s 1024] -i /tmp/ao.pcm\n",
@@ -30,6 +30,7 @@ static void print_usage(const RK_CHAR *name) {
   printf("\t-r: sample rate, Default:16000\n");
   printf("\t-c: channel count, Default:2\n");
   printf("\t-s: frames cnt, Default:1024\n");
+  printf("\t-v: volume, Default:50 (0-100)\n");
   printf("\t-i: input path.\n");
   printf("Notice: fmt always s16_le\n");
 }
@@ -38,6 +39,7 @@ int main(int argc, char *argv[]) {
   RK_U32 u32SampleRate = 16000;
   RK_U32 u32ChnCnt = 2;
   RK_U32 u32FrameCnt = 1024;
+  RK_S32 s32Volume = 50;
   // default:CARD=rockchiprk809co
   RK_CHAR *pDeviceName = "default";
   RK_CHAR *pInputPath = NULL;
@@ -58,6 +60,9 @@ int main(int argc, char *argv[]) {
     case 's':
       u32FrameCnt = atoi(optarg);
       break;
+    case 'v':
+      s32Volume = atoi(optarg);
+      break;
     case 'i':
       pInputPath = optarg;
       break;
@@ -74,9 +79,10 @@ int main(int argc, char *argv[]) {
   }
 
   printf("#Device: %s\n", pDeviceName);
-  printf("#SampleRate: %d\n", u32SampleRate);
-  printf("#Channel Count: %d\n", u32ChnCnt);
-  printf("#Frame Count: %d\n", u32FrameCnt);
+  printf("#SampleRate: %u\n", u32SampleRate);
+  printf("#Channel Count: %u\n", u32ChnCnt);
+  printf("#Frame Count: %u\n", u32FrameCnt);
+  printf("#Volume: %d\n", s32Volume);
   printf("#Output Path: %s\n", pInputPath);
 
   FILE *file = fopen(pInputPath, "r");
@@ -99,6 +105,29 @@ int main(int argc, char *argv[]) {
     printf("ERROR: create ao[0] failed! ret=%d\n", ret);
     return -1;
   }
+
+  RK_S32 s32CurrentVolmue = 0;
+  ret = RK_MPI_AO_GetVolume(0, &s32CurrentVolmue);
+  if (ret) {
+    printf("Get Volume(before) failed! ret=%d\n", ret);
+    return -1;
+  }
+  printf("#Before Volume set, volume=%d\n", s32CurrentVolmue);
+
+  ret = RK_MPI_AO_SetVolume(0, s32Volume);
+  if (ret) {
+    printf("Set Volume failed! ret=%d\n", ret);
+    return -1;
+  }
+
+  s32CurrentVolmue = 0;
+  ret = RK_MPI_AO_GetVolume(0, &s32CurrentVolmue);
+  if (ret) {
+    printf("Get Volume(after) failed! ret=%d\n", ret);
+    return -1;
+  }
+  printf("#After Volume set, volume=%d\n", s32CurrentVolmue);
+
 
   printf("%s initial finish\n", __func__);
   signal(SIGINT, sigterm_handler);

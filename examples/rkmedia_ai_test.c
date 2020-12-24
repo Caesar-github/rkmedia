@@ -55,7 +55,7 @@ static void *GetMediaBuffer(void *path) {
   return NULL;
 }
 
-static RK_CHAR optstr[] = "?::d:c:r:s:o:";
+static RK_CHAR optstr[] = "?::d:c:r:s:o:v:";
 static void print_usage(const RK_CHAR *name) {
   printf("usage example:\n");
   printf("\t%s [-d default] [-r 16000] [-c 2] [-s 1024] -o /tmp/ai.pcm\n",
@@ -64,6 +64,7 @@ static void print_usage(const RK_CHAR *name) {
   printf("\t-r: sample rate, Default:16000\n");
   printf("\t-c: channel count, Default:2\n");
   printf("\t-s: frames cnt, Default:1024\n");
+  printf("\t-v: volume, Default:50 (0-100)\n");
   printf("\t-o: output path, Default:\"/tmp/ai.pcm\"\n");
   printf("Notice: fmt always s16_le\n");
 }
@@ -72,10 +73,12 @@ int main(int argc, char *argv[]) {
   RK_U32 u32SampleRate = 16000;
   RK_U32 u32ChnCnt = 2;
   RK_U32 u32FrameCnt = 1024;
+  RK_S32 s32Volume = 50;
   // default:CARD=rockchiprk809co
   RK_CHAR *pDeviceName = "default";
   RK_CHAR *pOutPath = "/tmp/ai.pcm";
   int c;
+  int ret = 0;
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
     switch (c) {
@@ -91,6 +94,9 @@ int main(int argc, char *argv[]) {
     case 's':
       u32FrameCnt = atoi(optarg);
       break;
+    case 'v':
+      s32Volume = atoi(optarg);
+      break;
     case 'o':
       pOutPath = optarg;
       break;
@@ -102,9 +108,10 @@ int main(int argc, char *argv[]) {
   }
 
   printf("#Device: %s\n", pDeviceName);
-  printf("#SampleRate: %d\n", u32SampleRate);
-  printf("#Channel Count: %d\n", u32ChnCnt);
-  printf("#Frame Count: %d\n", u32FrameCnt);
+  printf("#SampleRate: %u\n", u32SampleRate);
+  printf("#Channel Count: %u\n", u32ChnCnt);
+  printf("#Frame Count: %u\n", u32FrameCnt);
+  printf("#Volume: %d\n", s32Volume);
   printf("#Output Path: %s\n", pOutPath);
 
   RK_MPI_SYS_Init();
@@ -117,12 +124,38 @@ int main(int argc, char *argv[]) {
   ai_attr.u32Channels = u32ChnCnt;
   ai_attr.enAiLayout = AI_LAYOUT_NORMAL;
 
-  RK_MPI_AI_SetChnAttr(0, &ai_attr);
-  RK_MPI_AI_EnableChn(0);
+  ret = RK_MPI_AI_SetChnAttr(0, &ai_attr);
+  ret |= RK_MPI_AI_EnableChn(0);
+  if (ret) {
+    printf("Enable AI[0] failed! ret=%d\n", ret);
+    return -1;
+  }
+
+  RK_S32 s32CurrentVolmue = 0;
+  ret = RK_MPI_AI_GetVolume(0, &s32CurrentVolmue);
+  if (ret) {
+    printf("Get Volume(before) failed! ret=%d\n", ret);
+    return -1;
+  }
+  printf("#Before Volume set, volume=%d\n", s32CurrentVolmue);
+
+  ret = RK_MPI_AI_SetVolume(0, s32Volume);
+  if (ret) {
+    printf("Set Volume failed! ret=%d\n", ret);
+    return -1;
+  }
+
+  s32CurrentVolmue = 0;
+  ret = RK_MPI_AI_GetVolume(0, &s32CurrentVolmue);
+  if (ret) {
+    printf("Get Volume(after) failed! ret=%d\n", ret);
+    return -1;
+  }
+  printf("#After Volume set, volume=%d\n", s32CurrentVolmue);
 
   pthread_t read_thread;
   pthread_create(&read_thread, NULL, GetMediaBuffer, pOutPath);
-  int ret = RK_MPI_AI_StartStream(0);
+  ret = RK_MPI_AI_StartStream(0);
   if (ret) {
     printf("Start AI failed! ret=%d\n", ret);
     return -1;
