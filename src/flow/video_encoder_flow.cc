@@ -141,6 +141,8 @@ bool encode(Flow *f, MediaBufferVector &input_vector) {
   // when output fps less len input fps, enc->Proccess() may
   // return a empty mediabuff.
   if (dst->GetValidSize() > 0) {
+    // Pass TsNodeInfo to new buffer.
+    src->TsListCopyTo(dst);
     ret = vf->SetOutput(dst, 0);
     if (vf->extra_output)
       ret &= vf->SetOutput(extra_dst, 1);

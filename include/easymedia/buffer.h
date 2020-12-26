@@ -33,6 +33,19 @@ enum drm_rockchip_gem_mem_type {
   ROCKCHIP_BO_MASK = ROCKCHIP_BO_CONTIG | ROCKCHIP_BO_CACHABLE | ROCKCHIP_BO_WC
 };
 
+class TimestampNode {
+public:
+  TimestampNode(std::string node_name, int64_t time_stamp) :
+    NodeName(node_name), TimeStamp(time_stamp) { }
+  ~TimestampNode() {};
+  std::string GetName() { return NodeName; }
+  int64_t GetValue() { return TimeStamp; }
+
+private:
+  std::string NodeName;
+  int64_t TimeStamp;
+};
+
 // wrapping existing buffer
 class _API MediaBuffer {
 public:
@@ -153,6 +166,27 @@ public:
   size_t GetDbgInfoSize() const { return dbg_info_size; }
   void SetDbgInfoSize(size_t s) { dbg_info_size = s; }
 
+  void TsListRecord(std::string name, int64_t time_stamp) {
+    auto ts_node = std::make_shared<TimestampNode>(name, time_stamp);
+    TsList.push_back(ts_node);
+  }
+  void TsListCopyTo(std::shared_ptr<MediaBuffer> mb) {
+    std::vector<std::shared_ptr<TimestampNode>>::iterator it;
+    for (it = TsList.begin(); it != TsList.end(); it++)
+      mb->TsListRecord((*it)->GetName(), (*it)->GetValue());
+  }
+  void TsListReset() { TsList.clear(); }
+  void TsListDump() {
+    int64_t ts_pre = 0;
+    int64_t ts_cur = 0;
+    std::vector<std::shared_ptr<TimestampNode>>::iterator it;
+    for (it = TsList.begin(); it != TsList.end(); it++) {
+      ts_cur = (*it)->GetValue();
+      printf("#[%s]:%0.3fms\n", (*it)->GetName().c_str(), (ts_cur - ts_pre) / 1000.0);
+      ts_pre = ts_cur;
+    }
+  }
+
 private:
   // copy attributs except buffer
   void CopyAttribute(MediaBuffer &src_attr);
@@ -171,6 +205,8 @@ private:
   size_t dbg_info_size; // Debug info size.
   std::shared_ptr<void> userdata;
   std::vector<std::shared_ptr<void>> related_sptrs;
+  // for record timestamp
+  std::vector<std::shared_ptr<TimestampNode>>TsList;
 };
 
 MediaBuffer::MemType StringToMemType(const char *s);

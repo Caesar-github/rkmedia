@@ -135,6 +135,13 @@ void FlowCoroutine::RunOnce() {
   bool ret = true;
   (this->*fetch_input_func)(in_vector);
 
+  for (unsigned int i = 0; i < in_vector.size(); i++) {
+    if (in_vector[i]) {
+      std::string node_name = std::string(flow->GetFlowTag()) + ":FetchInput";
+      in_vector[i]->TsListRecord(node_name, gettimeofday());
+    }
+  }
+
   if (flow->GetRunTimesRemaining()) {
 #ifndef NDEBUG
     {
@@ -777,6 +784,10 @@ void Flow::SendInput(std::shared_ptr<MediaBuffer> &input, int in_slot_index) {
   }
   if (enable) {
     auto &in = v_input[in_slot_index];
+    if (input) {
+      std::string node_name = std::string(GetFlowTag()) + ":SendInput";
+      input->TsListRecord(node_name, gettimeofday());
+    }
     CALL_MEMBER_FN(in, in.send_input_behavior)(input);
   }
 }
@@ -788,6 +799,9 @@ bool Flow::SetOutput(const std::shared_ptr<MediaBuffer> &output,
     RKMEDIA_LOGE("Output slot[%d] is vaild!\n", out_slot_index);
     return false;
   }
+
+  std::string node_name = std::string(GetFlowTag()) + ":SetOutput";
+  output->TsListRecord(node_name, gettimeofday());
 
   if (out_callback_ && output)
     out_callback_(out_handler_, output);
