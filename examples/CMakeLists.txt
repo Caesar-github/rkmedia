@@ -411,7 +411,7 @@ endif() #if(DRM_DISPLAY)
 ############################################################
 # STRESS TEST
 ############################################################
-option(COMPILES_STRESS_TEST "Enable stress tests" ON)
+option(COMPILES_STRESS_TEST "Enable stress tests" OFF)
 if(COMPILES_STRESS_TEST)
   add_subdirectory(stressTest)
 endif()
