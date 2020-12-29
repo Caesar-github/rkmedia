@@ -245,10 +245,22 @@ void RockxLandmarkPostProcess(rockx_image_t &input_img,
       fprintf(stderr, "rockx_face_landmark error %d\n", ret);
       return;
     }
-    memcpy(&result_item.landmark_info.object, &out_landmark,
-           sizeof(rockx_face_landmark_t));
+    // memcpy(&result_item.landmark_info.object, &out_landmark,
+    //        sizeof(rockx_face_landmark_t));
     result_item.img_w = input_img.width;
     result_item.img_h = input_img.height;
+    result_item.landmark_info.object.image_width = out_landmark.image_width;
+    result_item.landmark_info.object.image_height = out_landmark.image_height;
+    result_item.landmark_info.object.face_box.left = out_landmark.face_box.left;
+    result_item.landmark_info.object.face_box.top = out_landmark.face_box.top;
+    result_item.landmark_info.object.face_box.right = out_landmark.face_box.right;
+    result_item.landmark_info.object.face_box.bottom = out_landmark.face_box.bottom;
+    result_item.landmark_info.object.score = out_landmark.score;
+    result_item.landmark_info.object.landmarks_count = out_landmark.landmarks_count;
+    for (int j = 0; j < out_landmark.landmarks_count && j < RKMEDIA_ROCKX_LANDMARK_MAX_COUNT; j++) {
+      result_item.landmark_info.object.landmarks[j].x = out_landmark.landmarks[j].x;
+      result_item.landmark_info.object.landmarks[j].y = out_landmark.landmarks[j].y;
+    }
     nn_result.push_back(result_item);
   }
 }
@@ -267,7 +279,13 @@ void ROCKXFilter::RockxPoseBodyAsyncCallback(void *result, size_t result_size,
   result_item.type = NNRESULT_TYPE_BODY;
   for (int i = 0; i < key_points_array->count; i++) {
     rockx_keypoints_t *object = &key_points_array->keypoints[i];
-    memcpy(&result_item.body_info.object, object, sizeof(rockx_keypoints_t));
+    result_item.body_info.object.count = object->count;
+    for (int j = 0; j < object->count; j++) {
+      result_item.body_info.object.points[j].x = object->points[j].x;
+      result_item.body_info.object.points[j].y = object->points[j].y;
+      result_item.body_info.object.score[j] = object->score[j];
+    }
+    // memcpy(&result_item.body_info.object, object, sizeof(rockx_keypoints_t));
     result_item.img_w = ctx->GetInputWidth();
     result_item.img_h = ctx->GetInputHeight();
     body_results.push_back(result_item);
@@ -433,7 +451,13 @@ int ROCKXFilter::ProcessRockxFaceDetect(
   auto &nn_result = input_buffer->GetRknnResult();
   for (int i = 0; i < face_array_track.count; i++) {
     rockx_object_t *object = &face_array_track.object[i];
-    memcpy(&result_item.face_info.object, object, sizeof(rockx_object_t));
+    // memcpy(&result_item.face_info.object, object, sizeof(rockx_object_t));
+    result_item.face_info.object.cls_idx = object->cls_idx;
+    result_item.face_info.object.score = object->score;
+    result_item.face_info.object.box.left = object->box.left;
+    result_item.face_info.object.box.top = object->box.top;
+    result_item.face_info.object.box.right = object->box.right;
+    result_item.face_info.object.box.bottom = object->box.bottom;
     result_item.img_w = input_img.width;
     result_item.img_h = input_img.height;
     nn_result.push_back(result_item);
@@ -535,7 +559,13 @@ int ROCKXFilter::ProcessRockxPoseBody(
   auto &nn_result = input_buffer->GetRknnResult();
   for (int i = 0; i < key_points_array.count; i++) {
     rockx_keypoints_t *object = &key_points_array.keypoints[i];
-    memcpy(&result_item.body_info.object, object, sizeof(rockx_keypoints_t));
+    result_item.body_info.object.count = object->count;
+    for (int j = 0; j < object->count; j++) {
+      result_item.body_info.object.points[j].x = object->points[j].x;
+      result_item.body_info.object.points[j].y = object->points[j].y;
+      result_item.body_info.object.score[j] = object->score[j];
+    }
+    // memcpy(&result_item.body_info.object, object, sizeof(rockx_keypoints_t));
     result_item.img_w = input_img.width;
     result_item.img_h = input_img.height;
     nn_result.push_back(result_item);
@@ -584,8 +614,13 @@ int ROCKXFilter::ProcessRockxObjectDetect(
   RknnResult nn_result;
   memset(&nn_result, 0, sizeof(RknnResult));
   for (int i = 0; i < object_array.count; i++) {
-    rockx_object_t *object_g = &(object_array.object[i]);
-    nn_result.object_info = *object_g;
+    // rockx_object_t *object_g = &(object_array.object[i]);
+    nn_result.object_info.cls_idx = object_array.object[i].cls_idx;
+    nn_result.object_info.score = object_array.object[i].score;
+    nn_result.object_info.box.left = object_array.object[i].box.left;
+    nn_result.object_info.box.top = object_array.object[i].box.top;
+    nn_result.object_info.box.right = object_array.object[i].box.right;
+    nn_result.object_info.box.bottom = object_array.object[i].box.bottom;
     nn_list.push_back(nn_result);
   }
 
@@ -595,8 +630,14 @@ int ROCKXFilter::ProcessRockxObjectDetect(
     nn_array[i].img_w = input_img.width;
     nn_array[i].img_h = input_img.height;
     nn_array[i].type = NNRESULT_TYPE_OBJECT_DETECT;
-    memcpy(&nn_array[i].object_info, &object_array.object[i],
-           sizeof(rockx_object_t));
+    // memcpy(&nn_array[i].object_info, &object_array.object[i],
+    //        sizeof(rockx_object_t));
+    nn_array[i].object_info.score = object_array.object[i].score;
+    nn_array[i].object_info.cls_idx = object_array.object[i].cls_idx;
+    nn_array[i].object_info.box.left = object_array.object[i].box.left;
+    nn_array[i].object_info.box.top = object_array.object[i].box.top;
+    nn_array[i].object_info.box.right = object_array.object[i].box.right;
+    nn_array[i].object_info.box.bottom = object_array.object[i].box.bottom;
   }
   if (callback_)
     callback_(this, NNRESULT_TYPE_OBJECT_DETECT, nn_array, object_array.count);

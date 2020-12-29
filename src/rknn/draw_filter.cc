@@ -152,11 +152,11 @@ void DrawFilter::DoHwDraw(std::list<RknnResult> &nn_result) {
 #endif
 #ifdef USE_ROCKX
     if (info.type == NNRESULT_TYPE_OBJECT_DETECT) {
-      rockx_object_t object_det = info.object_info;
-      rect.left = UPALIGNTO16(object_det.box.left);
-      rect.right = DOWNALIGNTO16(object_det.box.right);
-      rect.top = UPALIGNTO16(object_det.box.top);
-      rect.bottom = DOWNALIGNTO16(object_det.box.bottom);
+      Rect object_det_box = info.object_info.box;
+      rect.left = UPALIGNTO16(object_det_box.left);
+      rect.right = DOWNALIGNTO16(object_det_box.right);
+      rect.top = UPALIGNTO16(object_det_box.top);
+      rect.bottom = DOWNALIGNTO16(object_det_box.bottom);
       rects.push_back(rect);
     }
 #endif
@@ -209,9 +209,9 @@ void DrawFilter::DoDraw(std::shared_ptr<ImageBuffer> &buffer,
 #endif
 #ifdef USE_ROCKX
     if (info_result.type == NNRESULT_TYPE_OBJECT_DETECT) {
-      rockx_object_t object_det = info_result.object_info;
-      Rect rect_rockx = {object_det.box.left, object_det.box.top,
-                         object_det.box.right, object_det.box.bottom};
+      Rect object_det_box = info_result.object_info.box;
+      Rect rect_rockx = {object_det_box.left, object_det_box.top,
+                         object_det_box.right, object_det_box.bottom};
       DoDrawRect(buffer, rect_rockx);
     }
 #endif
@@ -234,7 +234,7 @@ void DrawFilter::ConvertRect(std::list<RknnResult> &nn_list) {
 #endif
 #ifdef USE_ROCKX
     if (nn.type == NNRESULT_TYPE_OBJECT_DETECT) {
-      rockx_rect_t *rect = &nn.object_info.box;
+      Rect *rect = &nn.object_info.box;
       rect->left = rect->left + offset_x_;
       rect->top = rect->top + offset_y_;
       rect->right = rect->right + offset_x_;

@@ -15,6 +15,7 @@
 #endif
 
 #define RKNN_PICTURE_PATH_LEN (512)
+#define RKMEDIA_ROCKX_LANDMARK_MAX_COUNT (128)
 
 using RknnCallBack =
     std::add_pointer<void(void *handler, int type, void *ptr, int size)>::type;
@@ -26,6 +27,11 @@ typedef struct Rect {
   int right;
   int bottom;
 } Rect;
+
+typedef struct {
+  int x;
+  int y;
+} RkmediaPoint;
 
 typedef enum {
   FACE_REG_NONE = -1,
@@ -43,6 +49,27 @@ typedef struct {
 } FaceReg;
 
 typedef struct {
+  int cls_idx;
+  float score;
+  Rect box;
+} RkmediaRockxObject;
+
+typedef struct {
+  int image_width;
+  int image_height;
+  Rect face_box;
+  int landmarks_count;
+  RkmediaPoint landmarks[RKMEDIA_ROCKX_LANDMARK_MAX_COUNT];
+  float score;
+} RkmediaRockxFaceLandmark;
+
+typedef struct {
+    int count;
+    RkmediaPoint points[32];
+    float score[32];
+} RkmediaRockxKeypoints;
+
+typedef struct {
 #ifdef USE_ROCKFACE
   rockface_det_t base;
   rockface_attribute_t attr;
@@ -50,31 +77,23 @@ typedef struct {
   rockface_angle_t angle;
   rockface_feature_t feature;
 #endif
-#ifdef USE_ROCKX
-  rockx_object_t object;
-#endif
+  RkmediaRockxObject object;
   FaceReg face_reg;
 } FaceInfo;
 
 typedef struct {
-#ifdef USE_ROCKX
-  rockx_face_landmark_t object;
-#endif
+  RkmediaRockxFaceLandmark object;
 } LandmarkInfo;
 
 typedef struct {
 #ifdef USE_ROCKFACE
   rockface_det_t base;
 #endif
-#ifdef USE_ROCKX
-  rockx_keypoints_t object;
-#endif
+  RkmediaRockxKeypoints object;
 } BodyInfo;
 
 typedef struct {
-#ifdef USE_ROCKX
-  rockx_keypoints_t object;
-#endif
+  RkmediaRockxKeypoints object;
 } FingerInfo;
 
 typedef enum {
@@ -107,9 +126,7 @@ typedef struct {
     FaceInfo face_info;
     LandmarkInfo landmark_info;
     FingerInfo finger_info;
-#ifdef USE_ROCKX
-    rockx_object_t object_info;
-#endif
+    RkmediaRockxObject object_info;
   };
 } RknnResult;
 
