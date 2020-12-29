@@ -841,7 +841,7 @@ static RK_S32 SAMPLE_COMMON_VENC_SNAP_Start(RK_S32 chnId) {
   venc_chn_attr.stVencAttr.u32PicHeight = cfg.session_cfg[DRAW_INDEX].u32Height;
   venc_chn_attr.stVencAttr.u32VirWidth = cfg.session_cfg[DRAW_INDEX].u32Width;
   venc_chn_attr.stVencAttr.u32VirHeight = cfg.session_cfg[DRAW_INDEX].u32Height;
-  RK_S32 ret = RK_MPI_VENC_CreateJpegLightChn(chnId, &venc_chn_attr);
+  RK_S32 ret = RK_MPI_VENC_CreateChn(chnId, &venc_chn_attr);
   if (ret) {
     printf("Create Venc(JPEG) failed! ret=%d\n", ret);
     g_flag_run = 0;

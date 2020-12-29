@@ -414,7 +414,7 @@ int main(int argc, char *argv[]) {
   venc_chn_attr.stVencAttr.u32PicHeight = rga_arg.u32SrcHeight;
   venc_chn_attr.stVencAttr.u32VirWidth = rga_arg.u32SrcWidth;
   venc_chn_attr.stVencAttr.u32VirHeight = rga_arg.u32SrcHeight;
-  ret = RK_MPI_VENC_CreateJpegLightChn(0, &venc_chn_attr);
+  ret = RK_MPI_VENC_CreateChn(0, &venc_chn_attr);
   if (ret) {
     printf("Create Venc[0] failed! ret=%d\n", ret);
     return -1;

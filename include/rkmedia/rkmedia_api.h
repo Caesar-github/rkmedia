@@ -97,12 +97,13 @@ _CAPI RK_S32 RK_MPI_VI_StartStream(VI_PIPE ViPipe, VI_CHN ViChn);
  ********************************************************************/
 _CAPI RK_S32 RK_MPI_VENC_CreateChn(VENC_CHN VencChn,
                                    VENC_CHN_ATTR_S *stVencChnAttr);
+// Deprecated application interfaces will be abandoned
+_CAPI RK_S32 RK_MPI_VENC_CreateJpegLightChn(VENC_CHN VencChn,
+                                            VENC_CHN_ATTR_S *stVencChnAttr);
 _CAPI RK_S32 RK_MPI_VENC_GetVencChnAttr(VENC_CHN VencChn,
                                         VENC_CHN_ATTR_S *stVencChnAttr);
 _CAPI RK_S32 RK_MPI_VENC_SetVencChnAttr(VENC_CHN VencChn,
                                         VENC_CHN_ATTR_S *stVencChnAttr);
-_CAPI RK_S32 RK_MPI_VENC_CreateJpegLightChn(VENC_CHN VencChn,
-                                            VENC_CHN_ATTR_S *stVencChnAttr);
 _CAPI RK_S32 RK_MPI_VENC_GetRcParam(VENC_CHN VencChn,
                                     VENC_RC_PARAM_S *pstRcParam);
 _CAPI RK_S32 RK_MPI_VENC_SetRcParam(VENC_CHN VencChn,
