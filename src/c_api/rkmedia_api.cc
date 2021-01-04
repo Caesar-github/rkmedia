@@ -168,6 +168,8 @@ std::mutex g_vo_mtx;
 RkmediaChannel g_vdec_chns[VDEC_MAX_CHN_NUM];
 std::mutex g_vdec_mtx;
 
+static unsigned char g_sys_init;
+
 static inline void RkmediaPushPipFd(int fd) {
   int i = 0;
   ssize_t count = write(fd, &i, sizeof(i));
@@ -295,6 +297,9 @@ static void Reset_Channel_Table(RkmediaChannel *tbl, int cnt, MOD_ID_E mid) {
 }
 
 RK_S32 RK_MPI_SYS_Init() {
+  if (g_sys_init)
+    return -RK_ERR_SYS_OP_REPEAT;
+
   LOG_INIT();
 
   Reset_Channel_Table(g_vi_chns, VI_MAX_CHN_NUM, RK_ID_VI);
@@ -308,6 +313,7 @@ RK_S32 RK_MPI_SYS_Init() {
   Reset_Channel_Table(g_adec_chns, ADEC_MAX_CHN_NUM, RK_ID_ADEC);
   Reset_Channel_Table(g_vo_chns, VO_MAX_CHN_NUM, RK_ID_VO);
   Reset_Channel_Table(g_vdec_chns, VDEC_MAX_CHN_NUM, RK_ID_VDEC);
+  g_sys_init = 1; // init sucess.
   return RK_ERR_SYS_OK;
 }
 
