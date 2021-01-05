@@ -220,8 +220,6 @@ bool do_filters(Flow *f, MediaBufferVector &input_vector) {
     } else {
       if (filter->Process(in, out_buffer))
         return false;
-      // Pass TsNodeInfo to new buffer.
-      in->TsListCopyTo(out_buffer);
     }
     i++;
   }
