@@ -50,7 +50,6 @@ void video_packet_cb(MEDIA_BUFFER mb) {
     printf("#Get packet-%d, %s, size %zu\n", packet_cnt, nalu_type,
            RK_MPI_MB_GetSize(mb));
   }
-  RK_MPI_MB_TsNodeDump(mb);
   RK_MPI_MB_ReleaseBuffer(mb);
 
   packet_cnt++;
