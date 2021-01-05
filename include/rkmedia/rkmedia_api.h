@@ -25,8 +25,8 @@ extern "C" {
 // Platform resource number configuration
 #define VI_MAX_CHN_NUM 8
 #define VENC_MAX_CHN_NUM 16
-#define AI_MAX_CHN_NUM 1
-#define AO_MAX_CHN_NUM 1
+#define AI_MAX_CHN_NUM 8
+#define AO_MAX_CHN_NUM 8
 #define AENC_MAX_CHN_NUM 16
 #define ADEC_MAX_CHN_NUM 16
 #define ALGO_MD_MAX_CHN_NUM VI_MAX_CHN_NUM
