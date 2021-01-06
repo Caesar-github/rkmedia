@@ -31,48 +31,57 @@ typedef enum {
  //RK_AIQ_WORKING_MODE_SENSOR_HDR = 10, // sensor built-in hdr mode
 } rk_aiq_working_mode_t;
 */
-RK_S32 SAMPLE_COMM_ISP_Init(rk_aiq_working_mode_t WDRMode, RK_BOOL bFECEnable,
-                            const char *iq_file_dir);
-RK_VOID SAMPLE_COMM_ISP_Stop(RK_VOID);
-RK_S32 SAMPLE_COMM_ISP_Run(RK_VOID); // isp stop before vi streamoff
-
-RK_VOID SAMPLE_COMM_ISP_DumpExpInfo(rk_aiq_working_mode_t WDRMode);
-RK_VOID SAMPLE_COMM_ISP_SetFrameRate(RK_U32 uFps);
-RK_VOID SAMPLE_COMM_ISP_SetLDCHLevel(RK_U32 level);
-RK_VOID SAMPLE_COMM_ISP_SetWDRModeDyn(rk_aiq_working_mode_t WDRMode);
-RK_VOID SAMPLE_COMM_ISP_SET_Brightness(RK_U32 value);
-RK_VOID SAMPLE_COMM_ISP_SET_Contrast(RK_U32 value);
-RK_VOID SAMPLE_COMM_ISP_SET_Saturation(RK_U32 value);
-RK_VOID SAMPLE_COMM_ISP_SET_Sharpness(RK_U32 value);
-RK_VOID SAMPLE_COMM_ISP_SET_ManualExposureAutoGain(RK_U32 u32Shutter);
-RK_VOID SAMPLE_COMM_ISP_SET_ManualExposureManualGain(RK_U32 u32Shutter,
+RK_S32 SAMPLE_COMM_ISP_Init(RK_S32 CamId, rk_aiq_working_mode_t WDRMode,
+                            RK_BOOL MultiCam, const char *iq_file_dir);
+RK_S32 SAMPLE_COMM_ISP_Stop(RK_S32 CamId);
+RK_S32 SAMPLE_COMM_ISP_SetFecEn(RK_S32 CamId, RK_BOOL bFECEnable);
+RK_S32 SAMPLE_COMM_ISP_Run(RK_S32 CamId); // isp stop before vi streamoff
+RK_S32 SAMPLE_COMM_ISP_DumpExpInfo(RK_S32 CamId,
+                                    rk_aiq_working_mode_t WDRMode);
+RK_S32 SAMPLE_COMM_ISP_SetFrameRate(RK_S32 CamId, RK_U32 uFps);
+RK_S32 SAMPLE_COMM_ISP_SetLDCHLevel(RK_S32 CamId, RK_U32 level);
+RK_S32 SAMPLE_COMM_ISP_SetWDRModeDyn(RK_S32 CamId,
+                                      rk_aiq_working_mode_t WDRMode);
+RK_S32 SAMPLE_COMM_ISP_SET_Brightness(RK_S32 CamId, RK_U32 value);
+RK_S32 SAMPLE_COMM_ISP_SET_Contrast(RK_S32 CamId, RK_U32 value);
+RK_S32 SAMPLE_COMM_ISP_SET_Saturation(RK_S32 CamId, RK_U32 value);
+RK_S32 SAMPLE_COMM_ISP_SET_Sharpness(RK_S32 CamId, RK_U32 value);
+RK_S32 SAMPLE_COMM_ISP_SET_ManualExposureAutoGain(RK_S32 CamId,
+                                                   RK_U32 u32Shutter);
+RK_S32 SAMPLE_COMM_ISP_SET_ManualExposureManualGain(RK_S32 CamId,
+                                                     RK_U32 u32Shutter,
                                                      RK_U32 u32Gain);
-RK_VOID SAMPLE_COMM_ISP_SET_AutoExposure();
-RK_VOID SAMPLE_COMM_ISP_SET_Exposure(RK_BOOL bIsAutoExposure, RK_U32 bIsAGC,
-                                     RK_U32 u32ElectronicShutter,
+RK_S32 SAMPLE_COMM_ISP_SET_AutoExposure(RK_S32 CamId);
+RK_S32 SAMPLE_COMM_ISP_SET_Exposure(RK_S32 CamId, RK_BOOL bIsAutoExposure,
+                                     RK_U32 bIsAGC, RK_U32 u32ElectronicShutter,
                                      RK_U32 u32Agc);
-RK_VOID SAMPLE_COMM_ISP_SET_BackLight(RK_BOOL bEnable, RK_U32 u32Strength);
-RK_VOID SAMPLE_COMM_ISP_SET_LightInhibition(RK_BOOL bEnable, RK_U8 u8Strength,
-                                            RK_U8 u8Level);
-RK_VOID SAMPLE_COMM_ISP_SET_CPSL_CFG(rk_aiq_cpsl_cfg_t *cpsl);
-RK_VOID SAMPLE_COMM_ISP_SET_OpenColorCloseLed();
-RK_VOID SAMPLE_COMM_ISP_SET_GrayOpenLed(RK_U8 u8Strength);
-RK_VOID SAMPLE_COMMON_ISP_SET_AutoWhiteBalance();
-RK_VOID SAMPLE_COMMON_ISP_SET_ManualWhiteBalance(RK_U32 u32RGain,
+RK_S32 SAMPLE_COMM_ISP_SET_BackLight(RK_S32 CamId, RK_BOOL bEnable,
+                                      RK_U32 u32Strength);
+RK_S32 SAMPLE_COMM_ISP_SET_LightInhibition(RK_S32 CamId, RK_BOOL bEnable,
+                                            RK_U8 u8Strength, RK_U8 u8Level);
+RK_S32 SAMPLE_COMM_ISP_SET_CPSL_CFG(RK_S32 CamId, rk_aiq_cpsl_cfg_t *cpsl);
+RK_S32 SAMPLE_COMM_ISP_SET_OpenColorCloseLed(RK_S32 CamId);
+RK_S32 SAMPLE_COMM_ISP_SET_GrayOpenLed(RK_S32 CamId, RK_U8 u8Strength);
+RK_S32 SAMPLE_COMMON_ISP_SET_AutoWhiteBalance(RK_S32 CamId);
+RK_S32 SAMPLE_COMMON_ISP_SET_ManualWhiteBalance(RK_S32 CamId, RK_U32 u32RGain,
                                                  RK_U32 u32GGain,
                                                  RK_U32 u32BGain);
-RK_VOID SAMPLE_COMMON_ISP_GET_WhiteBalanceGain(rk_aiq_wb_gain_t *gain);
-RK_VOID SAMPLE_COMMON_ISP_SET_DNRStrength(RK_U32 u32Mode, RK_U32 u322DValue,
-                                          RK_U32 u323Dvalue);
-RK_VOID SAMPLE_COMMON_ISP_GET_DNRStrength(RK_U32 *u322DValue,
+RK_S32 SAMPLE_COMMON_ISP_GET_WhiteBalanceGain(RK_S32 CamId,
+                                               rk_aiq_wb_gain_t *gain);
+RK_S32 SAMPLE_COMMON_ISP_SET_DNRStrength(RK_S32 CamId, RK_U32 u32Mode,
+                                          RK_U32 u322DValue, RK_U32 u323Dvalue);
+RK_S32 SAMPLE_COMMON_ISP_GET_DNRStrength(RK_S32 CamId, RK_U32 *u322DValue,
                                           RK_U32 *u323Dvalue);
 
-RK_VOID SAMPLE_COMMON_ISP_SET_Flicker(RK_U8 u32Flicker);
-RK_VOID SAMPLE_COMM_ISP_SET_HDR(rk_aiq_working_mode_t mode);
-RK_VOID SAMPLE_COMM_ISP_SET_DefogEnable(RK_U32 u32Mode);
-RK_VOID SAMPLE_COMM_ISP_SET_DefogStrength(RK_U32 u32Mode, RK_U32 u32Value);
-RK_VOID SAMPLE_COMM_ISP_SET_Correction(RK_U32 u32Mode, RK_U32 u32Value);
-RK_VOID SAMPLE_COMM_ISP_SET_mirror(RK_U32 u32Value);
-RK_VOID SAMPLE_COMM_ISP_SET_BypassStreamRotation(RK_S32 S32Rotation);
-RK_VOID SAMPLE_COMM_ISP_SET_Crop(rk_aiq_rect_t rect);
+RK_S32 SAMPLE_COMMON_ISP_SET_Flicker(RK_S32 CamId, RK_U8 u32Flicker);
+RK_S32 SAMPLE_COMM_ISP_SET_HDR(RK_S32 CamId, rk_aiq_working_mode_t mode);
+RK_S32 SAMPLE_COMM_ISP_SET_DefogEnable(RK_S32 CamId, RK_U32 u32Mode);
+RK_S32 SAMPLE_COMM_ISP_SET_DefogStrength(RK_S32 CamId, RK_U32 u32Mode,
+                                          RK_U32 u32Value);
+RK_S32 SAMPLE_COMM_ISP_SET_Correction(RK_S32 CamId, RK_U32 u32Mode,
+                                       RK_U32 u32Value);
+RK_S32 SAMPLE_COMM_ISP_SET_mirror(RK_S32 CamId, RK_U32 u32Value);
+RK_S32 SAMPLE_COMM_ISP_SET_BypassStreamRotation(RK_S32 CamId,
+                                                 RK_S32 S32Rotation);
+RK_S32 SAMPLE_COMM_ISP_SET_Crop(RK_S32 CamId, rk_aiq_rect_t rect);
 #endif

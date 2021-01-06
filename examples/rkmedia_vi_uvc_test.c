@@ -25,6 +25,8 @@ static pthread_t th;
 static int start;
 static RK_CHAR *pDeviceName = "rkispp_scale0";
 RK_CHAR *pIqfilesPath = NULL;
+RK_S32 s32CamId = 0;
+RK_BOOL bMultictx = RK_FALSE;
 
 static bool quit = false;
 static void sigterm_handler(int sig) {
@@ -36,18 +38,18 @@ static void sigterm_handler(int sig) {
 void camera_control(unsigned char cs, unsigned int val) {
   switch (cs) {
   case UVC_PU_BRIGHTNESS_CONTROL:
-    SAMPLE_COMM_ISP_SET_Brightness(val);
+    SAMPLE_COMM_ISP_SET_Brightness(s32CamId, val);
     break;
   case UVC_PU_CONTRAST_CONTROL:
-    SAMPLE_COMM_ISP_SET_Contrast(val);
+    SAMPLE_COMM_ISP_SET_Contrast(s32CamId, val);
     break;
   case UVC_PU_HUE_CONTROL:
     break;
   case UVC_PU_SATURATION_CONTROL:
-    SAMPLE_COMM_ISP_SET_Saturation(val);
+    SAMPLE_COMM_ISP_SET_Saturation(s32CamId, val);
     break;
   case UVC_PU_SHARPNESS_CONTROL:
-    SAMPLE_COMM_ISP_SET_Sharpness(val);
+    SAMPLE_COMM_ISP_SET_Sharpness(s32CamId, val);
     break;
   case UVC_PU_GAMMA_CONTROL:
     break;
@@ -90,11 +92,13 @@ static void *GetMediaBuffer(void *arg) {
   return NULL;
 }
 
-static RK_CHAR optstr[] = "?::a::d:r";
+static RK_CHAR optstr[] = "?::a::d:rI:M:";
 static const struct option long_options[] = {
     {"aiq", optional_argument, NULL, 'a'},
     {"device_name", required_argument, NULL, 'd'},
     {"rndis", 0, NULL, 'r'},
+    {"camid", required_argument, NULL, 'I'},
+    {"multictx", required_argument, NULL, 'M'},
     {"help", optional_argument, NULL, '?'},
     {NULL, 0, NULL, 0},
 };
@@ -102,11 +106,18 @@ static const struct option long_options[] = {
 static void print_usage(const RK_CHAR *name) {
   printf("usage example:\n");
 #ifdef RKAIQ
-  printf("\t%s [-a [iqfiles_dir]] [-d rkispp_scale0] [-r]\n", name);
+  printf("\t%s [-a [iqfiles_dir]]"
+         "[-I 0] "
+         "[-M 0] "
+         " [-d rkispp_scale0] [-r]\n",
+         name);
   printf("\t-a | --aiq: enable aiq with dirpath provided, eg:-a "
          "/oem/etc/iqfiles/, "
          "set dirpath emtpty to using path by default, without this option aiq "
          "should run in other application\n");
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
+  printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
+         "1 to enable. Default: 0\n");
 #else
   printf("\t%s [-d rkispp_scale0] [-r]\n", name);
 #endif
@@ -125,10 +136,9 @@ int camera_start(int id, int width, int height, int fps, int format, int eptz) {
   if (pIqfilesPath) {
 #ifdef RKAIQ
     rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-    RK_BOOL fec_enable = RK_FALSE;
-    SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, pIqfilesPath);
-    SAMPLE_COMM_ISP_Run();
-    SAMPLE_COMM_ISP_SetFrameRate(fps);
+    SAMPLE_COMM_ISP_Init(s32CamId, hdr_mode, bMultictx, pIqfilesPath);
+    SAMPLE_COMM_ISP_Run(s32CamId);
+    SAMPLE_COMM_ISP_SetFrameRate(s32CamId, fps);
 
     register_uvc_pu_control_callback(camera_control);
 #endif
@@ -142,14 +152,14 @@ int camera_start(int id, int width, int height, int fps, int format, int eptz) {
   vi_chn_attr.u32Height = height;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
   vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
-  ret = RK_MPI_VI_SetChnAttr(0, 0, &vi_chn_attr);
-  ret |= RK_MPI_VI_EnableChn(0, 0);
+  ret = RK_MPI_VI_SetChnAttr(s32CamId, 0, &vi_chn_attr);
+  ret |= RK_MPI_VI_EnableChn(s32CamId, 0);
   if (ret) {
     printf("Create VI[0] failed! ret=%d\n", ret);
     return -1;
   }
 
-  ret = RK_MPI_VI_StartStream(0, 0);
+  ret = RK_MPI_VI_StartStream(s32CamId, 0);
   if (ret) {
     printf("Start VI[0] failed! ret=%d\n", ret);
     return -1;
@@ -169,11 +179,11 @@ void camera_stop(void) {
   if (start) {
     start = 0;
     pthread_join(th, NULL);
-    RK_MPI_VI_DisableChn(0, 0);
+    RK_MPI_VI_DisableChn(s32CamId, 0);
 #ifdef RKAIQ
     if (pIqfilesPath) {
       register_uvc_pu_control_callback(NULL);
-      SAMPLE_COMM_ISP_Stop();
+      SAMPLE_COMM_ISP_Stop(s32CamId);
     }
 #endif
   }
@@ -201,6 +211,14 @@ int main(int argc, char *argv[]) {
     case 'r':
       config = "uvc_config.sh rndis";
       break;
+    case 'I':
+      s32CamId = atoi(optarg);
+      break;
+    case 'M':
+      if (atoi(optarg)) {
+        bMultictx = RK_TRUE;
+      }
+      break;
     case '?':
     default:
       print_usage(argv[0]);
@@ -210,7 +228,8 @@ int main(int argc, char *argv[]) {
 
   printf("#####Device: %s\n", pDeviceName);
   printf("#####Aiq xml dirpath: %s\n\n", pIqfilesPath);
-
+  printf("#####cam id: %d\n\n", s32CamId);
+  printf("#####bMultictx: %d\n\n", bMultictx);
   RK_MPI_SYS_Init();
 
   system(config);

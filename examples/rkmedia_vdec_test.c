@@ -29,7 +29,7 @@ static void sigterm_handler(int sig) {
 }
 
 static void *GetMediaBuffer(void *arg) {
-  (void) arg;
+  (void)arg;
   MEDIA_BUFFER mb = NULL;
   int ret = 0;
 
@@ -56,11 +56,11 @@ static void *GetMediaBuffer(void *arg) {
   }
 
   printf("Get Frame:ptr:%p, fd:%d, size:%zu, mode:%d, channel:%d, "
-          "timestamp:%lld, ImgInfo:<wxh %dx%d, fmt 0x%x>\n",
-          RK_MPI_MB_GetPtr(mb), RK_MPI_MB_GetFD(mb), RK_MPI_MB_GetSize(mb),
-          RK_MPI_MB_GetModeID(mb), RK_MPI_MB_GetChannelID(mb),
-          RK_MPI_MB_GetTimestamp(mb), stImageInfo.u32Width,
-          stImageInfo.u32Height, stImageInfo.enImgType);
+         "timestamp:%lld, ImgInfo:<wxh %dx%d, fmt 0x%x>\n",
+         RK_MPI_MB_GetPtr(mb), RK_MPI_MB_GetFD(mb), RK_MPI_MB_GetSize(mb),
+         RK_MPI_MB_GetModeID(mb), RK_MPI_MB_GetChannelID(mb),
+         RK_MPI_MB_GetTimestamp(mb), stImageInfo.u32Width,
+         stImageInfo.u32Height, stImageInfo.enImgType);
   RK_MPI_MB_ReleaseBuffer(mb);
 
   VO_CHN_ATTR_S stVoAttr = {0};
@@ -168,6 +168,8 @@ int main(int argc, char *argv[]) {
   printf("#Decode Mode: %s\n", bIsHardware ? "Hardware" : "Software");
   printf("#Loop Cnt: %d\n", u32Loop);
 
+  signal(SIGINT, sigterm_handler);
+
   FILE *infile = fopen(pcFileName, "rb");
   if (!infile) {
     fprintf(stderr, "Could not open %s\n", pcFileName);
@@ -211,10 +213,9 @@ int main(int argc, char *argv[]) {
     fseek(infile, 0, SEEK_SET);
   }
 
-  signal(SIGINT, sigterm_handler);
   while (!quit) {
     MEDIA_BUFFER mb = RK_MPI_MB_CreateBuffer(data_size, RK_FALSE, 0);
-RETRY:
+  RETRY:
     /* read raw data from the input file */
     read_size = fread(RK_MPI_MB_GetPtr(mb), 1, data_size, infile);
     if (!read_size || feof(infile)) {
@@ -227,8 +228,8 @@ RETRY:
       }
     }
     RK_MPI_MB_SetSzie(mb, read_size);
-    printf("#Send packet(%p, %zuBytes) to VDEC[0].\n",
-           RK_MPI_MB_GetPtr(mb), RK_MPI_MB_GetSize(mb));
+    printf("#Send packet(%p, %zuBytes) to VDEC[0].\n", RK_MPI_MB_GetPtr(mb),
+           RK_MPI_MB_GetSize(mb));
     ret = RK_MPI_SYS_SendMediaBuffer(RK_ID_VDEC, 0, mb);
     RK_MPI_MB_ReleaseBuffer(mb);
 

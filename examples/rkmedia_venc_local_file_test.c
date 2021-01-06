@@ -69,7 +69,8 @@ static const struct option long_options[] = {
 
 static void print_usage(const RK_CHAR *name) {
   printf("usage example:\n");
-  printf("\t%s [-i in.nv12] [-o out.h264] [-w 1920] [-h 1080] [-t h264]\n", name);
+  printf("\t%s [-i in.nv12] [-o out.h264] [-w 1920] [-h 1080] [-t h264]\n",
+         name);
   printf("\t-i | --input: Input image file\n");
   printf("\t-o | --output: Output file\n");
   printf("\t-w | --width: Image width\n");

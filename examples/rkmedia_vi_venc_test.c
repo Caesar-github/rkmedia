@@ -9,9 +9,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <string.h>
 
 #include "common/sample_common.h"
 #include "rkmedia_api.h"
@@ -53,11 +53,11 @@ void video_packet_cb(MEDIA_BUFFER mb) {
   RK_MPI_MB_ReleaseBuffer(mb);
 
   packet_cnt++;
-  if ((g_s32FrameCnt >= 0) && (packet_cnt < g_s32FrameCnt))
+  if ((g_s32FrameCnt >= 0) && (packet_cnt > g_s32FrameCnt))
     quit = true;
 }
 
-static RK_CHAR optstr[] = "?::a::w:h:c:o:e:d:";
+static RK_CHAR optstr[] = "?::a::w:h:c:o:e:d:I:M:";
 static const struct option long_options[] = {
     {"aiq", optional_argument, NULL, 'a'},
     {"device_name", required_argument, NULL, 'd'},
@@ -66,6 +66,8 @@ static const struct option long_options[] = {
     {"frame_cnt", required_argument, NULL, 'c'},
     {"output_path", required_argument, NULL, 'o'},
     {"encode", required_argument, NULL, 'e'},
+    {"camid", required_argument, NULL, 'I'},
+    {"multictx", required_argument, NULL, 'M'},
     {"help", optional_argument, NULL, '?'},
     {NULL, 0, NULL, 0},
 };
@@ -78,12 +80,17 @@ static void print_usage(const RK_CHAR *name) {
          "[-c 150] "
          "[-d rkispp_scale0] "
          "[-e 0] "
+         "[-I 0] "
+         "[-M 0] "
          "[-o output.h264] \n",
          name);
   printf("\t-a | --aiq: enable aiq with dirpath provided, eg:-a "
          "/oem/etc/iqfiles/, "
          "set dirpath emtpty to using path by default, without this option aiq "
          "should run in other application\n");
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
+  printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
+         "1 to enable. Default: 0\n");
 #else
   printf("\t%s [-w 1920] "
          "[-h 1080]"
@@ -98,7 +105,8 @@ static void print_usage(const RK_CHAR *name) {
   printf("\t-c | --frame_cnt: frame number of output, Default:150\n");
   printf("\t-d | --device_name set pcDeviceName, Default:rkispp_scale0, "
          "Option:[rkispp_scale0, rkispp_scale1, rkispp_scale2]\n");
-  printf("\t-e | --encode: encode type, Default:h264, Value:h264, h265, mjpeg\n");
+  printf(
+      "\t-e | --encode: encode type, Default:h264, Value:h264, h265, mjpeg\n");
   printf("\t-o | --output_path: output path, Default:NULL\n");
 }
 
@@ -110,10 +118,11 @@ int main(int argc, char *argv[]) {
   RK_CHAR *pIqfilesPath = NULL;
   CODEC_TYPE_E enCodecType = RK_CODEC_TYPE_H264;
   RK_CHAR *pCodecName = "H264";
+  RK_S32 s32CamId = 0;
+  RK_BOOL bMultictx = RK_FALSE;
   int c;
   int ret = 0;
   while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
-    printf("get op is %d, a is %d\n", c, 'a');
     const char *tmp_optarg = optarg;
     switch (c) {
     case 'a':
@@ -156,6 +165,14 @@ int main(int argc, char *argv[]) {
         return 0;
       }
       break;
+    case 'I':
+      s32CamId = atoi(optarg);
+      break;
+    case 'M':
+      if (atoi(optarg)) {
+        bMultictx = RK_TRUE;
+      }
+      break;
     case '?':
     default:
       print_usage(argv[0]);
@@ -169,17 +186,18 @@ int main(int argc, char *argv[]) {
   printf("#Frame Count to save: %d\n", g_s32FrameCnt);
   printf("#Output Path: %s\n", pOutPath);
 #ifdef RKAIQ
+  printf("#####cam id: %d\n\n", s32CamId);
+  printf("#####bMultictx: %d\n\n", bMultictx);
   printf("#Aiq xml dirpath: %s\n\n", pIqfilesPath);
 #endif
 
   if (pIqfilesPath) {
 #ifdef RKAIQ
     rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-    RK_BOOL fec_enable = RK_FALSE;
     int fps = 30;
-    SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, pIqfilesPath);
-    SAMPLE_COMM_ISP_Run();
-    SAMPLE_COMM_ISP_SetFrameRate(fps);
+    SAMPLE_COMM_ISP_Init(s32CamId, hdr_mode, bMultictx, pIqfilesPath);
+    SAMPLE_COMM_ISP_Run(s32CamId);
+    SAMPLE_COMM_ISP_SetFrameRate(s32CamId, fps);
 #endif
   }
 
@@ -200,8 +218,8 @@ int main(int argc, char *argv[]) {
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
   vi_chn_attr.enBufType = VI_CHN_BUF_TYPE_MMAP;
   vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
-  ret = RK_MPI_VI_SetChnAttr(0, 0, &vi_chn_attr);
-  ret |= RK_MPI_VI_EnableChn(0, 0);
+  ret = RK_MPI_VI_SetChnAttr(s32CamId, 0, &vi_chn_attr);
+  ret |= RK_MPI_VI_EnableChn(s32CamId, 0);
   if (ret) {
     printf("ERROR: create VI[0] error! ret=%d\n", ret);
     return 0;
@@ -303,7 +321,7 @@ int main(int argc, char *argv[]) {
     return 0;
   }
   // destroy vi
-  ret = RK_MPI_VI_DisableChn(0, 0);
+  ret = RK_MPI_VI_DisableChn(s32CamId, 0);
   if (ret) {
     printf("ERROR: Destroy VI[0] error! ret=%d\n", ret);
     return 0;
@@ -311,7 +329,7 @@ int main(int argc, char *argv[]) {
 
   if (pIqfilesPath) {
 #ifdef RKAIQ
-    SAMPLE_COMM_ISP_Stop();
+    SAMPLE_COMM_ISP_Stop(s32CamId);
 #endif
   }
   return 0;

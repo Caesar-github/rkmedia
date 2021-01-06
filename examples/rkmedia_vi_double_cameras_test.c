@@ -9,11 +9,11 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <string.h>
 
-#include "common/sample_double_cam_isp.h"
+#include "common/sample_common.h"
 #include "rkmedia_api.h"
 #include <rga/RgaApi.h>
 #include <rga/rga.h>
@@ -174,14 +174,14 @@ int main(int argc, char *argv[]) {
   }
 
 #ifdef RKAIQ
-  rk_aiq_sys_ctx_t *ctx0 =
-      aiq_double_cam_init(0, RK_AIQ_WORKING_MODE_NORMAL, iq_dir);
-  if (!ctx0)
+  ret = SAMPLE_COMM_ISP_Init(0, RK_AIQ_WORKING_MODE_NORMAL, RK_TRUE, iq_dir);
+  if (ret)
     return -1;
-  rk_aiq_sys_ctx_t *ctx1 =
-      aiq_double_cam_init(1, RK_AIQ_WORKING_MODE_NORMAL, iq_dir);
-  if (!ctx1)
+  SAMPLE_COMM_ISP_Run(0);
+  ret = SAMPLE_COMM_ISP_Init(1, RK_AIQ_WORKING_MODE_NORMAL, RK_TRUE, iq_dir);
+  if (ret)
     return -1;
+  SAMPLE_COMM_ISP_Run(1);
 #endif // RKAIQ
 
   rgb_mb = RK_MPI_MB_CreateImageBuffer(&disp_info, RK_TRUE, 0);
@@ -345,8 +345,8 @@ int main(int argc, char *argv[]) {
   RK_MPI_VI_DisableChn(1, 1);
 
 #ifdef RKAIQ
-  aiq_double_cam_exit(ctx0);
-  aiq_double_cam_exit(ctx1);
+  SAMPLE_COMM_ISP_Stop(0);
+  SAMPLE_COMM_ISP_Stop(1);
 #endif
 
   return 0;

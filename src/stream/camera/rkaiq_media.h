@@ -20,6 +20,8 @@
 
 #define MAX_MEDIA_NUM 10
 #define MAX_CAM_NUM 4
+#define ISP_ORDER_FREE -2
+#define ISP_ORDER_OCCUPY -1
 
 typedef struct {
   int model_idx;
@@ -91,37 +93,31 @@ public:
   int GetMediaInfo();
   int DumpMediaInfo();
   int LinkToIsp(bool enable = false);
+  std::string GetVideoNode(int camera_id, const char *chn_name);
 
 public:
   std::string GetSensorName(int id) {
-    if (id >= MAX_CAM_NUM)
+    if (id >= MAX_CAM_NUM || id < 0)
       return "";
 
-    if (media_info[id].isp.linked_sensor)
-      return media_info[id].isp.sensor_name;
-    else if (media_info[id].cif.linked_sensor)
+    if (media_info[id].cif.linked_sensor)
       return media_info[id].cif.sensor_name;
-    return "";
-  }
 
-  std::string GetVideoNode(int camera_id, const char *chn_name) {
-    if (camera_id >= MAX_CAM_NUM)
+    int idx = cam_id2ispp_id[id];
+    if (idx >= MAX_CAM_NUM || idx < 0)
       return "";
 
-    if (strstr(chn_name, "bypass"))
-      return media_info[camera_id].ispp.pp_m_bypass_path;
-    else if (strstr(chn_name, "scale0"))
-      return media_info[camera_id].ispp.pp_scale0_path;
-    else if (strstr(chn_name, "scale1"))
-      return media_info[camera_id].ispp.pp_scale1_path;
-    else if (strstr(chn_name, "scale2"))
-      return media_info[camera_id].ispp.pp_scale2_path;
+    if (media_info[idx].isp.linked_sensor)
+      return media_info[idx].isp.sensor_name;
 
     return "";
   }
 
 private:
   media_info_t media_info[MAX_CAM_NUM];
+  int cam_id2ispp_id[MAX_CAM_NUM];
+  int SetCameraOrder(int idx);
+  void BindCameraWithIsp();
 };
 
 #endif // _TOOL_RKAIQ_MEDIA_H_

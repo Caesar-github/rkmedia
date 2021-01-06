@@ -628,8 +628,8 @@ static void *MainStream(void *arg) {
           src = wrapbuffer_fd(
               RK_MPI_MB_GetFD(mb), cfg.session_cfg[DRAW_INDEX].u32Width,
               cfg.session_cfg[DRAW_INDEX].u32Height, RK_FORMAT_YCbCr_420_SP);
-          dst = wrapbuffer_fd(RK_MPI_MB_GetFD(dst_mb), rga_width,
-                                       rga_height, RK_FORMAT_YCbCr_420_SP);
+          dst = wrapbuffer_fd(RK_MPI_MB_GetFD(dst_mb), rga_width, rga_height,
+                              RK_FORMAT_YCbCr_420_SP);
           im_rect src_rect = {rga_x, rga_y, rga_width, rga_height};
           im_rect dst_rect = {0};
           int ret = imcheck(src, dst, src_rect, dst_rect, IM_CROP);
@@ -762,7 +762,7 @@ static int load_cfg(const char *cfg_file) {
 }
 
 static RK_S32 SAMPLE_COMMON_VI_Start(struct Session *session,
-                                     VI_CHN_WORK_MODE mode) {
+                                     VI_CHN_WORK_MODE mode, RK_S32 vi_pipe) {
   RK_S32 ret = 0;
   VI_CHN_ATTR_S vi_chn_attr;
 
@@ -773,8 +773,8 @@ static RK_S32 SAMPLE_COMMON_VI_Start(struct Session *session,
   vi_chn_attr.pcVideoNode = session->videopath;
   vi_chn_attr.enPixFmt = session->enImageType;
 
-  ret |= RK_MPI_VI_SetChnAttr(0, session->stViChn.s32ChnId, &vi_chn_attr);
-  ret |= RK_MPI_VI_EnableChn(0, session->stViChn.s32ChnId);
+  ret |= RK_MPI_VI_SetChnAttr(vi_pipe, session->stViChn.s32ChnId, &vi_chn_attr);
+  ret |= RK_MPI_VI_EnableChn(vi_pipe, session->stViChn.s32ChnId);
 
   return ret;
 }
@@ -863,7 +863,7 @@ static RK_S32 SAMPLE_COMMON_VENC_SNAP_Start(RK_S32 chnId) {
   return ret;
 }
 
-static RK_CHAR optstr[] = "?a::c:v:l:sr:p:t:f:m:";
+static RK_CHAR optstr[] = "?a::c:v:l:sr:p:t:f:m:I:M:";
 static const struct option long_options[] = {
     {"aiq", optional_argument, NULL, 'a'},
     {"data_version", required_argument, NULL, 'v'},
@@ -875,6 +875,8 @@ static const struct option long_options[] = {
     {"fps", required_argument, NULL, 'f'},
     {"hdr_mode", required_argument, NULL, 'm'},
     {"stress", no_argument, NULL, 's'},
+    {"camid", required_argument, NULL, 'I'},
+    {"multictx", required_argument, NULL, 'M'},
     {"help", no_argument, NULL, '?'},
     {NULL, 0, NULL, 0},
 };
@@ -883,6 +885,8 @@ static void print_usage(const RK_CHAR *name) {
   printf("usage example:\n");
 #ifdef RKAIQ
   printf("\t%s [-a [iqfiles_dir]] "
+         "[-I 0] "
+         "[-M 0] "
          "[-v 0] "
          "[-c rtsp-nn.cfg] "
          "[-r librknn_runtime.so] "
@@ -897,6 +901,9 @@ static void print_usage(const RK_CHAR *name) {
          "/oem/etc/iqfiles/, "
          "set dirpath empty to using path by default, without this option aiq "
          "should run in other application\n");
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
+  printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
+         "1 to enable. Default: 0\n");
 #else
   printf("\t%s "
          "[-v 0] "
@@ -946,6 +953,8 @@ int main(int argc, char **argv) {
   sprintf(sub_arg.runtime_path, "/usr/lib/librknn_runtime.so");
   sub_arg.face_score = -1.0f;
   sub_arg.data_version = ROCKX_MODULE_PERSON_DETECTION_V2;
+  RK_S32 s32CamId = 0;
+  RK_BOOL bMultictx = RK_FALSE;
 #ifdef RKAIQ
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   int fps = 30;
@@ -1025,6 +1034,14 @@ int main(int argc, char **argv) {
       }
 #endif
       break;
+    case 'I':
+      s32CamId = atoi(optarg);
+      break;
+    case 'M':
+      if (atoi(optarg)) {
+        bMultictx = RK_TRUE;
+      }
+      break;
     case '?':
     default:
       print_usage(argv[0]);
@@ -1057,6 +1074,8 @@ int main(int argc, char **argv) {
   printf("####Aiq xml dirpath: %s\n\n", pIqfilesPath);
   printf("####hdr mode: %d\n\n", hdr_mode);
   printf("####fps: %d\n\n", fps);
+  printf("#####cam id: %d\n\n", s32CamId);
+  printf("#####bMultictx: %d\n\n", bMultictx);
 #endif
   printf("####data version: %d\n\n", sub_arg.data_version);
   printf("####config dirpath: %s\n\n", pCfgPath);
@@ -1067,12 +1086,13 @@ int main(int argc, char **argv) {
   printf("####draw time log en: %d\n\n", main_arg.time_log_en);
   printf("####stress_mode: %d\n\n", stress_mode);
 
+  signal(SIGINT, sig_proc);
+
   if (pIqfilesPath) {
 #ifdef RKAIQ
-    RK_BOOL fec_enable = RK_FALSE;
-    SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, pIqfilesPath);
-    SAMPLE_COMM_ISP_Run();
-    SAMPLE_COMM_ISP_SetFrameRate(fps);
+    SAMPLE_COMM_ISP_Init(s32CamId, hdr_mode, bMultictx, pIqfilesPath);
+    SAMPLE_COMM_ISP_Run(s32CamId);
+    SAMPLE_COMM_ISP_SetFrameRate(s32CamId, fps);
 #endif
   }
 
@@ -1095,7 +1115,8 @@ int main(int argc, char **argv) {
     printf("VI create\n");
     cfg.session_cfg[i].stViChn.enModId = RK_ID_VI;
     cfg.session_cfg[i].stViChn.s32ChnId = i;
-    ret = SAMPLE_COMMON_VI_Start(&cfg.session_cfg[i], VI_WORK_MODE_NORMAL);
+    ret = SAMPLE_COMMON_VI_Start(&cfg.session_cfg[i], VI_WORK_MODE_NORMAL,
+                                 s32CamId);
     if (ret) {
       printf("vi start fail, ret is %d, order is %d\n", ret, i);
       return -1;
@@ -1110,7 +1131,8 @@ int main(int argc, char **argv) {
       return -1;
     }
     if (i == DRAW_INDEX)
-      ret = RK_MPI_VI_StartStream(0, cfg.session_cfg[i].stViChn.s32ChnId);
+      ret =
+          RK_MPI_VI_StartStream(s32CamId, cfg.session_cfg[i].stViChn.s32ChnId);
     else
       ret = RK_MPI_SYS_Bind(&cfg.session_cfg[i].stViChn,
                             &cfg.session_cfg[i].stVenChn);
@@ -1172,7 +1194,6 @@ int main(int argc, char **argv) {
   pthread_t main_stream_thread;
   pthread_create(&main_stream_thread, NULL, MainStream, &main_arg);
 
-  signal(SIGINT, sig_proc);
   while (g_flag_run) {
     for (int i = 0; i < cfg.session_count; i++) {
       MEDIA_BUFFER buffer;
@@ -1199,12 +1220,12 @@ int main(int argc, char **argv) {
       RK_MPI_SYS_UnBind(&cfg.session_cfg[i].stViChn,
                         &cfg.session_cfg[i].stVenChn);
     RK_MPI_VENC_DestroyChn(cfg.session_cfg[i].stVenChn.s32ChnId);
-    RK_MPI_VI_DisableChn(0, cfg.session_cfg[i].stViChn.s32ChnId);
+    RK_MPI_VI_DisableChn(s32CamId, cfg.session_cfg[i].stViChn.s32ChnId);
   }
 
   if (pIqfilesPath) {
 #ifdef RKAIQ
-    SAMPLE_COMM_ISP_Stop();
+    SAMPLE_COMM_ISP_Stop(s32CamId);
 #endif
   }
 

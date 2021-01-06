@@ -53,7 +53,8 @@ void video_packet_cb(MEDIA_BUFFER mb) {
   RK_MPI_MB_ReleaseBuffer(mb);
 }
 
-static int avbrStreamOn(int width, int height, int vi_chn, int venc_chn) {
+static int avbrStreamOn(int width, int height, int vi_pipe, int vi_chn,
+                        int venc_chn) {
   int ret = 0;
 
   printf("=====> Avbr Stream on: VI[%d] -> Venc[%d], wxh:%dx%d <=====\n",
@@ -66,8 +67,8 @@ static int avbrStreamOn(int width, int height, int vi_chn, int venc_chn) {
   vi_chn_attr.u32Height = height;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
   vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
-  ret = RK_MPI_VI_SetChnAttr(0, vi_chn, &vi_chn_attr);
-  ret |= RK_MPI_VI_EnableChn(0, vi_chn);
+  ret = RK_MPI_VI_SetChnAttr(vi_pipe, vi_chn, &vi_chn_attr);
+  ret |= RK_MPI_VI_EnableChn(vi_pipe, vi_chn);
   if (ret) {
     printf("TEST: ERROR: Create vi[%d] error! code:%d\n", vi_chn, ret);
     return -1;
@@ -122,7 +123,7 @@ static int avbrStreamOn(int width, int height, int vi_chn, int venc_chn) {
   // Bind VI and VENC
   MPP_CHN_S stSrcChn;
   stSrcChn.enModId = RK_ID_VI;
-  stSrcChn.s32DevId = 0;
+  stSrcChn.s32DevId = vi_pipe;
   stSrcChn.s32ChnId = vi_chn;
   MPP_CHN_S stDestChn;
   stDestChn.enModId = RK_ID_VENC;
@@ -137,13 +138,13 @@ static int avbrStreamOn(int width, int height, int vi_chn, int venc_chn) {
   return 0;
 }
 
-static int avbrStreamOff(int vi_chn, int venc_chn) {
+static int avbrStreamOff(int vi_pipe, int vi_chn, int venc_chn) {
   printf("=====> Avbr Stream off: VI[%d] -> Venc[%d] <=====\n", vi_chn,
          venc_chn);
   int ret = 0;
   MPP_CHN_S stSrcChn;
   stSrcChn.enModId = RK_ID_VI;
-  stSrcChn.s32DevId = 0;
+  stSrcChn.s32DevId = vi_pipe;
   stSrcChn.s32ChnId = vi_chn;
   MPP_CHN_S stDestChn;
   stDestChn.enModId = RK_ID_VENC;
@@ -160,7 +161,7 @@ static int avbrStreamOff(int vi_chn, int venc_chn) {
     printf("ERROR: Destroy Venc[%d] failed! ret=%d\n", venc_chn, ret);
     return -1;
   }
-  ret = RK_MPI_VI_DisableChn(0, vi_chn);
+  ret = RK_MPI_VI_DisableChn(vi_pipe, vi_chn);
   if (ret) {
     printf("ERROR: Destroy VI[%d] failed! ret=%d\n", vi_chn, ret);
     return -1;
@@ -169,11 +170,13 @@ static int avbrStreamOff(int vi_chn, int venc_chn) {
   return 0;
 }
 
-static RK_CHAR optstr[] = "?::a::o:";
+static RK_CHAR optstr[] = "?::a::o:I:M:";
 static const struct option long_options[] = {
     {"aiq", optional_argument, NULL, 'a'},
     {"help", optional_argument, NULL, '?'},
     {"output", required_argument, NULL, 'o'},
+    {"camid", required_argument, NULL, 'I'},
+    {"multictx", required_argument, NULL, 'M'},
     {NULL, 0, NULL, 0},
 };
 
@@ -181,12 +184,17 @@ static void print_usage(const RK_CHAR *name) {
   printf("usage example:\n");
 #ifdef RKAIQ
   printf("\t%s [-a [iqfiles_dir]]"
+         "[-I 0] "
+         "[-M 0] "
          "[-o output.h265] \n",
          name);
   printf("\t-a | --aiq: enable aiq with dirpath provided, eg:-a "
          "/oem/etc/iqfiles/, "
          "set dirpath empty to using path by default, without this option aiq "
          "should run in other application\n");
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
+  printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
+         "1 to enable. Default: 0\n");
 #else
   printf("\t%s"
          "[-o output.h265] \n",
@@ -200,6 +208,8 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, sigterm_handler);
   int c;
   char *iq_file_dir = NULL;
+  RK_S32 s32CamId = 0;
+  RK_BOOL bMultictx = RK_FALSE;
   while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
     const char *tmp_optarg = optarg;
     switch (c) {
@@ -215,6 +225,14 @@ int main(int argc, char *argv[]) {
       break;
     case 'o':
       output_path = optarg;
+      break;
+    case 'I':
+      s32CamId = atoi(optarg);
+      break;
+    case 'M':
+      if (atoi(optarg)) {
+        bMultictx = RK_TRUE;
+      }
       break;
     case '?':
     default:
@@ -232,24 +250,25 @@ int main(int argc, char *argv[]) {
   if (iq_file_dir) {
 #ifdef RKAIQ
     printf("#Aiq xml dirpath: %s\n\n", iq_file_dir);
+    printf("#####cam id: %d\n\n", s32CamId);
+    printf("#####bMultictx: %d\n\n", bMultictx);
     rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-    RK_BOOL fec_enable = RK_FALSE;
     int fps = 30;
-    SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
-    SAMPLE_COMM_ISP_Run();
-    SAMPLE_COMM_ISP_SetFrameRate(fps);
+    SAMPLE_COMM_ISP_Init(s32CamId, hdr_mode, bMultictx, iq_file_dir);
+    SAMPLE_COMM_ISP_Run(s32CamId);
+    SAMPLE_COMM_ISP_SetFrameRate(s32CamId, fps);
 #endif
   }
 
   RK_MPI_SYS_Init();
-  if (avbrStreamOn(1920, 1080, 0, 0))
+  if (avbrStreamOn(1920, 1080, s32CamId, 0, 0))
     return -1;
 
   while (!quit) {
     usleep(500000);
   }
 
-  avbrStreamOff(0, 0);
+  avbrStreamOff(s32CamId, 0, 0);
   if (g_save_file) {
     printf("#VENC AVBR TEST:: Close save file!\n");
     fclose(g_save_file);
@@ -257,7 +276,7 @@ int main(int argc, char *argv[]) {
 
   if (iq_file_dir) {
 #ifdef RKAIQ
-    SAMPLE_COMM_ISP_Stop();
+    SAMPLE_COMM_ISP_Stop(s32CamId);
 #endif
   }
 

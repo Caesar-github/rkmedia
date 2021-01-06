@@ -67,10 +67,9 @@ static void *GetMediaBuffer(void *arg) {
     }
 
     src = wrapbuffer_fd(RK_MPI_MB_GetFD(src_mb), crop_arg->vi_width,
-                                 crop_arg->vi_height, RK_FORMAT_YCbCr_420_SP);
-    dst =
-        wrapbuffer_fd(RK_MPI_MB_GetFD(dst_mb), crop_arg->target_width,
-                               crop_arg->target_height, RK_FORMAT_YCbCr_420_SP);
+                        crop_arg->vi_height, RK_FORMAT_YCbCr_420_SP);
+    dst = wrapbuffer_fd(RK_MPI_MB_GetFD(dst_mb), crop_arg->target_width,
+                        crop_arg->target_height, RK_FORMAT_YCbCr_420_SP);
     im_rect src_rect = {crop_arg->target_x, crop_arg->target_y,
                         crop_arg->target_width, crop_arg->target_height};
     im_rect dst_rect = {0};
@@ -98,7 +97,7 @@ static void *GetMediaBuffer(void *arg) {
   return NULL;
 }
 
-static RK_CHAR optstr[] = "?::a::x:y:d:H:W:w:h:";
+static RK_CHAR optstr[] = "?::a::x:y:d:H:W:w:h:I:M:";
 static const struct option long_options[] = {
     {"aiq", optional_argument, NULL, 'a'},
     {"vi_height", required_argument, NULL, 'H'},
@@ -108,6 +107,8 @@ static const struct option long_options[] = {
     {"device_name", required_argument, NULL, 'd'},
     {"crop_x", required_argument, NULL, 'x'},
     {"crop_y", required_argument, NULL, 'y'},
+    {"camid", required_argument, NULL, 'I'},
+    {"multictx", required_argument, NULL, 'M'},
     {"help", optional_argument, NULL, '?'},
     {NULL, 0, NULL, 0},
 };
@@ -123,12 +124,17 @@ static void print_usage(const RK_CHAR *name) {
          "[-w 640] "
          "[-x 300] "
          "[-y 300] "
+         "[-I 0] "
+         "[-M 0] "
          "[-d rkispp_scale0] \n",
          name);
   printf("\t-a | --aiq: enable aiq with dirpath provided, eg:-a "
          "/oem/etc/iqfiles/, "
          "set dirpath empty to using path by default. without this option, aiq "
          "should run in other application\n");
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
+  printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
+         "1 to enable. Default: 0\n");
 #else
   printf("\t%s [-H 1920] "
          "[-W 1080] "
@@ -162,6 +168,8 @@ int main(int argc, char *argv[]) {
   demo_arg.target_y = 300;
   char *device_name = "rkispp_scale0";
   char *iq_file_dir = NULL;
+  RK_S32 s32CamId = 0;
+  RK_BOOL bMultictx = RK_FALSE;
   int c = 0;
   opterr = 1;
   while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
@@ -198,6 +206,14 @@ int main(int argc, char *argv[]) {
     case 'd':
       device_name = optarg;
       break;
+    case 'I':
+      s32CamId = atoi(optarg);
+      break;
+    case 'M':
+      if (atoi(optarg)) {
+        bMultictx = RK_TRUE;
+      }
+      break;
     case '?':
     default:
       print_usage(argv[0]);
@@ -218,16 +234,18 @@ int main(int argc, char *argv[]) {
     printf("crop size is over vi\n");
     return -1;
   }
+  signal(SIGINT, sigterm_handler);
 
   if (iq_file_dir) {
 #ifdef RKAIQ
     printf("#Aiq xml dirpath: %s\n\n", iq_file_dir);
+    printf("#####cam id: %d\n\n", s32CamId);
+    printf("#####bMultictx: %d\n\n", bMultictx);
     rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-    RK_BOOL fec_enable = RK_FALSE;
     int fps = 30;
-    SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
-    SAMPLE_COMM_ISP_Run();
-    SAMPLE_COMM_ISP_SetFrameRate(fps);
+    SAMPLE_COMM_ISP_Init(s32CamId, hdr_mode, bMultictx, iq_file_dir);
+    SAMPLE_COMM_ISP_Run(s32CamId);
+    SAMPLE_COMM_ISP_SetFrameRate(s32CamId, fps);
 #endif
   }
 
@@ -239,8 +257,8 @@ int main(int argc, char *argv[]) {
   vi_chn_attr.u32Height = demo_arg.vi_height;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
   vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
-  ret = RK_MPI_VI_SetChnAttr(0, 0, &vi_chn_attr);
-  ret |= RK_MPI_VI_EnableChn(0, 0);
+  ret = RK_MPI_VI_SetChnAttr(s32CamId, 0, &vi_chn_attr);
+  ret |= RK_MPI_VI_EnableChn(s32CamId, 0);
   if (ret) {
     printf("ERROR: Create vi[0] failed! ret=%d\n", ret);
     return -1;
@@ -271,25 +289,24 @@ int main(int argc, char *argv[]) {
   pthread_create(&read_thread, NULL, GetMediaBuffer, &demo_arg);
 
   usleep(1000); // waite for thread ready.
-  ret = RK_MPI_VI_StartStream(0, 0);
+  ret = RK_MPI_VI_StartStream(s32CamId, 0);
   if (ret) {
     printf("ERROR: Start Vi[0] failed! ret=%d\n", ret);
     return -1;
   }
 
   printf("%s initial finish\n", __func__);
-  signal(SIGINT, sigterm_handler);
   while (!quit) {
     usleep(500000);
   }
 
   printf("%s exit!\n", __func__);
   RK_MPI_VO_DestroyChn(0);
-  RK_MPI_VI_DisableChn(0, 0);
+  RK_MPI_VI_DisableChn(s32CamId, 0);
 
   if (iq_file_dir) {
 #ifdef RKAIQ
-    SAMPLE_COMM_ISP_Stop();
+    SAMPLE_COMM_ISP_Stop(s32CamId);
 #endif
   }
 
