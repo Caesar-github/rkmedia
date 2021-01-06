@@ -23,8 +23,6 @@
 #define TEST_ARGB32_TRANS 0x00000000
 
 static FILE *g_save_file;
-static FILE *g_save_file_sub0;
-static FILE *g_save_file_sub1;
 static bool quit = false;
 static void sigterm_handler(int sig) {
   fprintf(stderr, "signal %d\n", sig);
@@ -41,187 +39,6 @@ void video_packet_cb(MEDIA_BUFFER mb) {
     fwrite(RK_MPI_MB_GetPtr(mb), 1, RK_MPI_MB_GetSize(mb), g_save_file);
 
   RK_MPI_MB_ReleaseBuffer(mb);
-}
-
-void video_packet_cb_sub0(MEDIA_BUFFER mb) {
-  if (g_save_file_sub0)
-    fwrite(RK_MPI_MB_GetPtr(mb), 1, RK_MPI_MB_GetSize(mb), g_save_file_sub0);
-  RK_MPI_MB_ReleaseBuffer(mb);
-}
-
-void video_packet_cb_sub1(MEDIA_BUFFER mb) {
-  if (g_save_file_sub0)
-    fwrite(RK_MPI_MB_GetPtr(mb), 1, RK_MPI_MB_GetSize(mb), g_save_file_sub1);
-  RK_MPI_MB_ReleaseBuffer(mb);
-}
-
-static int EnableOsd(RK_U16 u16VencChn) {
-  // Generate a test bitmap, bitmap width and height 64 x 256,
-  // color distribution is as follows:
-  // ***********
-  // *         *
-  // * YELLOW  *
-  // *         *
-  // ***********
-  // *         *
-  // *  TRANS  *
-  // *         *
-  // ***********
-  // *         *
-  // *   RED   *
-  // *         *
-  // ***********
-  // *         *
-  // *  BLUE   *
-  // *         *
-  // ***********
-  BITMAP_S BitMap;
-  BitMap.enPixelFormat = PIXEL_FORMAT_ARGB_8888;
-  BitMap.u32Width = 64;
-  BitMap.u32Height = 256;
-  BitMap.pData = malloc(BitMap.u32Width * 4 * BitMap.u32Height);
-  RK_U8 *ColorData = (RK_U8 *)BitMap.pData;
-  RK_U16 ColorBlockSize = BitMap.u32Height * BitMap.u32Width;
-  set_argb8888_buffer((RK_U32 *)ColorData, ColorBlockSize / 4,
-                      TEST_ARGB32_YELLOW);
-  set_argb8888_buffer((RK_U32 *)(ColorData + ColorBlockSize),
-                      ColorBlockSize / 4, TEST_ARGB32_TRANS);
-  set_argb8888_buffer((RK_U32 *)(ColorData + 2 * ColorBlockSize),
-                      ColorBlockSize / 4, TEST_ARGB32_RED);
-  set_argb8888_buffer((RK_U32 *)(ColorData + 3 * ColorBlockSize),
-                      ColorBlockSize / 4, TEST_ARGB32_BLUE);
-
-  // Case 1: Canvas and bitmap are equal in size
-  OSD_REGION_INFO_S RngInfo;
-  RngInfo.enRegionId = REGION_ID_0;
-  RngInfo.u32PosX = 0;
-  RngInfo.u32PosY = 0;
-  RngInfo.u32Width = 64;
-  RngInfo.u32Height = 256;
-  RngInfo.u8Enable = 1;
-  RngInfo.u8Inverse = 0;
-  return RK_MPI_VENC_RGN_SetBitMap(u16VencChn, &RngInfo, &BitMap);
-}
-
-static int EnableRoi(RK_U16 u16VencChn, RECT_S stRect) {
-  VENC_ROI_ATTR_S stRoiAttr = {0};
-  stRoiAttr.bAbsQp = RK_FALSE;
-  stRoiAttr.bEnable = RK_FALSE;
-  stRoiAttr.stRect.s32X = stRect.s32X;
-  stRoiAttr.stRect.s32Y = stRect.s32Y;
-  stRoiAttr.stRect.u32Width = stRect.u32Width;
-  stRoiAttr.stRect.u32Height = stRect.u32Height;
-  stRoiAttr.u32Index = 0;
-  stRoiAttr.s32Qp = 6;
-  stRoiAttr.bIntra = RK_FALSE;
-  int ret = RK_MPI_VENC_SetRoiAttr(u16VencChn, &stRoiAttr, 1);
-  printf("set roi : %d\n", ret);
-  return ret;
-}
-
-int StreamOn(int width, int height, const char *video_node, int vi_chn,
-             int venc_chn) {
-  static int stream_cnt = 0;
-  int ret = 0;
-
-  printf(
-      "*** StreamOn[%d]: VideoNode:%s, wxh:%dx%d, vi:%d, venc:%d START....\n",
-      stream_cnt, video_node, width, height, vi_chn, venc_chn);
-
-  CODEC_TYPE_E codec_type = RK_CODEC_TYPE_H264;
-  VI_CHN_ATTR_S vi_chn_attr;
-  vi_chn_attr.pcVideoNode = video_node;
-  vi_chn_attr.u32BufCnt = 3;
-  vi_chn_attr.u32Width = width;
-  vi_chn_attr.u32Height = height;
-  vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
-  vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
-  ret = RK_MPI_VI_SetChnAttr(0, vi_chn, &vi_chn_attr);
-  ret |= RK_MPI_VI_EnableChn(0, vi_chn);
-  if (ret) {
-    printf("Create Vi failed! ret=%d\n", ret);
-    return -1;
-  }
-
-  VENC_CHN_ATTR_S venc_chn_attr;
-  memset(&venc_chn_attr, 0, sizeof(venc_chn_attr));
-  venc_chn_attr.stVencAttr.enType = codec_type;
-  venc_chn_attr.stVencAttr.imageType = IMAGE_TYPE_NV12;
-  venc_chn_attr.stVencAttr.u32PicWidth = width;
-  venc_chn_attr.stVencAttr.u32PicHeight = height;
-  venc_chn_attr.stVencAttr.u32VirWidth = width;
-  venc_chn_attr.stVencAttr.u32VirHeight = height;
-  venc_chn_attr.stVencAttr.u32Profile = 77;
-  venc_chn_attr.stRcAttr.enRcMode = VENC_RC_MODE_H264CBR;
-  venc_chn_attr.stRcAttr.stH264Cbr.u32Gop = 75;
-  venc_chn_attr.stRcAttr.stH264Cbr.u32BitRate = width * height * 30 / 14;
-  venc_chn_attr.stRcAttr.stH264Cbr.fr32DstFrameRateDen = 0;
-  venc_chn_attr.stRcAttr.stH264Cbr.fr32DstFrameRateNum = 25;
-  venc_chn_attr.stRcAttr.stH264Cbr.u32SrcFrameRateDen = 0;
-  venc_chn_attr.stRcAttr.stH264Cbr.u32SrcFrameRateNum = 30;
-  ret = RK_MPI_VENC_CreateChn(venc_chn, &venc_chn_attr);
-  if (ret) {
-    printf("Create avc failed! ret=%d\n", ret);
-    return -1;
-  }
-
-  MPP_CHN_S stEncChn;
-  stEncChn.enModId = RK_ID_VENC;
-  stEncChn.s32DevId = 0;
-  stEncChn.s32ChnId = venc_chn;
-  if (stream_cnt == 0)
-    RK_MPI_SYS_RegisterOutCb(&stEncChn, video_packet_cb);
-  else if (stream_cnt == 1)
-    RK_MPI_SYS_RegisterOutCb(&stEncChn, video_packet_cb_sub0);
-  else
-    RK_MPI_SYS_RegisterOutCb(&stEncChn, video_packet_cb_sub1);
-
-  RK_MPI_VENC_RGN_Init(venc_chn, NULL);
-
-  MPP_CHN_S stSrcChn;
-  stSrcChn.enModId = RK_ID_VI;
-  stSrcChn.s32DevId = 0;
-  stSrcChn.s32ChnId = vi_chn;
-  MPP_CHN_S stDestChn;
-  stDestChn.enModId = RK_ID_VENC;
-  stDestChn.s32DevId = 0;
-  stDestChn.s32ChnId = venc_chn;
-  ret = RK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
-  if (ret) {
-    printf("Create RK_MPI_SYS_Bind0 failed! ret=%d\n", ret);
-    return -1;
-  }
-
-  stream_cnt++;
-  printf("*** StreamOn: END....\n");
-
-  return 0;
-}
-
-int StreamOff(int vi_chn, int venc_chn) {
-  int ret = 0;
-
-  printf("*** StreamOff: vi:%d, venc:%d START....\n", vi_chn, venc_chn);
-
-  MPP_CHN_S stSrcChn;
-  stSrcChn.enModId = RK_ID_VI;
-  stSrcChn.s32DevId = 0;
-  stSrcChn.s32ChnId = vi_chn;
-  MPP_CHN_S stDestChn;
-  stDestChn.enModId = RK_ID_VENC;
-  stDestChn.s32DevId = 0;
-  stDestChn.s32ChnId = venc_chn;
-  ret = RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
-  if (ret) {
-    printf("ERROR: unbind vi[%d] -> venc[%d] failed!\n", vi_chn, venc_chn);
-    return -1;
-  }
-
-  RK_MPI_VI_DisableChn(0, vi_chn);
-  RK_MPI_VENC_DestroyChn(venc_chn);
-  printf("*** StreamOff: END....\n");
-
-  return 0;
 }
 
 static RK_CHAR optstr[] = "?::a::o:";
@@ -254,9 +71,17 @@ static void print_usage(char *name) {
 }
 
 int main(int argc, char *argv[]) {
-  char *iq_file_dir = NULL;
-  int c = 0;
-  RK_CHAR *pOutPath = "/tmp/";
+  char *iq_file_dir = NULL;  
+  RK_CHAR *pOutPath = NULL;
+  RK_U32 u32Width = 1920;
+  RK_U32 u32Height = 1080;
+  RK_U32 u32RectX = 0;
+  RK_U32 u32RectY = 0;
+  RK_U32 u32RectW = (u32Width / 2) & (~0x0000000F); // 16 align
+  RK_U32 u32RectH = (u32Height / 2) & (~0x0000000F);
+  const RK_CHAR *pDeviceNode = "rkispp_scale0";
+  int c = 0, ret = 0;
+
   opterr = 1;
   while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
     const char *tmp_optarg = optarg;
@@ -281,28 +106,11 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  char file_name[128] = {0};
-  char file_name0[128] = {0};
-  char file_name1[128] = {0};
-  sprintf(file_name, "%s/main.h264", pOutPath);
-  sprintf(file_name0, "%s/sub0.h264", pOutPath);
-  sprintf(file_name1, "%s/sub1.h264", pOutPath);
-  printf("#output main:%s\n", file_name);
-  printf("#output sub0:%s\n", file_name0);
-  printf("#output sub1:%s\n", file_name1);
-  g_save_file = fopen(file_name, "w");
-  if (!g_save_file) {
-    printf("******open %s fail\n", file_name);
-  }
-  g_save_file_sub0 = fopen(file_name0, "w");
-  if (!g_save_file_sub0) {
-    printf("******open %s fail\n", file_name0);
-  }
-  g_save_file_sub1 = fopen(file_name1, "w");
-  if (!g_save_file_sub1) {
-    printf("******open %s fail\n", file_name1);
-  }
-  printf(">>>>>>>>>>>>>>> Test START <<<<<<<<<<<<<<<<<<<<<<\n");
+  printf("#output path:%s\n", pOutPath);
+  g_save_file = fopen(pOutPath, "w");
+  if (!g_save_file)
+    printf("ERROR: open %s fail\n", pOutPath);
+
   if (iq_file_dir) {
 #ifdef RKAIQ
     printf("#Aiq xml dirpath: %s\n\n", iq_file_dir);
@@ -316,67 +124,103 @@ int main(int argc, char *argv[]) {
   }
 
   RK_MPI_SYS_Init();
-  if (StreamOn(1920, 1080, "rkispp_scale0", 0, 0)) {
-    printf("ERROR: StreamOn failed!\n");
+
+  VI_CHN_ATTR_S vi_chn_attr;
+  vi_chn_attr.pcVideoNode = pDeviceNode;
+  vi_chn_attr.u32BufCnt = 3;
+  vi_chn_attr.u32Width = u32Width;
+  vi_chn_attr.u32Height = u32Height;
+  vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
+  vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
+  ret = RK_MPI_VI_SetChnAttr(0, 0, &vi_chn_attr);
+  ret |= RK_MPI_VI_EnableChn(0, 0);
+  if (ret) {
+    printf("Create Vi failed! ret=%d\n", ret);
     return -1;
   }
 
-  if (StreamOn(720, 480, "rkispp_scale1", 1, 1)) {
-    printf("ERROR: StreamOn failed!\n");
+  VENC_CHN_ATTR_S venc_chn_attr;
+  memset(&venc_chn_attr, 0, sizeof(venc_chn_attr));
+  venc_chn_attr.stVencAttr.enType = RK_CODEC_TYPE_H264;
+  venc_chn_attr.stVencAttr.imageType = IMAGE_TYPE_NV12;
+  venc_chn_attr.stVencAttr.u32PicWidth = u32Width;
+  venc_chn_attr.stVencAttr.u32PicHeight = u32Height;
+  venc_chn_attr.stVencAttr.u32VirWidth = u32Width;
+  venc_chn_attr.stVencAttr.u32VirHeight = u32Height;
+  venc_chn_attr.stVencAttr.u32Profile = 77;
+  venc_chn_attr.stRcAttr.enRcMode = VENC_RC_MODE_H264CBR;
+  venc_chn_attr.stRcAttr.stH264Cbr.u32Gop = 75;
+  venc_chn_attr.stRcAttr.stH264Cbr.u32BitRate = u32Width * u32Height;
+  venc_chn_attr.stRcAttr.stH264Cbr.fr32DstFrameRateDen = 1;
+  venc_chn_attr.stRcAttr.stH264Cbr.fr32DstFrameRateNum = 30;
+  venc_chn_attr.stRcAttr.stH264Cbr.u32SrcFrameRateDen = 1;
+  venc_chn_attr.stRcAttr.stH264Cbr.u32SrcFrameRateNum = 30;
+  ret = RK_MPI_VENC_CreateChn(0, &venc_chn_attr);
+  if (ret) {
+    printf("Create avc failed! ret=%d\n", ret);
     return -1;
   }
 
-  if (StreamOn(1280, 720, "rkispp_scale2", 2, 2)) {
-    printf("ERROR: StreamOn failed!\n");
+  MPP_CHN_S stEncChn;
+  stEncChn.enModId = RK_ID_VENC;
+  stEncChn.s32DevId = 0;
+  stEncChn.s32ChnId = 0;
+  RK_MPI_SYS_RegisterOutCb(&stEncChn, video_packet_cb);
+
+  RK_MPI_VENC_RGN_Init(0, NULL);
+
+  // Generate bitmap
+  BITMAP_S BitMap;
+  BitMap.enPixelFormat = PIXEL_FORMAT_ARGB_8888;
+  BitMap.u32Width = u32Width / 2;
+  BitMap.u32Height = u32Height / 2;
+  BitMap.pData = malloc(BitMap.u32Width * 4 * BitMap.u32Height);
+  set_argb8888_buffer((RK_U32 *)BitMap.pData, BitMap.u32Height * BitMap.u32Width,
+                      TEST_ARGB32_YELLOW);
+
+  // Create Canvas
+  OSD_REGION_INFO_S RngInfo;
+  RngInfo.enRegionId = REGION_ID_0;
+  RngInfo.u32PosX = u32RectX;
+  RngInfo.u32PosY = u32RectY;
+  RngInfo.u32Width = u32RectW;
+  RngInfo.u32Height = u32RectH;
+  RngInfo.u8Enable = 1;
+  RngInfo.u8Inverse = 0;
+  ret = RK_MPI_VENC_RGN_SetBitMap(0, &RngInfo, &BitMap);
+  if (ret) {
+    printf("Venc SetBitMap failed! ret=%d\n", ret);
     return -1;
   }
 
-  printf("Encodering for 5s...\n");
-  sleep(5);
-
-  printf("Enable osd for three streams...\n");
-  for (int i = 0; i < 3; i++) {
-    if (EnableOsd(i)) {
-      printf("TEST: ERROR: Enable venc[%d] osd failed!\n", i);
-      quit = true;
-      break;
-    }
+  VENC_ROI_ATTR_S stRoiAttr = {0};
+  stRoiAttr.bAbsQp = RK_TRUE;
+  stRoiAttr.bEnable = RK_TRUE;
+  stRoiAttr.stRect.s32X = u32RectX;
+  stRoiAttr.stRect.s32Y = u32RectY;
+  stRoiAttr.stRect.u32Width = u32RectW;
+  stRoiAttr.stRect.u32Height = u32RectH;
+  stRoiAttr.u32Index = 0;
+  stRoiAttr.s32Qp = 18;
+  stRoiAttr.bIntra = RK_FALSE;
+  ret = RK_MPI_VENC_SetRoiAttr(0, &stRoiAttr, 1);
+  if (ret) {
+    printf("Venc SetRoi failed! ret=%d\n", ret);
+    return -1;
   }
 
-  if (!quit) {
-    printf("Encodering for 3s after enable osd...\n");
-    sleep(3);
-
-    printf("Enable MainStream roi[128, 128, 1280, 768]...\n");
-    RECT_S stRect = {0};
-    stRect.s32X = 128;
-    stRect.s32Y = 128;
-    stRect.u32Width = 1280;
-    stRect.u32Height = 768;
-    if (EnableRoi(0, stRect)) {
-      printf("TEST: ERROR: Enable venc[0] roi failed!\n");
-      quit = true;
-    }
-
-    printf("Enable SubStream0 roi[128, 128, 512, 320]...\n");
-    stRect.s32X = 128;
-    stRect.s32Y = 128;
-    stRect.u32Width = 512;
-    stRect.u32Height = 320;
-    if (EnableRoi(1, stRect)) {
-      printf("TEST: ERROR: Enable venc[1] roi failed!\n");
-      quit = true;
-    }
-
-    printf("Enable SubStream1 roi[128, 128, 960, 512]...\n");
-    stRect.s32X = 128;
-    stRect.s32Y = 128;
-    stRect.u32Width = 960;
-    stRect.u32Height = 512;
-    if (EnableRoi(2, stRect)) {
-      printf("TEST: ERROR: Enable venc[2] roi failed!\n");
-      quit = true;
-    }
+  MPP_CHN_S stSrcChn;
+  stSrcChn.enModId = RK_ID_VI;
+  stSrcChn.s32DevId = 0;
+  stSrcChn.s32ChnId = 0;
+  MPP_CHN_S stDestChn;
+  stDestChn.enModId = RK_ID_VENC;
+  stDestChn.s32DevId = 0;
+  stDestChn.s32ChnId = 0;
+  ret = RK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
+  if (ret) {
+    printf("Create RK_MPI_SYS_Bind0 failed! ret=%d\n", ret);
+    return -1;
   }
 
   signal(SIGINT, sigterm_handler);
@@ -384,9 +228,19 @@ int main(int argc, char *argv[]) {
     usleep(500000);
   }
 
-  StreamOff(0, 0);
-  StreamOff(1, 1);
-  StreamOff(2, 2);
+  ret = RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
+  if (ret) {
+    printf("ERROR: unbind vi[0] -> venc[0] failed! ret=%d\n", ret);
+    return -1;
+  }
+
+  ret = RK_MPI_VI_DisableChn(0, 0);
+  if (ret)
+    printf("ERROR: destroy vi[0] failed! ret=%d\n", ret);
+
+  ret = RK_MPI_VENC_DestroyChn(0);
+  if (ret)
+    printf("ERROR: destroy venc[0] failed! ret=%d\n", ret);
 
   if (iq_file_dir) {
 #ifdef RKAIQ
@@ -395,8 +249,5 @@ int main(int argc, char *argv[]) {
   }
 
   fclose(g_save_file);
-  fclose(g_save_file_sub0);
-  fclose(g_save_file_sub1);
-  printf(">>>>>>>>>>>>>>> Test END <<<<<<<<<<<<<<<<<<<<<<\n");
   return 0;
 }
