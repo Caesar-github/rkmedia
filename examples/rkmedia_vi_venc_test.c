@@ -198,6 +198,7 @@ int main(int argc, char *argv[]) {
   vi_chn_attr.u32Width = u32Width;
   vi_chn_attr.u32Height = u32Height;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
+  vi_chn_attr.enBufType = VI_CHN_BUF_TYPE_MMAP;
   vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
   ret = RK_MPI_VI_SetChnAttr(0, 0, &vi_chn_attr);
   ret |= RK_MPI_VI_EnableChn(0, 0);
