@@ -10,6 +10,8 @@
 #include <sys/time.h>
 
 #include <memory>
+#include <vector>
+#include <string>
 
 #include "image.h"
 #include "lock.h"
@@ -33,6 +35,68 @@ enum drm_rockchip_gem_mem_type {
   ROCKCHIP_BO_MASK = ROCKCHIP_BO_CONTIG | ROCKCHIP_BO_CACHABLE | ROCKCHIP_BO_WC
 };
 
+#ifdef RKMEDIA_TIMESTAMP_DEBUG
+class TimeStampNode {
+public:
+  TimeStampNode(std::string name, int64_t ts) : NodeName(name), NodeTs(ts) {}
+  TimeStampNode(const TimeStampNode &TsNode) {
+    NodeName = TsNode.NodeName;
+    NodeTs = TsNode.NodeTs;
+  }
+
+  ~TimeStampNode() = default;
+
+  TimeStampNode operator=(const TimeStampNode &TsNode) {
+    if (this != &TsNode) {
+      NodeName = TsNode.NodeName;
+      NodeTs = TsNode.NodeTs;
+    }
+    return *this;
+  }
+
+  std::string NodeName;
+  int64_t NodeTs;
+};
+
+class TimeStampRecorder {
+public:
+  TimeStampRecorder() {
+    TsNodeList.clear();
+  }
+
+  ~TimeStampRecorder() {
+    TsNodeList.clear();
+  }
+
+  void Record(std::string name, int64_t ts) {
+    TsNodeListMtx.lock();
+    TsNodeList.push_back(TimeStampNode(name, ts));
+    TsNodeListMtx.unlock();
+  }
+
+  void Reset() {
+    TsNodeListMtx.lock();
+    TsNodeList.clear();
+    TsNodeListMtx.unlock();
+  }
+
+  void Dump() {
+    int64_t ts_pre = 0;
+    int64_t ts_cur = 0;
+    TsNodeListMtx.lock();
+    for (size_t i = 0; i < TsNodeList.size(); i++) {
+      ts_cur = TsNodeList[i].NodeTs;
+      printf("#[%s]:[%lld]: %0.3fms\n", TsNodeList[i].NodeName.c_str(), TsNodeList[i].NodeTs, (ts_cur - ts_pre) / 1000.0);
+      ts_pre = ts_cur;
+    }
+    TsNodeListMtx.unlock();
+  }
+
+  std::vector<TimeStampNode> TsNodeList;
+  std::mutex TsNodeListMtx;
+};
+#endif // RKMEDIA_TIMESTAMP_DEBUG
+
 // wrapping existing buffer
 class _API MediaBuffer {
 public:
@@ -50,7 +114,11 @@ public:
   MediaBuffer()
       : ptr(nullptr), size(0), fd(-1), valid_size(0), type(Type::None),
         user_flag(0), ustimestamp(0), eof(false), tsvc_level(-1),
-        dbg_info(nullptr) {}
+        dbg_info(nullptr) {
+#ifdef RKMEDIA_TIMESTAMP_DEBUG
+    TsRecorder = std::make_shared<TimeStampRecorder>();
+#endif
+  }
   // Set userdata and delete function if you want free resource when destrut.
   MediaBuffer(void *buffer_ptr, size_t buffer_size, int buffer_fd = -1,
               void *user_data = nullptr, DeleteFun df = nullptr)
@@ -58,6 +126,9 @@ public:
         type(Type::None), user_flag(0), ustimestamp(0), eof(false),
         tsvc_level(-1), dbg_info(nullptr) {
     SetUserData(user_data, df);
+#ifdef RKMEDIA_TIMESTAMP_DEBUG
+    TsRecorder = std::make_shared<TimeStampRecorder>();
+#endif
   }
   virtual ~MediaBuffer() = default;
   virtual PixelFormat GetPixelFormat() const { return PIX_FMT_NONE; }
@@ -152,6 +223,23 @@ public:
   void SetDbgInfo(void *addr) { dbg_info = addr; }
   size_t GetDbgInfoSize() const { return dbg_info_size; }
   void SetDbgInfoSize(size_t s) { dbg_info_size = s; }
+
+#ifdef RKMEDIA_TIMESTAMP_DEBUG
+  void TimeStampRecord(std::string name, int64_t ts) {
+    TsRecorder->Record(name, ts);
+  }
+  void TimeStampCopy(std::shared_ptr<MediaBuffer> mb) {
+    TsRecorder = mb->TsRecorder;
+  }
+  void TimeStampReset() {
+    TsRecorder->Reset();
+  }
+  void TimeStampDump() {
+    TsRecorder->Dump();
+  }
+
+  std::shared_ptr<TimeStampRecorder> TsRecorder;
+#endif // RKMEDIA_TIMESTAMP_DEBUG
 
 private:
   // copy attributs except buffer

@@ -357,3 +357,18 @@ RK_S32 RK_MPI_MB_GetImageInfo(MEDIA_BUFFER mb, MB_IMAGE_INFO_S *pstImageInfo) {
   *pstImageInfo = mb_impl->stImageInfo;
   return RK_ERR_SYS_OK;
 }
+
+RK_S32 RK_MPI_MB_TsNodeDump(MEDIA_BUFFER mb) {
+  if (!mb)
+    return -RK_ERR_SYS_ILLEGAL_PARAM;
+
+#ifdef RKMEDIA_TIMESTAMP_DEBUG
+  MEDIA_BUFFER_IMPLE *mb_impl = (MEDIA_BUFFER_IMPLE *)mb;
+  if (mb_impl->rkmedia_mb)
+    mb_impl->rkmedia_mb->TimeStampDump();
+  return RK_ERR_SYS_OK;
+#else
+  return -RK_ERR_SYS_NOT_SUPPORT;
+#endif
+}
+
