@@ -193,7 +193,7 @@ void FlowCoroutine::WhileRunSleep() {
       ad.Reset();
     RunOnce();
     ++times;
-    int64_t remain = (interval * times - ad.Get()) / 1000;
+    int64_t remain = interval * times - ad.Get() / 1000.0;
     if (remain > 0)
       msleep((int)remain);
     if (times >= 10000)
@@ -721,12 +721,14 @@ bool Flow::InstallSlotMap(SlotMap &map, const std::string &mark,
 
 void Flow::FlowMap::AddFlow(std::shared_ptr<Flow> flow, int index) {
   AutoLockMutex _lg(list_mtx);
+#if 0
   auto i = std::find(flows.begin(), flows.end(), flow);
   if (i != flows.end()) {
     RKMEDIA_LOGI("repeatedly add, update index\n");
     i->index_of_in = index;
     return;
   }
+#endif
   // TODO: sort by sync type in downflow
   flows.emplace_back(flow, index);
 }

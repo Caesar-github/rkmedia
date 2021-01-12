@@ -51,29 +51,17 @@ typedef struct _RkmediaVencAttr {
   RK_BOOL bFullFunc; // Used to distinguish jpeg or jpeg light
 } RkmediaVencAttr;
 
-typedef struct _RkmediaVIAttr {
-  VI_CHN_ATTR_S attr;
-} RkmediaVIAttr;
+typedef struct _RkmediaVIAttr { VI_CHN_ATTR_S attr; } RkmediaVIAttr;
 
-typedef struct _RkmediaAIAttr {
-  AI_CHN_ATTR_S attr;
-} RkmediaAIAttr;
+typedef struct _RkmediaAIAttr { AI_CHN_ATTR_S attr; } RkmediaAIAttr;
 
-typedef struct _RkmediaAOAttr {
-  AO_CHN_ATTR_S attr;
-} RkmediaAOAttr;
+typedef struct _RkmediaAOAttr { AO_CHN_ATTR_S attr; } RkmediaAOAttr;
 
-typedef struct _RkmediaAENCAttr {
-  AENC_CHN_ATTR_S attr;
-} RkmediaAENCAttr;
+typedef struct _RkmediaAENCAttr { AENC_CHN_ATTR_S attr; } RkmediaAENCAttr;
 
-typedef struct _RkmediaADECAttr {
-  ADEC_CHN_ATTR_S attr;
-} RkmediaADECAttr;
+typedef struct _RkmediaADECAttr { ADEC_CHN_ATTR_S attr; } RkmediaADECAttr;
 
-typedef struct _RkmediaVDECAttr {
-  VDEC_CHN_ATTR_S attr;
-} RkmediaVDECAttr;
+typedef struct _RkmediaVDECAttr { VDEC_CHN_ATTR_S attr; } RkmediaVDECAttr;
 
 typedef ALGO_MD_ATTR_S RkmediaMDAttr;
 typedef ALGO_OD_ATTR_S RkmediaODAttr;
@@ -97,6 +85,7 @@ typedef struct _RkmediaChannel {
   std::list<std::shared_ptr<easymedia::Flow>> rkmedia_flow_list;
   OutCbFunc out_cb;
   EventCbFunc event_cb;
+
   union {
     RkmediaVIAttr vi_attr;
     RkmediaVencAttr venc_attr;
@@ -109,6 +98,7 @@ typedef struct _RkmediaChannel {
     RkmediaVOAttr vo_attr;
     RkmediaVDECAttr vdec_attr;
   };
+
   RK_S16 bind_ref_pre;
   RK_S16 bind_ref_nxt;
   std::mutex buffer_list_mtx;
@@ -167,6 +157,19 @@ std::mutex g_vo_mtx;
 
 RkmediaChannel g_vdec_chns[VDEC_MAX_CHN_NUM];
 std::mutex g_vdec_mtx;
+
+typedef struct VideoMixDevice_ {
+  RK_BOOL bInit;
+  RK_U16 u16Fps;
+  RK_U16 u16ChnCnt;
+  RECT_S stSrcRect[VMIX_MAX_CHN_NUM];
+  RECT_S stDstRect[VMIX_MAX_CHN_NUM];
+  std::shared_ptr<easymedia::Flow> rkmedia_flow;
+  RK_U16 u16RefCnt;
+  std::mutex VmMtx;
+  RkmediaChannel VmChns[VMIX_MAX_CHN_NUM];
+} VideoMixDevice;
+VideoMixDevice g_vmix_dev[VMIX_MAX_DEV_NUM];
 
 static unsigned char g_sys_init;
 
@@ -313,6 +316,15 @@ RK_S32 RK_MPI_SYS_Init() {
   Reset_Channel_Table(g_adec_chns, ADEC_MAX_CHN_NUM, RK_ID_ADEC);
   Reset_Channel_Table(g_vo_chns, VO_MAX_CHN_NUM, RK_ID_VO);
   Reset_Channel_Table(g_vdec_chns, VDEC_MAX_CHN_NUM, RK_ID_VDEC);
+
+  // init video mixer device
+  for (RK_U16 i = 0; i < VMIX_MAX_DEV_NUM; i++) {
+    g_vmix_dev[i].bInit = RK_FALSE;
+    g_vmix_dev[i].u16ChnCnt = 0;
+    g_vmix_dev[i].u16RefCnt = 0;
+    Reset_Channel_Table(g_vmix_dev[i].VmChns, VMIX_MAX_CHN_NUM, RK_ID_VMIX);
+  }
+
   g_sys_init = 1; // init sucess.
   return RK_ERR_SYS_OK;
 }
@@ -320,6 +332,25 @@ RK_S32 RK_MPI_SYS_Init() {
 RK_VOID RK_MPI_SYS_DumpChn(MOD_ID_E enModId) {
   RK_U16 u16ChnMaxCnt = 0;
   RkmediaChannel *pChns = NULL;
+
+  if (enModId == RK_ID_VMIX) {
+    RKMEDIA_LOGI("\nDump Mode:%d:\n", enModId);
+    for (RK_U16 j = 0; j < 1; j++) {
+      RKMEDIA_LOGI("Dump VMIX Device[%d]: Init:%d, refcnt:%d\n", j,
+                   g_vmix_dev[j].bInit, g_vmix_dev[j].u16RefCnt);
+      pChns = g_vmix_dev[j].VmChns;
+      for (RK_U16 i = 0; i < 4; i++) {
+        RKMEDIA_LOGI("  Chn[%d]->status:%d\n", i, pChns[i].status);
+        RKMEDIA_LOGI("  Chn[%d]->bind_ref_pre:%d\n", i, pChns[i].bind_ref_pre);
+        RKMEDIA_LOGI("  Chn[%d]->bind_ref_nxt:%d\n", i, pChns[i].bind_ref_nxt);
+        // RKMEDIA_LOGI("  Chn[%d]->output_cb:%p\n", i, pChns[i].out_cb);
+        // RKMEDIA_LOGI("  Chn[%d]->event_cb:%p\n\n", i, pChns[i].event_cb);
+      }
+    }
+
+    return;
+  }
+
   switch (enModId) {
   case RK_ID_VI:
     u16ChnMaxCnt = VI_MAX_CHN_NUM;
@@ -356,6 +387,8 @@ RK_S32 RK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
   RkmediaChannel *dst_chn = NULL;
   std::mutex *src_mutex = NULL;
   std::mutex *dst_mutex = NULL;
+  RK_S32 src_out_idx = 0;
+  RK_S32 dst_in_idx = 0;
 
   if (!pstSrcChn || !pstDestChn)
     return -RK_ERR_SYS_ILLEGAL_PARAM;
@@ -400,11 +433,16 @@ RK_S32 RK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
     src_chn = &g_vdec_chns[pstSrcChn->s32ChnId];
     src_mutex = &g_vdec_mtx;
     break;
+  case RK_ID_VMIX:
+    src = g_vmix_dev[pstSrcChn->s32DevId].rkmedia_flow;
+    src_mutex = &g_vmix_dev[pstSrcChn->s32DevId].VmMtx;
+    break;
   default:
     return -RK_ERR_SYS_NOT_SUPPORT;
   }
 
-  if ((src_chn->status < CHN_STATUS_OPEN) || (!src)) {
+  if ((pstSrcChn->enModId != RK_ID_VMIX) &&
+      (!src_chn || (src_chn->status < CHN_STATUS_OPEN) || !src)) {
     RKMEDIA_LOGE("%s Src Mode[%s]:Chn[%d] is not ready!\n", __func__,
                  ModIdToString(pstSrcChn->enModId), pstSrcChn->s32ChnId);
     return -RK_ERR_SYS_NOTREADY;
@@ -456,11 +494,19 @@ RK_S32 RK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
     dst_chn = &g_vdec_chns[pstDestChn->s32ChnId];
     dst_mutex = &g_vdec_mtx;
     break;
+  case RK_ID_VMIX:
+    sink = g_vmix_dev[pstDestChn->s32DevId]
+               .VmChns[pstDestChn->s32ChnId]
+               .rkmedia_flow;
+    dst_chn = &g_vmix_dev[pstDestChn->s32DevId].VmChns[pstDestChn->s32ChnId];
+    dst_mutex = &g_vmix_dev[pstDestChn->s32DevId].VmMtx;
+    dst_in_idx = pstDestChn->s32ChnId;
+    break;
   default:
     return -RK_ERR_SYS_NOT_SUPPORT;
   }
 
-  if ((dst_chn->status < CHN_STATUS_OPEN) || (!sink)) {
+  if ((!dst_chn || (dst_chn->status < CHN_STATUS_OPEN) || !sink)) {
     RKMEDIA_LOGE("%s Dst Mode[%s]:Chn[%d] is not ready!\n", __func__,
                  ModIdToString(pstDestChn->enModId), pstDestChn->s32ChnId);
     return -RK_ERR_SYS_NOTREADY;
@@ -468,18 +514,42 @@ RK_S32 RK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
 
   src_mutex->lock();
   // Rkmedia flow bind
-  src->AddDownFlow(sink, 0, 0);
-  if ((src_chn->rkmedia_out_cb_status == CHN_OUT_CB_INIT) ||
-      (src_chn->rkmedia_out_cb_status == CHN_OUT_CB_CLOSE)) {
-    RKMEDIA_LOGD("%s: disable rkmedia flow output callback!\n", __func__);
-    src_chn->rkmedia_out_cb_status = CHN_OUT_CB_CLOSE;
-    src->SetOutputCallBack(NULL, NULL);
-    RkmediaChnClearBuffer(src_chn);
+  if (!src->AddDownFlow(sink, src_out_idx, dst_in_idx)) {
+    src_mutex->unlock();
+    RKMEDIA_LOGE(
+        "%s Mode[%s]:Chn[%d]:Out[%d] -> Mode[%s]:Chn[%d]:In[%d] failed!\n",
+        __func__, ModIdToString(pstSrcChn->enModId), pstSrcChn->s32ChnId,
+        src_out_idx, ModIdToString(pstDestChn->enModId), pstDestChn->s32ChnId,
+        dst_in_idx);
+    return -RK_ERR_SYS_NOTREADY;
   }
 
-  // change status frome OPEN to BIND.
-  src_chn->status = CHN_STATUS_BIND;
-  src_chn->bind_ref_nxt++;
+  if (pstSrcChn->enModId == RK_ID_VMIX) {
+    RK_U16 u16ChnMaxCnt = g_vmix_dev[pstSrcChn->s32DevId].u16ChnCnt;
+    for (RK_S32 i = 0; i < u16ChnMaxCnt; i++) {
+      src_chn = &g_vmix_dev[pstSrcChn->s32DevId].VmChns[i];
+      if (src_chn->status != CHN_STATUS_OPEN) {
+        RKMEDIA_LOGW("%s: SrcChn:VMIX[%d]:Chn[x] status(%d) invalid!\n",
+                     __func__, pstSrcChn->s32DevId, src_chn->status);
+      } else {
+        src_chn->status = CHN_STATUS_BIND;
+        src_chn->bind_ref_nxt++;
+      }
+    }
+  } else {
+    if ((src_chn->rkmedia_out_cb_status == CHN_OUT_CB_INIT) ||
+        (src_chn->rkmedia_out_cb_status == CHN_OUT_CB_CLOSE)) {
+      RKMEDIA_LOGD("%s: disable rkmedia flow output callback!\n", __func__);
+      src_chn->rkmedia_out_cb_status = CHN_OUT_CB_CLOSE;
+      src->SetOutputCallBack(NULL, NULL);
+      RkmediaChnClearBuffer(src_chn);
+    }
+
+    // change status frome OPEN to BIND.
+    src_chn->status = CHN_STATUS_BIND;
+    src_chn->bind_ref_nxt++;
+  }
+
   src_mutex->unlock();
 
   dst_mutex->lock();
@@ -539,18 +609,36 @@ RK_S32 RK_MPI_SYS_UnBind(const MPP_CHN_S *pstSrcChn,
     src_chn = &g_vdec_chns[pstSrcChn->s32ChnId];
     src_mutex = &g_vdec_mtx;
     break;
+  case RK_ID_VMIX:
+    src = g_vmix_dev[pstSrcChn->s32DevId].rkmedia_flow;
+    src_mutex = &g_vmix_dev[pstSrcChn->s32DevId].VmMtx;
+    break;
   default:
     return -RK_ERR_SYS_ILLEGAL_PARAM;
   }
 
-  if ((src_chn->status != CHN_STATUS_BIND))
-    return -RK_ERR_SYS_NOT_PERM;
-
-  if ((src_chn->bind_ref_nxt <= 0) || (!src)) {
-    RKMEDIA_LOGE("%s Src Mode[%s]:Chn[%d](nxt-ref:%d):Serious error status!\n",
-                 __func__, ModIdToString(pstSrcChn->enModId),
-                 pstSrcChn->s32ChnId, src_chn->bind_ref_nxt);
+  if (!src) {
+    RKMEDIA_LOGE("%s Src Mode[%s]:Chn[%d]: flow is null!\n", __func__,
+                 ModIdToString(pstSrcChn->enModId), pstSrcChn->s32ChnId);
     return -RK_ERR_SYS_ERR_STATUS;
+  }
+
+  if (pstSrcChn->enModId != RK_ID_VMIX) {
+    if (!src_chn) {
+      RKMEDIA_LOGE("%s Src Mode[%s]:Chn[%d]: chn is null!\n", __func__,
+                   ModIdToString(pstSrcChn->enModId), pstSrcChn->s32ChnId);
+      return -RK_ERR_SYS_ERR_STATUS;
+    }
+
+    if (src_chn->status != CHN_STATUS_BIND)
+      return -RK_ERR_SYS_NOT_PERM;
+
+    if (src_chn->bind_ref_nxt <= 0) {
+      RKMEDIA_LOGE("%s Src Mode[%s]:Chn[%d]: nxt-ref:%d\n", __func__,
+                   ModIdToString(pstSrcChn->enModId), pstSrcChn->s32ChnId,
+                   src_chn->bind_ref_nxt);
+      return -RK_ERR_SYS_ERR_STATUS;
+    }
   }
 
   switch (pstDestChn->enModId) {
@@ -599,8 +687,27 @@ RK_S32 RK_MPI_SYS_UnBind(const MPP_CHN_S *pstSrcChn,
     dst_chn = &g_vdec_chns[pstDestChn->s32ChnId];
     dst_mutex = &g_vdec_mtx;
     break;
+  case RK_ID_VMIX:
+    sink = g_vmix_dev[pstDestChn->s32DevId]
+               .VmChns[pstDestChn->s32ChnId]
+               .rkmedia_flow;
+    dst_chn = &g_vmix_dev[pstDestChn->s32DevId].VmChns[pstDestChn->s32ChnId];
+    dst_mutex = &g_vmix_dev[pstDestChn->s32DevId].VmMtx;
+    break;
   default:
     return -RK_ERR_SYS_ILLEGAL_PARAM;
+  }
+
+  if (!sink) {
+    RKMEDIA_LOGE("%s Dst Mode[%s]:Chn[%d]: flow is null!\n", __func__,
+                 ModIdToString(pstDestChn->enModId), pstDestChn->s32ChnId);
+    return -RK_ERR_SYS_ERR_STATUS;
+  }
+
+  if (!dst_chn) {
+    RKMEDIA_LOGE("%s Dst Mode[%s]:Chn[%d]: chn is null!\n", __func__,
+                 ModIdToString(pstDestChn->enModId), pstDestChn->s32ChnId);
+    return -RK_ERR_SYS_ERR_STATUS;
   }
 
   if ((dst_chn->status != CHN_STATUS_BIND))
@@ -616,12 +723,31 @@ RK_S32 RK_MPI_SYS_UnBind(const MPP_CHN_S *pstSrcChn,
   src_mutex->lock();
   // Rkmedia flow unbind
   src->RemoveDownFlow(sink);
-  src_chn->bind_ref_nxt--;
-  // change status frome BIND to OPEN.
-  if ((src_chn->bind_ref_nxt <= 0) && (src_chn->bind_ref_pre <= 0)) {
-    src_chn->status = CHN_STATUS_OPEN;
-    src_chn->bind_ref_pre = 0;
-    src_chn->bind_ref_nxt = 0;
+  if (pstSrcChn->enModId == RK_ID_VMIX) {
+    RK_U16 u16ChnMaxCnt = g_vmix_dev[pstSrcChn->s32DevId].u16ChnCnt;
+    for (RK_S32 i = 0; i < u16ChnMaxCnt; i++) {
+      src_chn = &g_vmix_dev[pstSrcChn->s32DevId].VmChns[i];
+      if (src_chn->status != CHN_STATUS_BIND) {
+        RKMEDIA_LOGW("%s: SrcChn:VMIX[%d]:Chn[X] status(%d) invalid!\n",
+                     __func__, pstSrcChn->s32DevId, src_chn->status);
+        continue;
+      }
+      src_chn->bind_ref_nxt--;
+      // change status frome BIND to OPEN.
+      if ((src_chn->bind_ref_nxt <= 0) && (src_chn->bind_ref_pre <= 0)) {
+        src_chn->status = CHN_STATUS_OPEN;
+        src_chn->bind_ref_pre = 0;
+        src_chn->bind_ref_nxt = 0;
+      }
+    }
+  } else {
+    src_chn->bind_ref_nxt--;
+    // change status frome BIND to OPEN.
+    if ((src_chn->bind_ref_nxt <= 0) && (src_chn->bind_ref_pre <= 0)) {
+      src_chn->status = CHN_STATUS_OPEN;
+      src_chn->bind_ref_pre = 0;
+      src_chn->bind_ref_nxt = 0;
+    }
   }
   src_mutex->unlock();
 
@@ -1283,8 +1409,8 @@ RK_S32 RK_MPI_VI_EnableChn(VI_PIPE ViPipe, VI_CHN ViChn) {
     RK_CHAR chrValue = 0;
     fread(&chrValue, 1, 1, DbgFile);
     if ((chrValue == 'y') || (chrValue == 'Y')) {
-      RKMEDIA_LOGI("VI[%d:%d] enable debug mode(with ispp reg info)\n",
-                   ViPipe, ViChn);
+      RKMEDIA_LOGI("VI[%d:%d] enable debug mode(with ispp reg info)\n", ViPipe,
+                   ViChn);
       u8DbgFlag = 1;
     }
     fclose(DbgFile);
@@ -5317,21 +5443,21 @@ RK_S32 RK_MPI_VDEC_CreateChn(VDEC_CHN VdChn, const VDEC_CHN_ATTR_S *pstAttr) {
   }
 
   switch (pstAttr->enCodecType) {
-    case RK_CODEC_TYPE_H264:
-    case RK_CODEC_TYPE_H265:
-      split = ParaseSplitAttr(pstAttr->enMode);
-      break;
-    case RK_CODEC_TYPE_JPEG:
-    case RK_CODEC_TYPE_MJPEG:
-      if (pstAttr->enMode == VIDEO_MODE_STREAM) {
-        RKMEDIA_LOGE("JPEG/MJPEG only support VIDEO_MODE_FRAME!\n");
-        return -RK_ERR_VDEC_ILLEGAL_PARAM;
-      }
-      split = ParaseSplitAttr(pstAttr->enMode);
-      break;
-    default:
-      RKMEDIA_LOGE("Not support CodecType:%d!\n", pstAttr->enCodecType);
+  case RK_CODEC_TYPE_H264:
+  case RK_CODEC_TYPE_H265:
+    split = ParaseSplitAttr(pstAttr->enMode);
+    break;
+  case RK_CODEC_TYPE_JPEG:
+  case RK_CODEC_TYPE_MJPEG:
+    if (pstAttr->enMode == VIDEO_MODE_STREAM) {
+      RKMEDIA_LOGE("JPEG/MJPEG only support VIDEO_MODE_FRAME!\n");
       return -RK_ERR_VDEC_ILLEGAL_PARAM;
+    }
+    split = ParaseSplitAttr(pstAttr->enMode);
+    break;
+  default:
+    RKMEDIA_LOGE("Not support CodecType:%d!\n", pstAttr->enCodecType);
+    return -RK_ERR_VDEC_ILLEGAL_PARAM;
   }
 
   if (split < 0) {
@@ -5394,6 +5520,140 @@ RK_S32 RK_MPI_VDEC_DestroyChn(VDEC_CHN VdChn) {
   RkmediaChnClearBuffer(&g_vdec_chns[VdChn]);
   g_vdec_chns[VdChn].status = CHN_STATUS_CLOSED;
   g_vdec_mtx.unlock();
+
+  return RK_ERR_SYS_OK;
+}
+
+RK_S32 RK_MPI_VMIX_CreateDev(VMIX_DEV VmDev, VMIX_DEV_INFO_S *pstDevInfo) {
+  if ((VmDev < 0) || (VmDev >= VMIX_MAX_DEV_NUM))
+    return -RK_ERR_VMIX_INVALID_DEVID;
+
+  if (!pstDevInfo)
+    return -RK_ERR_VMIX_ILLEGAL_PARAM;
+
+  g_vmix_dev[VmDev].VmMtx.lock();
+  if (g_vmix_dev[VmDev].bInit == RK_TRUE) {
+    g_vmix_dev[VmDev].VmMtx.unlock();
+    return -RK_ERR_VMIX_EXIST;
+  }
+
+  // Parames Check. ToDo...
+
+  // Create N-In and 1-Out filter flow.
+  std::string param;
+  PARAM_STRING_APPEND(param, KEY_NAME, "rkrga");
+  // ASYNC ATOMIC type.
+  PARAM_STRING_APPEND(param, KEK_THREAD_SYNC_MODEL, KEY_ASYNCATOMIC);
+  PARAM_STRING_APPEND_TO(param, KEY_FPS, pstDevInfo->u16Fps);
+  // Output fmt cfg
+  PARAM_STRING_APPEND(param, KEY_OUTPUTDATATYPE,
+                      ImageTypeToString(pstDevInfo->enImgType));
+  PARAM_STRING_APPEND(param, KEY_INPUTDATATYPE,
+                      ImageTypeToString(pstDevInfo->enImgType));
+  PARAM_STRING_APPEND_TO(param, KEY_BUFFER_WIDTH, pstDevInfo->u32ImgWidth);
+  PARAM_STRING_APPEND_TO(param, KEY_BUFFER_HEIGHT, pstDevInfo->u32ImgHeight);
+  PARAM_STRING_APPEND_TO(param, KEY_BUFFER_VIR_WIDTH, pstDevInfo->u32ImgWidth);
+  PARAM_STRING_APPEND_TO(param, KEY_BUFFER_VIR_HEIGHT,
+                         pstDevInfo->u32ImgHeight);
+
+  for (RK_U16 i = 0; i < pstDevInfo->u16ChnCnt; i++) {
+    char rect_str[128] = {0};
+    snprintf(rect_str, sizeof(rect_str), "(%d,%d,%u,%u)->(%d,%d,%u,%u)",
+             pstDevInfo->stChnInfo[i].stInRect.s32X,
+             pstDevInfo->stChnInfo[i].stInRect.s32Y,
+             pstDevInfo->stChnInfo[i].stInRect.u32Width,
+             pstDevInfo->stChnInfo[i].stInRect.u32Height,
+             pstDevInfo->stChnInfo[i].stOutRect.s32X,
+             pstDevInfo->stChnInfo[i].stOutRect.s32Y,
+             pstDevInfo->stChnInfo[i].stOutRect.u32Width,
+             pstDevInfo->stChnInfo[i].stOutRect.u32Height);
+    param.append(" ");
+    PARAM_STRING_APPEND(param, KEY_BUFFER_RECT, rect_str);
+  }
+  RKMEDIA_LOGD("VMIX Flow: %s\n", param.c_str());
+  g_vmix_dev[VmDev].rkmedia_flow = easymedia::REFLECTOR(
+      Flow)::Create<easymedia::Flow>("filter", param.c_str());
+  if (!g_vmix_dev[VmDev].rkmedia_flow) {
+    RKMEDIA_LOGE("[%s]: Create video mixer flow failed!\n", __func__);
+    g_vmix_dev[VmDev].VmMtx.unlock();
+    return -RK_ERR_VMIX_ILLEGAL_PARAM;
+  }
+
+  g_vmix_dev[VmDev].u16ChnCnt = pstDevInfo->u16ChnCnt;
+  g_vmix_dev[VmDev].bInit = RK_TRUE;
+  g_vmix_dev[VmDev].VmMtx.unlock();
+
+  return RK_ERR_SYS_OK;
+}
+
+RK_S32 RK_MPI_VMIX_DestroyDev(VMIX_DEV VmDev) {
+  if ((VmDev < 0) || (VmDev >= VMIX_MAX_DEV_NUM))
+    return -RK_ERR_VMIX_INVALID_DEVID;
+
+  g_vmix_dev[VmDev].VmMtx.lock();
+  if (g_vmix_dev[VmDev].bInit == RK_FALSE) {
+    g_vmix_dev[VmDev].VmMtx.unlock();
+    return -RK_ERR_VMIX_NOTREADY;
+  }
+  if (g_vmix_dev[VmDev].u16RefCnt > 0) {
+    g_vmix_dev[VmDev].VmMtx.unlock();
+    return -RK_ERR_VMIX_BUSY;
+  }
+
+  if (g_vmix_dev[VmDev].rkmedia_flow)
+    g_vmix_dev[VmDev].rkmedia_flow.reset();
+  g_vmix_dev[VmDev].bInit = RK_FALSE;
+  g_vmix_dev[VmDev].VmMtx.unlock();
+  return RK_ERR_SYS_OK;
+}
+
+RK_S32 RK_MPI_VMIX_EnableChn(VMIX_DEV VmDev, VMIX_CHN VmChn) {
+  if ((VmDev < 0) || (VmDev > VMIX_MAX_DEV_NUM))
+    return -RK_ERR_VMIX_INVALID_DEVID;
+
+  if ((VmChn < 0) || (VmChn > VMIX_MAX_CHN_NUM))
+    return -RK_ERR_VMIX_INVALID_CHNID;
+
+  g_vmix_dev[VmDev].VmMtx.lock();
+  if (g_vmix_dev[VmDev].bInit == RK_FALSE) {
+    g_vmix_dev[VmDev].VmMtx.unlock();
+    return -RK_ERR_VMIX_NOTREADY;
+  }
+
+  if (g_vmix_dev[VmDev].VmChns[VmChn].status != CHN_STATUS_CLOSED) {
+    g_vmix_dev[VmDev].VmMtx.unlock();
+    return -RK_ERR_VMIX_BUSY;
+  }
+
+  g_vmix_dev[VmDev].VmChns[VmChn].rkmedia_flow = g_vmix_dev[VmDev].rkmedia_flow;
+  g_vmix_dev[VmDev].u16RefCnt++;
+  g_vmix_dev[VmDev].VmChns[VmChn].status = CHN_STATUS_OPEN;
+  g_vmix_dev[VmDev].VmMtx.unlock();
+
+  return RK_ERR_SYS_OK;
+}
+
+RK_S32 RK_MPI_VMIX_DisableChn(VMIX_DEV VmDev, VMIX_CHN VmChn) {
+  if ((VmDev < 0) || (VmDev > VMIX_MAX_DEV_NUM))
+    return -RK_ERR_VMIX_INVALID_DEVID;
+
+  if ((VmChn < 0) || (VmChn > VMIX_MAX_CHN_NUM))
+    return -RK_ERR_VMIX_INVALID_CHNID;
+
+  g_vmix_dev[VmDev].VmMtx.lock();
+  if (g_vmix_dev[VmDev].VmChns[VmChn].status == CHN_STATUS_BIND) {
+    g_vmix_dev[VmDev].VmMtx.unlock();
+    return -RK_ERR_VMIX_BUSY;
+  }
+
+  if (g_vmix_dev[VmDev].VmChns[VmChn].rkmedia_flow)
+    g_vmix_dev[VmDev].VmChns[VmChn].rkmedia_flow.reset();
+
+  if (g_vmix_dev[VmDev].u16RefCnt > 0)
+    g_vmix_dev[VmDev].u16RefCnt--;
+
+  g_vmix_dev[VmDev].VmChns[VmChn].status = CHN_STATUS_CLOSED;
+  g_vmix_dev[VmDev].VmMtx.unlock();
 
   return RK_ERR_SYS_OK;
 }

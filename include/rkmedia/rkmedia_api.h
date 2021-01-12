@@ -20,6 +20,7 @@ extern "C" {
 #include "rkmedia_vdec.h"
 #include "rkmedia_venc.h"
 #include "rkmedia_vi.h"
+#include "rkmedia_vmix.h"
 #include "rkmedia_vo.h"
 
 // Platform resource number configuration
@@ -47,6 +48,8 @@ typedef RK_S32 ALGO_MD_CHN;
 typedef RK_S32 ALGO_OD_CHN;
 typedef RK_S32 RGA_CHN;
 typedef RK_S32 VO_CHN;
+typedef RK_S32 VMIX_DEV;
+typedef RK_S32 VMIX_CHN;
 
 typedef struct rkMPP_CHN_S {
   MOD_ID_E enModId;
@@ -248,6 +251,14 @@ _CAPI RK_S32 RK_MPI_VO_DestroyChn(VO_CHN VoChn);
 _CAPI RK_S32 RK_MPI_VDEC_CreateChn(VDEC_CHN VdChn,
                                    const VDEC_CHN_ATTR_S *pstAttr);
 _CAPI RK_S32 RK_MPI_VDEC_DestroyChn(VDEC_CHN VdChn);
+
+/********************************************************************
+ * VMIX api
+ ********************************************************************/
+_CAPI RK_S32 RK_MPI_VMIX_CreateDev(VMIX_DEV VmDev, VMIX_DEV_INFO_S *pstDevInfo);
+_CAPI RK_S32 RK_MPI_VMIX_DestroyDev(VMIX_DEV VmDev);
+_CAPI RK_S32 RK_MPI_VMIX_EnableChn(VMIX_DEV VmDev, VMIX_CHN VmChn);
+_CAPI RK_S32 RK_MPI_VMIX_DisableChn(VMIX_DEV VmDev, VMIX_CHN VmChn);
 
 #ifdef __cplusplus
 }

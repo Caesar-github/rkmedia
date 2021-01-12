@@ -46,9 +46,9 @@ short g_level_list[LOG_MOD_MAX_NUM] = {
 };
 
 char mod_tag_list[][LOG_MOD_MAX_LEN] = {
-    "UNKNOW", "VB",    "SYS",  "VDEC",    "VENC",    "H264E",
-    "JPEGE",  "H265E", "VO",   "VI",      "AIO",     "AI",
-    "AO",     "AENC",  "ADEC", "ALGO_MD", "ALGO_OD", "RGA"};
+    "UNKNOW", "VB",      "SYS",     "VDEC", "VENC", "H264E", "JPEGE",
+    "H265E",  "VO",      "VI",      "AIO",  "AI",   "AO",    "AENC",
+    "ADEC",   "ALGO_MD", "ALGO_OD", "RGA",  "VMIX"};
 
 #define LOG_FILE_PATH "/tmp/loglevel"
 static bool monitor_log_level_quit = false;

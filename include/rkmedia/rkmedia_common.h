@@ -118,6 +118,7 @@ typedef enum rkMOD_ID_E {
   RK_ID_ALGO_MD,
   RK_ID_ALGO_OD,
   RK_ID_RGA,
+  RK_ID_VMIX,
 
   RK_ID_BUTT,
 } MOD_ID_E;
@@ -294,6 +295,16 @@ enum {
   RK_ERR_VDEC_BUF_EMPTY,
   RK_ERR_VDEC_ILLEGAL_PARAM,
   RK_ERR_VDEC_NOTREADY,
+
+  /***********************************
+   * VMIX::Video Mixer error types
+   **********************************/
+  RK_ERR_VMIX_INVALID_DEVID = 130,
+  RK_ERR_VMIX_INVALID_CHNID,
+  RK_ERR_VMIX_BUSY,
+  RK_ERR_VMIX_EXIST,
+  RK_ERR_VMIX_ILLEGAL_PARAM,
+  RK_ERR_VMIX_NOTREADY,
 
   RK_ERR_BUIT,
 };

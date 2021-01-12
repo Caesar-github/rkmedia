@@ -379,6 +379,15 @@ target_include_directories(rkmedia_vi_vo_test PRIVATE ${CMAKE_SOURCE_DIR}/includ
 install(TARGETS rkmedia_vi_vo_test RUNTIME DESTINATION "bin")
 
 #--------------------------
+#  rkmedia_vmix_vo_test
+#--------------------------
+add_executable(rkmedia_vmix_vo_test rkmedia_vmix_vo_test.c ${COMMON_SRC})
+add_dependencies(rkmedia_vmix_vo_test easymedia)
+target_link_libraries(rkmedia_vmix_vo_test easymedia)
+target_include_directories(rkmedia_vmix_vo_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+install(TARGETS rkmedia_vmix_vo_test RUNTIME DESTINATION "bin")
+
+#--------------------------
 #  rkmedia_vo_scale_test
 #--------------------------
 add_executable(rkmedia_vo_scale_test rkmedia_vo_scale_test.c ${COMMON_SRC})
