@@ -28,6 +28,16 @@ target_include_directories(rkmedia_vi_venc_test PRIVATE ${CMAKE_SOURCE_DIR}/incl
 install(TARGETS rkmedia_vi_venc_test RUNTIME DESTINATION "bin")
 
 #--------------------------
+# rkmedia_vi_venc_rtsp_test
+#--------------------------
+link_directories(${PROJECT_SOURCE_DIR}/librtsp/)
+add_executable(rkmedia_vi_venc_rtsp_test rkmedia_vi_venc_rtsp_test.c ${COMMON_SRC})
+add_dependencies(rkmedia_vi_venc_rtsp_test easymedia)
+target_link_libraries(rkmedia_vi_venc_rtsp_test easymedia rtsp)
+target_include_directories(rkmedia_vi_venc_rtsp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+install(TARGETS rkmedia_vi_venc_rtsp_test RUNTIME DESTINATION "bin")
+
+#--------------------------
 # rkmedia_venc_osd_test
 #--------------------------
 add_executable(rkmedia_venc_osd_test rkmedia_venc_osd_test.c ${COMMON_SRC})
