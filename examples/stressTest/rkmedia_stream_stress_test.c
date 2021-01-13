@@ -42,6 +42,8 @@ typedef struct _streamInfo {
 } StreamInfo;
 
 static bool quit = false;
+static RK_S32 s32CamId = 0;
+static RK_BOOL bMultictx = RK_FALSE;
 static void sigterm_handler(int sig) {
   fprintf(stderr, "signal %d\n", sig);
   quit = true;
@@ -133,8 +135,8 @@ int StreamOn(StreamInfo *info) {
   vi_chn_attr.u32Height = info->height;
   vi_chn_attr.enPixFmt = info->pix_fmt;
   vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
-  ret = RK_MPI_VI_SetChnAttr(0, info->vi_chn, &vi_chn_attr);
-  ret |= RK_MPI_VI_EnableChn(0, info->vi_chn);
+  ret = RK_MPI_VI_SetChnAttr(s32CamId, info->vi_chn, &vi_chn_attr);
+  ret |= RK_MPI_VI_EnableChn(s32CamId, info->vi_chn);
   if (ret) {
     printf("Create Vi[%d]:%s failed! ret=%d\n", info->vi_chn, info->video_node,
            ret);
@@ -153,8 +155,8 @@ int StreamOn(StreamInfo *info) {
     vi_chn_attr.u32Height = 720;
     vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
     vi_chn_attr.enWorkMode = VI_WORK_MODE_LUMA_ONLY;
-    ret = RK_MPI_VI_SetChnAttr(0, info->luma_chn, &vi_chn_attr);
-    ret |= RK_MPI_VI_EnableChn(0, info->luma_chn);
+    ret = RK_MPI_VI_SetChnAttr(s32CamId, info->luma_chn, &vi_chn_attr);
+    ret |= RK_MPI_VI_EnableChn(s32CamId, info->luma_chn);
     if (ret) {
       printf("ERROR: Create Vi[%d] for luma failed! ret=%d\n", info->luma_chn,
              ret);
@@ -305,7 +307,7 @@ int StreamOff(StreamInfo *info) {
   }
 
   if (info->luma_chn >= 0) {
-    ret = RK_MPI_VI_DisableChn(0, info->luma_chn);
+    ret = RK_MPI_VI_DisableChn(s32CamId, info->luma_chn);
     if (ret) {
       printf("ERROR: VI[%d]:%s Destroy failed! ret=%d\n", info->luma_chn,
              info->luma_node, ret);
@@ -313,7 +315,7 @@ int StreamOff(StreamInfo *info) {
     }
   }
 
-  ret = RK_MPI_VI_DisableChn(0, info->vi_chn);
+  ret = RK_MPI_VI_DisableChn(s32CamId, info->vi_chn);
   if (ret) {
     printf("ERROR: VI[%d]:%s Destroy failed! ret=%d\n", info->vi_chn,
            info->video_node, ret);
@@ -339,7 +341,7 @@ int StreamOff(StreamInfo *info) {
   return 0;
 }
 
-static char optstr[] = "?::s:w:h:a:";
+static char optstr[] = "?::s:w:h:a:I:M:";
 
 static void print_usage(char *name) {
   printf("#Function description:\n");
@@ -356,6 +358,9 @@ static void print_usage(char *name) {
   printf("  @[-w] img width for rkispp_m_bypass. default: 2688\n");
   printf("  @[-h] img height for rkispp_m_bypass. default: 1520\n");
   printf("  @[-a] the path of iqfiles. default: /oem/etc/iqfiles/\n");
+  printf("  @[-I] camera ctx id, Default 0\n");
+  printf("  @[-M] switch of multictx in isp, set 0 to disable, set 1 to "
+         "enable. Default: 0\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -385,6 +390,16 @@ int main(int argc, char *argv[]) {
     case 'h':
       main_height = atoi(optarg);
       printf("#IN ARGS: bypass height: %d\n", main_height);
+      break;
+    case 'I':
+      s32CamId = atoi(optarg);
+      printf("#IN ARGS: s32CamId: %d\n", s32CamId);
+      break;
+    case 'M':
+      if (atoi(optarg)) {
+        bMultictx = RK_TRUE;
+      }
+      printf("#IN ARGS: bMultictx: %d\n", bMultictx);
       break;
     case '?':
     default:
@@ -455,9 +470,10 @@ int main(int argc, char *argv[]) {
     }
 
     printf("hdr mode %d, fec mode %d, fps %d\n", hdr_mode, fec_enable, fps);
-    SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
-    SAMPLE_COMM_ISP_Run();
-    SAMPLE_COMM_ISP_SetFrameRate(fps);
+    SAMPLE_COMM_ISP_Init(s32CamId, hdr_mode, bMultictx, iq_file_dir);
+    SAMPLE_COMM_ISP_SetFecEn(s32CamId, fec_enable);
+    SAMPLE_COMM_ISP_Run(s32CamId);
+    SAMPLE_COMM_ISP_SetFrameRate(s32CamId, fps);
 #endif // RKAIQ
 
     // Main Stream
@@ -527,7 +543,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("--> Start Luma VI[%d]...\n", stream_info0.luma_chn);
-    ret = RK_MPI_VI_StartStream(0, stream_info0.luma_chn);
+    ret = RK_MPI_VI_StartStream(s32CamId, stream_info0.luma_chn);
     if (ret) {
       printf("ERROR: VI[%d]:RK_MPI_VI_StartStream ret = %d\n",
              stream_info0.luma_chn, ret);
@@ -543,8 +559,8 @@ int main(int argc, char *argv[]) {
     RK_U64 u64LumaData;
     while (!quit) {
       loop_cnt--;
-      ret = RK_MPI_VI_GetChnRegionLuma(0, stream_info0.luma_chn, &stVideoRgn,
-                                       &u64LumaData, 500);
+      ret = RK_MPI_VI_GetChnRegionLuma(s32CamId, stream_info0.luma_chn,
+                                       &stVideoRgn, &u64LumaData, 500);
       if (ret) {
         printf("ERROR: VI[%d]:RK_MPI_VI_GetChnRegionLuma ret = %d\n",
                stream_info0.luma_chn, ret);
@@ -575,7 +591,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef RKAIQ
     printf("INFO: Stop ISP...\n");
-    SAMPLE_COMM_ISP_Stop();
+    SAMPLE_COMM_ISP_Stop(s32CamId);
     last_hdr_mode_name = cur_hdr_mode_name;
 #endif
     test_cnt++;

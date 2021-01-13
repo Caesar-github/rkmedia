@@ -84,11 +84,13 @@ static void *GetMediaBuffer(void *arg) {
   return NULL;
 }
 
-static RK_CHAR optstr[] = "?::a::o:c:d:";
+static RK_CHAR optstr[] = "?::a::o:c:d:I:M:";
 static const struct option long_options[] = {
     {"aiq", optional_argument, NULL, 'a'},
     {"output", required_argument, NULL, 'o'},
     {"frame_cnt", required_argument, NULL, 'c'},
+    {"camid", required_argument, NULL, 'I'},
+    {"multictx", required_argument, NULL, 'M'},
     {"help", no_argument, NULL, '?'},
     {NULL, 0, NULL, 0},
 };
@@ -96,11 +98,18 @@ static const struct option long_options[] = {
 static void print_usage(const RK_CHAR *name) {
   printf("usage example:\n");
 #ifdef RKAIQ
-  printf("\t%s [-o /tmp/rga.nv12] [-a [iqfiles_dir]]\n", name);
+  printf("\t%s [-a [iqfiles_dir]] "
+         "[-I 0] "
+         "[-M 0] "
+         " [-o /tmp/rga.nv12]\n",
+         name);
   printf("\t-a | --aiq: enable aiq with dirpath provided, eg:-a "
          "/oem/etc/iqfiles/, "
          "set dirpath empty to using path by default, without this option aiq "
          "should run in other application\n");
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
+  printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
+         "1 to enable. Default: 0\n");
 #else
   printf("\t%s [-o /tmp/rga.nv12]\n", name);
 #endif
@@ -119,6 +128,8 @@ int main(int argc, char *argv[]) {
   RK_CHAR *pOutPath = NULL;
   RK_U32 u32Width = 1920;
   RK_U32 u32Height = 1080;
+  RK_S32 s32CamId = 0;
+  RK_BOOL bMultictx = RK_FALSE;
 
   while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
     const char *tmp_optarg = optarg;
@@ -142,6 +153,14 @@ int main(int argc, char *argv[]) {
     case 'd':
       pDeviceName = optarg;
       break;
+    case 'I':
+      s32CamId = atoi(optarg);
+      break;
+    case 'M':
+      if (atoi(optarg)) {
+        bMultictx = RK_TRUE;
+      }
+      break;
     case '?':
     default:
       print_usage(argv[0]);
@@ -153,16 +172,18 @@ int main(int argc, char *argv[]) {
   printf("#Resolution: %dx%d\n", u32Width, u32Height);
   printf("#FrameCount: %d\n", frameCnt);
   printf("#OutputPath: %s\n", pOutPath);
+  signal(SIGINT, sigterm_handler);
 
   if (iq_file_dir) {
 #ifdef RKAIQ
     printf("#Aiq xml dirpath: %s\n\n", iq_file_dir);
+    printf("#####cam id: %d\n\n", s32CamId);
+    printf("#####bMultictx: %d\n\n", bMultictx);
     rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-    RK_BOOL fec_enable = RK_FALSE;
     int fps = 30;
-    SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
-    SAMPLE_COMM_ISP_Run();
-    SAMPLE_COMM_ISP_SetFrameRate(fps);
+    SAMPLE_COMM_ISP_Init(s32CamId, hdr_mode, bMultictx, iq_file_dir);
+    SAMPLE_COMM_ISP_Run(s32CamId);
+    SAMPLE_COMM_ISP_SetFrameRate(s32CamId, fps);
 #endif
   }
 
@@ -174,8 +195,8 @@ int main(int argc, char *argv[]) {
   vi_chn_attr.u32Height = u32Height;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
   vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
-  ret = RK_MPI_VI_SetChnAttr(0, 0, &vi_chn_attr);
-  ret |= RK_MPI_VI_EnableChn(0, 0);
+  ret = RK_MPI_VI_SetChnAttr(s32CamId, 0, &vi_chn_attr);
+  ret |= RK_MPI_VI_EnableChn(s32CamId, 0);
   if (ret) {
     printf("ERROR: Create vi[0] failed! ret=%d\n", ret);
     return -1;
@@ -207,7 +228,7 @@ int main(int argc, char *argv[]) {
 
   MPP_CHN_S stSrcChn;
   stSrcChn.enModId = RK_ID_VI;
-  stSrcChn.s32DevId = 0;
+  stSrcChn.s32DevId = s32CamId;
   stSrcChn.s32ChnId = 0;
   MPP_CHN_S stDestChn;
   stDestChn.enModId = RK_ID_RGA;
@@ -220,7 +241,6 @@ int main(int argc, char *argv[]) {
   }
 
   printf("%s initial finish\n", __func__);
-  signal(SIGINT, sigterm_handler);
 
   pthread_t read_thread;
   OutputArgs outArgs = {pOutPath, frameCnt};
@@ -270,12 +290,12 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   printf("#RGA Get Attr: ImgIn:<%u,%u,%u,%u> "
-          "ImgOut:<%u,%u,%u,%u>, rotation=%u.\n",
-          stRgaAttr.stImgIn.u32X, stRgaAttr.stImgIn.u32Y,
-          stRgaAttr.stImgIn.u32Width, stRgaAttr.stImgIn.u32Height,
-          stRgaAttr.stImgOut.u32X, stRgaAttr.stImgOut.u32Y,
-          stRgaAttr.stImgOut.u32Width, stRgaAttr.stImgOut.u32Height,
-          stRgaAttr.u16Rotaion);
+         "ImgOut:<%u,%u,%u,%u>, rotation=%u.\n",
+         stRgaAttr.stImgIn.u32X, stRgaAttr.stImgIn.u32Y,
+         stRgaAttr.stImgIn.u32Width, stRgaAttr.stImgIn.u32Height,
+         stRgaAttr.stImgOut.u32X, stRgaAttr.stImgOut.u32Y,
+         stRgaAttr.stImgOut.u32Width, stRgaAttr.stImgOut.u32Height,
+         stRgaAttr.u16Rotaion);
   sleep(1);
 
   printf("#Crop (960,540,960,540) to 960x540...\n");
@@ -306,12 +326,12 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   printf("#RGA Get Attr: ImgIn:<%u,%u,%u,%u> "
-          "ImgOut:<%u,%u,%u,%u>, rotation=%u.\n",
-          stRgaAttr.stImgIn.u32X, stRgaAttr.stImgIn.u32Y,
-          stRgaAttr.stImgIn.u32Width, stRgaAttr.stImgIn.u32Height,
-          stRgaAttr.stImgOut.u32X, stRgaAttr.stImgOut.u32Y,
-          stRgaAttr.stImgOut.u32Width, stRgaAttr.stImgOut.u32Height,
-          stRgaAttr.u16Rotaion);
+         "ImgOut:<%u,%u,%u,%u>, rotation=%u.\n",
+         stRgaAttr.stImgIn.u32X, stRgaAttr.stImgIn.u32Y,
+         stRgaAttr.stImgIn.u32Width, stRgaAttr.stImgIn.u32Height,
+         stRgaAttr.stImgOut.u32X, stRgaAttr.stImgOut.u32Y,
+         stRgaAttr.stImgOut.u32Width, stRgaAttr.stImgOut.u32Height,
+         stRgaAttr.u16Rotaion);
   sleep(1);
 
   printf("#Rotation (0,0,540,960) to 960x540...\n");
@@ -342,12 +362,12 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   printf("#RGA Get Attr: ImgIn:<%u,%u,%u,%u> "
-          "ImgOut:<%u,%u,%u,%u>, rotation=%u.\n",
-          stRgaAttr.stImgIn.u32X, stRgaAttr.stImgIn.u32Y,
-          stRgaAttr.stImgIn.u32Width, stRgaAttr.stImgIn.u32Height,
-          stRgaAttr.stImgOut.u32X, stRgaAttr.stImgOut.u32Y,
-          stRgaAttr.stImgOut.u32Width, stRgaAttr.stImgOut.u32Height,
-          stRgaAttr.u16Rotaion);
+         "ImgOut:<%u,%u,%u,%u>, rotation=%u.\n",
+         stRgaAttr.stImgIn.u32X, stRgaAttr.stImgIn.u32Y,
+         stRgaAttr.stImgIn.u32Width, stRgaAttr.stImgIn.u32Height,
+         stRgaAttr.stImgOut.u32X, stRgaAttr.stImgOut.u32Y,
+         stRgaAttr.stImgOut.u32Width, stRgaAttr.stImgOut.u32Height,
+         stRgaAttr.u16Rotaion);
   sleep(1);
 #endif
 
@@ -359,11 +379,11 @@ int main(int argc, char *argv[]) {
   pthread_join(read_thread, NULL);
   RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
   RK_MPI_RGA_DestroyChn(0);
-  RK_MPI_VI_DisableChn(0, 1);
+  RK_MPI_VI_DisableChn(s32CamId, 1);
 
   if (iq_file_dir) {
 #ifdef RKAIQ
-    SAMPLE_COMM_ISP_Stop();
+    SAMPLE_COMM_ISP_Stop(s32CamId);
 #endif
   }
 

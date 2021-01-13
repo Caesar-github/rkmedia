@@ -11,9 +11,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <string.h>
 
 #include "common/sample_common.h"
 #include "rkmedia_api.h"
@@ -28,6 +28,8 @@ static rtsp_session_handle g_rtsp_session[3];
 static FILE *g_save_file[3];
 static bool quit = false;
 static int g_buf_flag = 0;
+static RK_S32 s32CamId = 0;
+static RK_BOOL bMultictx = RK_FALSE;
 
 static void sigterm_handler(int sig) {
   fprintf(stderr, "signal %d\n", sig);
@@ -57,8 +59,8 @@ int StreamOn(int width, int height, IMAGE_TYPE_E img_type,
   vi_chn_attr.u32Height = height;
   vi_chn_attr.enPixFmt = img_type;
   vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
-  ret = RK_MPI_VI_SetChnAttr(0, 0, &vi_chn_attr);
-  ret |= RK_MPI_VI_EnableChn(0, 0);
+  ret = RK_MPI_VI_SetChnAttr(s32CamId, 0, &vi_chn_attr);
+  ret |= RK_MPI_VI_EnableChn(s32CamId, 0);
   if (ret) {
     printf("Create Vi failed! ret=%d\n", ret);
     return -1;
@@ -72,8 +74,8 @@ int StreamOn(int width, int height, IMAGE_TYPE_E img_type,
     vi_chn_attr.u32Height = 720;
     vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
     vi_chn_attr.enWorkMode = VI_WORK_MODE_LUMA_ONLY;
-    ret = RK_MPI_VI_SetChnAttr(0, 3, &vi_chn_attr);
-    ret |= RK_MPI_VI_EnableChn(0, 3);
+    ret = RK_MPI_VI_SetChnAttr(s32CamId, 3, &vi_chn_attr);
+    ret |= RK_MPI_VI_EnableChn(s32CamId, 3);
     if (ret) {
       printf("Create Vi[3] for luma failed! ret=%d\n", ret);
       return -1;
@@ -152,7 +154,7 @@ int StreamOn(int width, int height, IMAGE_TYPE_E img_type,
   VI_CHN luma_chn = 0;
   if (img_type == IMAGE_TYPE_FBC0) {
     luma_chn = 3;
-    ret = RK_MPI_VI_StartStream(0, luma_chn);
+    ret = RK_MPI_VI_StartStream(s32CamId, luma_chn);
     if (ret) {
       printf("ERROR: RK_MPI_VI_StartStream ret=%d\n", ret);
       return -1;
@@ -167,8 +169,8 @@ int StreamOn(int width, int height, IMAGE_TYPE_E img_type,
     usleep(500000);
     loop_cnt--;
 
-    ret =
-        RK_MPI_VI_GetChnRegionLuma(0, luma_chn, &stVideoRgn, u64LumaData, 100);
+    ret = RK_MPI_VI_GetChnRegionLuma(s32CamId, luma_chn, &stVideoRgn,
+                                     u64LumaData, 100);
     if (ret) {
       printf("ERROR: VI[%d]:RK_MPI_VI_GetChnRegionLuma ret = %d\n", luma_chn,
              ret);
@@ -210,10 +212,10 @@ int StreamOff(IMAGE_TYPE_E img_type) {
 
   RK_MPI_VENC_DestroyChn(0); // avc/hevc
   RK_MPI_VENC_DestroyChn(3); // jpeg
-  RK_MPI_VI_DisableChn(0, 0);
+  RK_MPI_VI_DisableChn(s32CamId, 0);
   if (img_type == IMAGE_TYPE_FBC0) {
     printf("TEST: INFO: Disable luma caculation vi[3]!\n");
-    RK_MPI_VI_DisableChn(0, 3);
+    RK_MPI_VI_DisableChn(s32CamId, 3);
   }
   printf("\n-------------------END----------------------------\n");
   return 0;
@@ -236,8 +238,8 @@ int SubStreamOn(int width, int height, const char *video_node, int vi_chn,
   vi_chn_attr.u32Height = height;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
   vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
-  ret = RK_MPI_VI_SetChnAttr(0, vi_chn, &vi_chn_attr);
-  ret |= RK_MPI_VI_EnableChn(0, vi_chn);
+  ret = RK_MPI_VI_SetChnAttr(s32CamId, vi_chn, &vi_chn_attr);
+  ret |= RK_MPI_VI_EnableChn(s32CamId, vi_chn);
   if (ret) {
     printf("Create Vi failed! ret=%d\n", ret);
     return -1;
@@ -310,7 +312,7 @@ int SubStreamOff(int vi_chn, int venc_chn) {
     return -1;
   }
 
-  ret = RK_MPI_VI_DisableChn(0, vi_chn);
+  ret = RK_MPI_VI_DisableChn(s32CamId, vi_chn);
   if (ret) {
     printf("ERROR: disable vi[%d] failed, ret: %d\n", vi_chn, ret);
     return -1;
@@ -343,7 +345,7 @@ static void *GetStreamThread() {
   return NULL;
 }
 
-static char optstr[] = "?::c:s:w:h:a::";
+static char optstr[] = "?::c:s:w:h:a::I:M:";
 
 static const struct option long_options[] = {
     {"aiq", optional_argument, NULL, 'a'},
@@ -351,6 +353,8 @@ static const struct option long_options[] = {
     {"seconds", required_argument, NULL, 's'},
     {"width", required_argument, NULL, 'w'},
     {"height", required_argument, NULL, 'h'},
+    {"camid", required_argument, NULL, 'I'},
+    {"multictx", required_argument, NULL, 'M'},
     {"help", optional_argument, NULL, '?'},
     {NULL, 0, NULL, 0},
 };
@@ -375,6 +379,9 @@ static void print_usage(char *name) {
   printf("  @[-w] img width for rkispp_m_bypass. default: 3840\n");
   printf("  @[-h] img height for rkispp_m_bypass. default: 2160\n");
   printf("  @[-a] the path of iqfiles. default: NULL\n");
+  printf("  @[-I] camera ctx id, Default 0\n");
+  printf("  @[-M] switch of multictx in isp, set 0 to disable, set 1 to "
+         "enable. Default: 0\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -416,6 +423,16 @@ int main(int argc, char *argv[]) {
       }
       printf("#IN ARGS: the path of iqfiles: %s\n", iq_file_dir);
       break;
+    case 'I':
+      s32CamId = atoi(optarg);
+      printf("#IN ARGS: s32CamId: %d\n", s32CamId);
+      break;
+    case 'M':
+      if (atoi(optarg)) {
+        bMultictx = RK_TRUE;
+      }
+      printf("#IN ARGS: bMultictx: %d\n", bMultictx);
+      break;
     case '?':
     default:
       print_usage(argv[0]);
@@ -455,11 +472,10 @@ int main(int argc, char *argv[]) {
     if (iq_file_dir) {
 #ifdef RKAIQ
       rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-      RK_BOOL fec_enable = RK_FALSE;
       int fps = 30;
-      SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
-      SAMPLE_COMM_ISP_Run();
-      SAMPLE_COMM_ISP_SetFrameRate(fps);
+      SAMPLE_COMM_ISP_Init(s32CamId, hdr_mode, bMultictx, iq_file_dir);
+      SAMPLE_COMM_ISP_Run(s32CamId);
+      SAMPLE_COMM_ISP_SetFrameRate(s32CamId, fps);
 #endif
     }
     g_save_file[SUB_ORDER] = fopen("/tmp/sub0.h264", "w");
@@ -515,7 +531,7 @@ int main(int argc, char *argv[]) {
 
     if (iq_file_dir) {
 #ifdef RKAIQ
-      SAMPLE_COMM_ISP_Stop();
+      SAMPLE_COMM_ISP_Stop(s32CamId);
 #endif
     }
 

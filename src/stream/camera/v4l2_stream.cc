@@ -117,7 +117,8 @@ int V4L2Stream::Open() {
 #endif
   } else
     devname = device;
-  RKMEDIA_LOGI("#V4l2Stream: VideoNode:%s\n", devname.c_str());
+  RKMEDIA_LOGI("#V4l2Stream: camera id:%d, VideoNode:%s\n", camera_id,
+               devname.c_str());
   v4l2_ctx = std::make_shared<V4L2Context>(capture_type, vio, devname);
   if (!v4l2_ctx)
     return -ENOMEM;

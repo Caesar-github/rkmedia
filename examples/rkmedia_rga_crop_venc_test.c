@@ -102,10 +102,9 @@ static void *GetMediaBuffer(void *arg) {
     }
 
     src = wrapbuffer_fd(RK_MPI_MB_GetFD(src_mb), crop_arg->vi_width,
-                                 crop_arg->vi_height, RK_FORMAT_YCbCr_420_SP);
-    dst =
-        wrapbuffer_fd(RK_MPI_MB_GetFD(dst_mb), crop_arg->target_width,
-                               crop_arg->target_height, RK_FORMAT_YCbCr_420_SP);
+                        crop_arg->vi_height, RK_FORMAT_YCbCr_420_SP);
+    dst = wrapbuffer_fd(RK_MPI_MB_GetFD(dst_mb), crop_arg->target_width,
+                        crop_arg->target_height, RK_FORMAT_YCbCr_420_SP);
     im_rect src_rect = {crop_arg->target_x, crop_arg->target_y,
                         crop_arg->target_width, crop_arg->target_height};
     im_rect dst_rect = {0};
@@ -141,7 +140,7 @@ static void *GetMediaBuffer(void *arg) {
   return NULL;
 }
 
-static RK_CHAR optstr[] = "?::a::x:y:d:H:W:w:h:r:";
+static RK_CHAR optstr[] = "?::a::x:y:d:H:W:w:h:r:I:M:";
 static const struct option long_options[] = {
     {"aiq", optional_argument, NULL, 'a'},
     {"vi_height", required_argument, NULL, 'H'},
@@ -152,6 +151,8 @@ static const struct option long_options[] = {
     {"crop_x", required_argument, NULL, 'x'},
     {"crop_y", required_argument, NULL, 'y'},
     {"rotation", required_argument, NULL, 'r'},
+    {"camid", required_argument, NULL, 'I'},
+    {"multictx", required_argument, NULL, 'M'},
     {NULL, 0, NULL, 0},
 };
 
@@ -160,6 +161,8 @@ static void print_usage(const RK_CHAR *name) {
 #ifdef RKAIQ
   printf("\t%s "
          "[-a [iqfiles_dir]] "
+         "[-I 0] "
+         "[-M 0] "
          "[-H 1920] "
          "[-W 1080] "
          "[-h 640] "
@@ -173,6 +176,9 @@ static void print_usage(const RK_CHAR *name) {
          "/oem/etc/iqfiles/, "
          "set dirpath empty to using path by default. without this option, aiq "
          "should run in other application\n");
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
+  printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
+         "1 to enable. Default: 0\n");
 #else
   printf("\t%s [-H 1920] "
          "[-W 1080] "
@@ -209,6 +215,8 @@ int main(int argc, char *argv[]) {
   RK_S32 S32Rotation = 0;
   char *device_name = "rkispp_scale0";
   char *iq_file_dir = NULL;
+  RK_S32 s32CamId = 0;
+  RK_BOOL bMultictx = RK_FALSE;
   int c = 0;
   opterr = 1;
   while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
@@ -248,6 +256,14 @@ int main(int argc, char *argv[]) {
     case 'r':
       S32Rotation = atoi(optarg);
       break;
+    case 'I':
+      s32CamId = atoi(optarg);
+      break;
+    case 'M':
+      if (atoi(optarg)) {
+        bMultictx = RK_TRUE;
+      }
+      break;
     case '?':
     default:
       print_usage(argv[0]);
@@ -269,22 +285,24 @@ int main(int argc, char *argv[]) {
     printf("crop size is over vi\n");
     return -1;
   }
+  signal(SIGINT, sigterm_handler);
 
   if (iq_file_dir) {
 #ifdef RKAIQ
     printf("#Aiq xml dirpath: %s\n\n", iq_file_dir);
+    printf("#####cam id: %d\n\n", s32CamId);
+    printf("#####bMultictx: %d\n\n", bMultictx);
     rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-    RK_BOOL fec_enable = RK_FALSE;
     int fps = 30;
-    SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
-    SAMPLE_COMM_ISP_Run();
-    SAMPLE_COMM_ISP_SetFrameRate(fps);
+    SAMPLE_COMM_ISP_Init(s32CamId, hdr_mode, bMultictx, iq_file_dir);
+    SAMPLE_COMM_ISP_Run(s32CamId);
+    SAMPLE_COMM_ISP_SetFrameRate(s32CamId, fps);
 #endif
   }
 
   RK_MPI_SYS_Init();
   g_stViChn.enModId = RK_ID_VI;
-  g_stViChn.s32DevId = 0;
+  g_stViChn.s32DevId = s32CamId;
   g_stViChn.s32ChnId = 1;
   g_stVencChn.enModId = RK_ID_VENC;
   g_stVencChn.s32DevId = 0;
@@ -341,7 +359,6 @@ int main(int argc, char *argv[]) {
   }
 
   printf("%s initial finish\n", __func__);
-  signal(SIGINT, sigterm_handler);
   while (!quit) {
     usleep(500000);
   }
@@ -355,7 +372,7 @@ int main(int argc, char *argv[]) {
 
   if (iq_file_dir) {
 #ifdef RKAIQ
-    SAMPLE_COMM_ISP_Stop();
+    SAMPLE_COMM_ISP_Stop(s32CamId);
 #endif
   }
 

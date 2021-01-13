@@ -9,9 +9,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <string.h>
 
 #include "common/sample_common.h"
 #include "rkmedia_api.h"
@@ -80,9 +80,11 @@ int menu_ldch() {
   return menu;
 }
 
-static RK_CHAR optstr[] = "?::a::";
+static RK_CHAR optstr[] = "?::a::I:M:";
 static const struct option long_options[] = {
     {"aiq", optional_argument, NULL, 'a'},
+    {"camid", required_argument, NULL, 'I'},
+    {"multictx", required_argument, NULL, 'M'},
     {"help", optional_argument, NULL, '?'},
     {NULL, 0, NULL, 0},
 };
@@ -90,11 +92,16 @@ static const struct option long_options[] = {
 static void print_usage(const RK_CHAR *name) {
   printf("usage example:\n");
   printf("\t%s [-a iqfiles_dir] "
+         "[-I 0] "
+         "[-M 0] "
          "\n",
          name);
   printf("\t-a | --aiq: enable aiq with dirpath provided,"
          "without this option, default path \"/oem/etc/iqfiles/\" would be "
          "userd.\n");
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
+  printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
+         "1 to enable. Default: 0\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -105,12 +112,21 @@ int main(int argc, char *argv[]) {
   RK_BOOL fec_enable = RK_FALSE;
   int fps = 30;
   char *iq_file_dir = "/oem/etc/iqfiles/";
-
+  RK_S32 s32CamId = 0;
+  RK_BOOL bMultictx = RK_FALSE;
   int c;
   while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
     switch (c) {
     case 'a':
       iq_file_dir = optarg;
+      break;
+    case 'I':
+      s32CamId = atoi(optarg);
+      break;
+    case 'M':
+      if (atoi(optarg)) {
+        bMultictx = RK_TRUE;
+      }
       break;
     case '?':
     default:
@@ -118,6 +134,9 @@ int main(int argc, char *argv[]) {
       return 0;
     }
   }
+
+  printf("#####cam id: %d\n\n", s32CamId);
+  printf("#####bMultictx: %d\n\n", bMultictx);
 
   char *tmp = getenv("HDR_MODE");
   if (tmp) {
@@ -146,16 +165,17 @@ int main(int argc, char *argv[]) {
 
 restart:
   if (running) {
-    SAMPLE_COMM_ISP_Stop(); // isp aiq stop before vi streamoff
+    SAMPLE_COMM_ISP_Stop(0); // isp aiq stop before vi streamoff
     RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
     RK_MPI_VENC_DestroyChn(0);
-    RK_MPI_VI_DisableChn(0, 1);
+    RK_MPI_VI_DisableChn(s32CamId, 0);
   }
 
-  printf("hdr mode %d, fec mode %d, fps %d\n", hdr_mode, fec_enable, fps);
-  SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
-  SAMPLE_COMM_ISP_Run();
-  SAMPLE_COMM_ISP_SetFrameRate(fps);
+  printf("#####hdr mode %d, fec mode %d, fps %d\n", hdr_mode, fec_enable, fps);
+  SAMPLE_COMM_ISP_Init(s32CamId, hdr_mode, bMultictx, iq_file_dir);
+  SAMPLE_COMM_ISP_SetFecEn(s32CamId, fec_enable);
+  SAMPLE_COMM_ISP_Run(s32CamId);
+  SAMPLE_COMM_ISP_SetFrameRate(s32CamId, fps);
 
   VENC_CHN_ATTR_S venc_chn_attr;
   memset(&venc_chn_attr, 0, sizeof(venc_chn_attr));
@@ -183,9 +203,10 @@ restart:
   vi_chn_attr.u32Height = 1080;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
   vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
+  vi_chn_attr.enBufType = VI_CHN_BUF_TYPE_MMAP;
 
-  RK_MPI_VI_SetChnAttr(0, 1, &vi_chn_attr);
-  RK_MPI_VI_EnableChn(0, 1);
+  RK_MPI_VI_SetChnAttr(s32CamId, 0, &vi_chn_attr);
+  RK_MPI_VI_EnableChn(s32CamId, 0);
   RK_MPI_VENC_CreateChn(0, &venc_chn_attr);
 
   MPP_CHN_S stEncChn;
@@ -195,8 +216,8 @@ restart:
   RK_MPI_SYS_RegisterOutCb(&stEncChn, video_packet_cb);
 
   stSrcChn.enModId = RK_ID_VI;
-  stSrcChn.s32DevId = 0;
-  stSrcChn.s32ChnId = 1;
+  stSrcChn.s32DevId = s32CamId;
+  stSrcChn.s32ChnId = 0;
 
   stDestChn.enModId = RK_ID_VENC;
   stDestChn.s32DevId = 0;
@@ -237,7 +258,7 @@ restart:
         goto restart;
       } else {
         hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-        SAMPLE_COMM_ISP_SetWDRModeDyn(hdr_mode);
+        SAMPLE_COMM_ISP_SetWDRModeDyn(0, hdr_mode);
       }
       break;
     case 2:
@@ -246,7 +267,7 @@ restart:
         goto restart;
       } else {
         hdr_mode = RK_AIQ_WORKING_MODE_ISP_HDR2;
-        SAMPLE_COMM_ISP_SetWDRModeDyn(hdr_mode);
+        SAMPLE_COMM_ISP_SetWDRModeDyn(0, hdr_mode);
       }
       break;
     case 3:
@@ -259,7 +280,7 @@ restart:
       fec_enable = 0;
       goto restart;
     case 6:
-      SAMPLE_COMM_ISP_SetLDCHLevel(menu_ldch());
+      SAMPLE_COMM_ISP_SetLDCHLevel(0, menu_ldch());
       continue;
     }
     usleep(30000); // sleep 30 ms.
@@ -269,8 +290,8 @@ restart:
 
   RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
   RK_MPI_VENC_DestroyChn(0);
-  RK_MPI_VI_DisableChn(0, 1);
+  RK_MPI_VI_DisableChn(s32CamId, 0);
 
-  SAMPLE_COMM_ISP_Stop();
+  SAMPLE_COMM_ISP_Stop(s32CamId);
   return 0;
 }

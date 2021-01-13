@@ -8,9 +8,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <string.h>
 
 #include "common/sample_common.h"
 #include "librtsp/rtsp_demo.h"
@@ -24,6 +24,8 @@ static bool quit = false;
 static bool g_connect = false;
 static bool g_venc = false;
 static bool g_fec = false;
+static RK_S32 s32CamId = 0;
+static RK_BOOL bMultictx = RK_FALSE;
 static rk_aiq_working_mode_t g_wmode = RK_AIQ_WORKING_MODE_NORMAL;
 
 static void sigterm_handler(int sig) {
@@ -71,7 +73,7 @@ static void StreamOnOff(RK_BOOL start) {
   MPP_CHN_S stSrcChn;
   MPP_CHN_S stDestChn;
   stSrcChn.enModId = RK_ID_VI;
-  stSrcChn.s32DevId = 0;
+  stSrcChn.s32DevId = s32CamId;
   stSrcChn.s32ChnId = 1;
 
   stDestChn.enModId = RK_ID_VENC;
@@ -135,7 +137,7 @@ static void StreamOnOff(RK_BOOL start) {
 static void StreamOnOffVI(RK_BOOL start) {
   MPP_CHN_S stSrcChn;
   stSrcChn.enModId = RK_ID_VI;
-  stSrcChn.s32DevId = 0;
+  stSrcChn.s32DevId = s32CamId;
   stSrcChn.s32ChnId = 1;
   if (start) {
     VI_CHN_ATTR_S vi_chn_attr;
@@ -179,9 +181,10 @@ static void startISP(rk_aiq_working_mode_t hdr_mode, RK_BOOL fec_enable,
   // fec_enable = RK_FALSE;
   int fps = 30;
   printf("hdr mode %d, fec mode %d, fps %d\n", hdr_mode, fec_enable, fps);
-  SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
-  SAMPLE_COMM_ISP_Run();
-  SAMPLE_COMM_ISP_SetFrameRate(fps);
+  SAMPLE_COMM_ISP_Init(s32CamId, hdr_mode, bMultictx, iq_file_dir);
+  SAMPLE_COMM_ISP_SetFecEn(s32CamId, fec_enable);
+  SAMPLE_COMM_ISP_Run(s32CamId);
+  SAMPLE_COMM_ISP_SetFrameRate(s32CamId, fps);
 }
 
 static void testNormalToHdr2(char *iq_file_dir) {
@@ -200,10 +203,10 @@ static void testNormalToHdr2(char *iq_file_dir) {
       printf("set hdr mode to normal count = %u.\n", count);
     }
 
-    SAMPLE_COMM_ISP_SET_HDR(hdr_mode);
+    SAMPLE_COMM_ISP_SET_HDR(s32CamId, hdr_mode);
     usleep(100 * 1000); // sleep 30 ms.
   }
-  SAMPLE_COMM_ISP_Stop(); // isp aiq stop before vi streamoff
+  SAMPLE_COMM_ISP_Stop(s32CamId); // isp aiq stop before vi streamoff
   streamOff();
 }
 
@@ -220,17 +223,17 @@ static void testNormalToHdr2ToHdr3(char *iq_file_dir) {
 
     // hdr2
     printf("############ hdr2 : count = %u ###############.\n", count);
-    SAMPLE_COMM_ISP_SET_HDR(RK_AIQ_WORKING_MODE_ISP_HDR2);
+    SAMPLE_COMM_ISP_SET_HDR(s32CamId, RK_AIQ_WORKING_MODE_ISP_HDR2);
     usleep(100 * 10000);
 
     // hdr3:  go or leave hdr3, must restart aiq
     printf("############ hdr3 : count = %u ##############.\n", count);
-    SAMPLE_COMM_ISP_Stop(); // isp aiq stop before vi streamoff
+    SAMPLE_COMM_ISP_Stop(s32CamId); // isp aiq stop before vi streamoff
     streamOff();
     startISP(RK_AIQ_WORKING_MODE_ISP_HDR3, RK_FALSE, iq_file_dir);
     streamOn();
     usleep(100 * 10000);
-    SAMPLE_COMM_ISP_Stop(); // isp aiq stop before vi streamoff
+    SAMPLE_COMM_ISP_Stop(s32CamId); // isp aiq stop before vi streamoff
     streamOff();
   }
 }
@@ -252,10 +255,10 @@ static RK_VOID testFBCRotation(char *iq_file_dir) {
     printf("######### %d : count = %u #############.\n", g_S32Rotation,
            count++);
     startISP(RK_AIQ_WORKING_MODE_NORMAL, RK_FALSE, iq_file_dir);
-    SAMPLE_COMM_ISP_SET_BypassStreamRotation(g_S32Rotation);
+    SAMPLE_COMM_ISP_SET_BypassStreamRotation(s32CamId, g_S32Rotation);
     streamOn();
     usleep(5 * 100 * 1000);
-    SAMPLE_COMM_ISP_Stop(); // isp aiq stop before vi streamoff
+    SAMPLE_COMM_ISP_Stop(s32CamId); // isp aiq stop before vi streamoff
     streamOff();
   }
 }
@@ -273,21 +276,21 @@ static RK_VOID testDefog(char *iq_file_dir) {
   while (quit) {
     printf("######## disable count = %u ############.\n", count++);
     u32Mode = 0;
-    SAMPLE_COMM_ISP_SET_DefogEnable(u32Mode);
+    SAMPLE_COMM_ISP_SET_DefogEnable(s32CamId, u32Mode);
 
     printf("######## enable manaul count = %u ############.\n", count);
     u32Mode = 1; // manual
-    SAMPLE_COMM_ISP_SET_DefogEnable(u32Mode);
+    SAMPLE_COMM_ISP_SET_DefogEnable(s32CamId, u32Mode);
 
     for (int i = 0; i < 255; i++) {
-      SAMPLE_COMM_ISP_SET_DefogStrength(u32Mode, i);
+      SAMPLE_COMM_ISP_SET_DefogStrength(s32CamId, u32Mode, i);
     }
 
     printf("######## enable auto count = %u ############.\n", count);
     u32Mode = 2;
-    SAMPLE_COMM_ISP_SET_DefogStrength(u32Mode, 0);
+    SAMPLE_COMM_ISP_SET_DefogStrength(s32CamId, u32Mode, 0);
   }
-  SAMPLE_COMM_ISP_Stop();
+  SAMPLE_COMM_ISP_Stop(s32CamId);
   streamOff();
 }
 
@@ -303,13 +306,13 @@ static RK_VOID testImage(char *iq_file_dir) {
   while (quit) {
     printf("###########count = %u ###########.\n", u32Count++);
     for (int i = 0; i < 255; i++) {
-      SAMPLE_COMM_ISP_SET_Brightness(i);
-      SAMPLE_COMM_ISP_SET_Contrast(i);
-      SAMPLE_COMM_ISP_SET_Saturation(i);
-      SAMPLE_COMM_ISP_SET_Sharpness(i);
+      SAMPLE_COMM_ISP_SET_Brightness(s32CamId, i);
+      SAMPLE_COMM_ISP_SET_Contrast(s32CamId, i);
+      SAMPLE_COMM_ISP_SET_Saturation(s32CamId, i);
+      SAMPLE_COMM_ISP_SET_Sharpness(s32CamId, i);
     }
   }
-  SAMPLE_COMM_ISP_Stop();
+  SAMPLE_COMM_ISP_Stop(s32CamId);
   streamOff();
 }
 
@@ -321,17 +324,17 @@ static RK_VOID testDayNight(char *iq_file_dir) {
   while (quit) {
     // day
     printf("###########day count = %u ###########.\n", u32Count++);
-    SAMPLE_COMM_ISP_SET_OpenColorCloseLed();
-    SAMPLE_COMM_ISP_SET_HDR(RK_AIQ_WORKING_MODE_ISP_HDR2);
+    SAMPLE_COMM_ISP_SET_OpenColorCloseLed(s32CamId);
+    SAMPLE_COMM_ISP_SET_HDR(s32CamId, RK_AIQ_WORKING_MODE_ISP_HDR2);
     usleep(2 * 1000 * 1000);
     // night
     printf("###########night count = %u ###########.\n", u32Count);
-    SAMPLE_COMM_ISP_SET_HDR(RK_AIQ_WORKING_MODE_NORMAL);
+    SAMPLE_COMM_ISP_SET_HDR(s32CamId, RK_AIQ_WORKING_MODE_NORMAL);
     for (int i = 0; i < 100; i++)
-      SAMPLE_COMM_ISP_SET_GrayOpenLed(i);
+      SAMPLE_COMM_ISP_SET_GrayOpenLed(s32CamId, i);
     usleep(2 * 1000 * 1000);
   }
-  SAMPLE_COMM_ISP_Stop();
+  SAMPLE_COMM_ISP_Stop(s32CamId);
   streamOff();
 }
 
@@ -355,8 +358,8 @@ static RK_VOID testExposure(char *iq_file_dir) {
     u32ElectronicShutter = 0;
     bIsAGC = RK_TRUE;
     u32Agc = 0;
-    SAMPLE_COMM_ISP_SET_Exposure(bIsAutoExposure, bIsAGC, u32ElectronicShutter,
-                                 u32Agc);
+    SAMPLE_COMM_ISP_SET_Exposure(s32CamId, bIsAutoExposure, bIsAGC,
+                                 u32ElectronicShutter, u32Agc);
     usleep(100 * 1000);
 
     printf(
@@ -369,7 +372,7 @@ static RK_VOID testExposure(char *iq_file_dir) {
     for (u32ElectronicShutter = 0; u32ElectronicShutter < 17;
          u32ElectronicShutter++)
       for (u32Agc = 0; u32Agc < 255; u32Agc += 10)
-        SAMPLE_COMM_ISP_SET_Exposure(bIsAutoExposure, bIsAGC,
+        SAMPLE_COMM_ISP_SET_Exposure(s32CamId, bIsAutoExposure, bIsAGC,
                                      u32ElectronicShutter, u32Agc);
     usleep(100 * 1000);
 
@@ -381,11 +384,11 @@ static RK_VOID testExposure(char *iq_file_dir) {
     u32Agc = 0;
     for (u32ElectronicShutter = 0; u32ElectronicShutter < 17;
          u32ElectronicShutter++)
-      SAMPLE_COMM_ISP_SET_Exposure(bIsAutoExposure, bIsAGC,
+      SAMPLE_COMM_ISP_SET_Exposure(s32CamId, bIsAutoExposure, bIsAGC,
                                    u32ElectronicShutter, u32Agc);
     usleep(100 * 1000);
   }
-  SAMPLE_COMM_ISP_Stop();
+  SAMPLE_COMM_ISP_Stop(s32CamId);
   streamOff();
 }
 
@@ -428,10 +431,10 @@ static RK_VOID testCrop(char *iq_file_dir) {
            g_width, g_height);
     int fps = 30;
     printf("hdr mode %d, fec mode %d, fps %d\n", g_wmode, g_fec, fps);
-    SAMPLE_COMM_ISP_Init(g_wmode, g_fec, iq_file_dir);
-    SAMPLE_COMM_ISP_SET_Crop(rect);
-    SAMPLE_COMM_ISP_Run();
-    SAMPLE_COMM_ISP_SetFrameRate(fps);
+    SAMPLE_COMM_ISP_Init(s32CamId, g_wmode, g_fec, iq_file_dir);
+    SAMPLE_COMM_ISP_SET_Crop(s32CamId, rect);
+    SAMPLE_COMM_ISP_Run(s32CamId);
+    SAMPLE_COMM_ISP_SetFrameRate(s32CamId, fps);
 
     streamOn();
     sleep(2);
@@ -440,7 +443,7 @@ static RK_VOID testCrop(char *iq_file_dir) {
       usleep(10 * 1000);
     }
     streamOff();
-    SAMPLE_COMM_ISP_Stop();
+    SAMPLE_COMM_ISP_Stop(s32CamId);
     if (bChange) {
       if (bCrop) {
         bCrop = RK_FALSE;

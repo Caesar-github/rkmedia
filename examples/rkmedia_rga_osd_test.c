@@ -174,36 +174,36 @@ static void *GetMediaBuffer(void *arg) {
           break;
         }
         src = wrapbuffer_fd(RK_MPI_MB_GetFD(mb), rga_arg->u32SrcWidth,
-                                     rga_arg->u32SrcHeight,
-                                     RK_FORMAT_YCbCr_420_SP);
+                            rga_arg->u32SrcHeight, RK_FORMAT_YCbCr_420_SP);
         if (rga_arg->u32Mode == 0) {
-          pat = wrapbuffer_fd(
-              RK_MPI_MB_GetFD(pat_mb), rga_arg->u32RgaWidth,
-              rga_arg->u32RgaHeight, RK_FORMAT_RGBA_8888);
+          pat = wrapbuffer_fd(RK_MPI_MB_GetFD(pat_mb), rga_arg->u32RgaWidth,
+                              rga_arg->u32RgaHeight, RK_FORMAT_RGBA_8888);
           STATUS = RGA_Rect_Fill(pat, 0, 0, rga_arg->u32RgaWidth,
                                  rga_arg->u32RgaHeight);
           if (STATUS != IM_STATUS_SUCCESS)
-            printf(">>>>>>>>>>>>>>>>RGA_Rect_Fill failed: %s\n", imStrError(STATUS));
-          im_rect pat_rect = {0, 0, rga_arg->u32RgaWidth, rga_arg->u32RgaHeight};
+            printf(">>>>>>>>>>>>>>>>RGA_Rect_Fill failed: %s\n",
+                   imStrError(STATUS));
+          im_rect pat_rect = {0, 0, rga_arg->u32RgaWidth,
+                              rga_arg->u32RgaHeight};
           im_rect src_rect = {rga_arg->u32RgaX, rga_arg->u32RgaY,
-                            rga_arg->u32RgaWidth, rga_arg->u32RgaHeight};
+                              rga_arg->u32RgaWidth, rga_arg->u32RgaHeight};
           STATUS = improcess(src, src, pat, src_rect, src_rect, pat_rect,
-                            IM_ALPHA_BLEND_DST_OVER);
+                             IM_ALPHA_BLEND_DST_OVER);
         } else if (rga_arg->u32Mode == 1) {
-          pat = wrapbuffer_fd(
-              RK_MPI_MB_GetFD(pat_mb), rga_arg->u32SrcWidth,
-              rga_arg->u32SrcHeight, RK_FORMAT_RGBA_8888);
+          pat = wrapbuffer_fd(RK_MPI_MB_GetFD(pat_mb), rga_arg->u32SrcWidth,
+                              rga_arg->u32SrcHeight, RK_FORMAT_RGBA_8888);
           RGA_Clear_Rect(pat, rga_arg->u32SrcWidth, rga_arg->u32SrcHeight);
-          STATUS = RGA_Rect_draw2(pat, rga_arg->u32RgaX, rga_arg->u32RgaY, rga_arg->u32RgaWidth,
-                                 rga_arg->u32RgaHeight, 4);
+          STATUS =
+              RGA_Rect_draw2(pat, rga_arg->u32RgaX, rga_arg->u32RgaY,
+                             rga_arg->u32RgaWidth, rga_arg->u32RgaHeight, 4);
           if (STATUS != IM_STATUS_SUCCESS)
-            printf(">>>>>>>>>>>>>>>>RGA_Rect_draw failed: %s\n", imStrError(STATUS));
+            printf(">>>>>>>>>>>>>>>>RGA_Rect_draw failed: %s\n",
+                   imStrError(STATUS));
           STATUS = imcomposite(src, pat, src, IM_ALPHA_BLEND_DST_OVER);
         } else if (rga_arg->u32Mode ==
                    2) { // different way to init rect, only for reference
-          pat = wrapbuffer_fd(
-              RK_MPI_MB_GetFD(pat_mb), rga_arg->u32SrcWidth,
-              rga_arg->u32SrcHeight, RK_FORMAT_RGBA_8888);
+          pat = wrapbuffer_fd(RK_MPI_MB_GetFD(pat_mb), rga_arg->u32SrcWidth,
+                              rga_arg->u32SrcHeight, RK_FORMAT_RGBA_8888);
           RGA_Clear_Rect(pat, rga_arg->u32SrcWidth, rga_arg->u32SrcHeight);
           int i;
           for (i = 0; i < 10; i++) {
@@ -216,7 +216,8 @@ static void *GetMediaBuffer(void *arg) {
             printf(">> %d, %d, %d, %d\n", x, y, w, h);
             STATUS = RGA_Rect_draw2(pat, x, y, w, h, 4);
             if (STATUS != IM_STATUS_SUCCESS)
-              printf(">>>>>>>>>>>>>>>>RGA_Rect_draw2 failed: %s, id:%d\n", imStrError(STATUS), i);
+              printf(">>>>>>>>>>>>>>>>RGA_Rect_draw2 failed: %s, id:%d\n",
+                     imStrError(STATUS), i);
           }
           STATUS = imcomposite(src, pat, src, IM_ALPHA_BLEND_DST_OVER);
           long after_time = getCurrentTimeMsec();
@@ -237,14 +238,13 @@ static void *GetMediaBuffer(void *arg) {
           // fill rect in nv12, only support white and black
           rga_buffer_t src;
           src = wrapbuffer_fd(RK_MPI_MB_GetFD(mb), rga_arg->u32SrcWidth,
-                                      rga_arg->u32SrcHeight,
-                                      RK_FORMAT_YCbCr_420_SP);
+                              rga_arg->u32SrcHeight, RK_FORMAT_YCbCr_420_SP);
           IM_STATUS STATUS =
               RGA_Rect_draw2(src, rga_arg->u32RgaX, rga_arg->u32RgaY,
-                            rga_arg->u32RgaWidth, rga_arg->u32RgaHeight, 4);
+                             rga_arg->u32RgaWidth, rga_arg->u32RgaHeight, 4);
           if (STATUS != IM_STATUS_SUCCESS) {
             printf(">>>>>>>>>>>>>>>>RGA_BUF_GET failed: %s\n",
-                  imStrError(STATUS));
+                   imStrError(STATUS));
             RK_MPI_MB_ReleaseBuffer(mb);
             quit = true;
             break;
@@ -262,11 +262,12 @@ static void *GetMediaBuffer(void *arg) {
             w = (x + w) > rga_arg->u32SrcWidth ? rga_arg->u32SrcWidth - x : w;
             h = (y + h) > rga_arg->u32SrcHeight ? rga_arg->u32SrcHeight - y : h;
             printf(">> %d, %d, %d, %d\n", x, y, w, h);
-            nv12_border((char *)RK_MPI_MB_GetPtr(mb),
-                    rga_arg->u32SrcWidth, rga_arg->u32RgaHeight, x, y, w, h, 0, 0, 255);
+            nv12_border((char *)RK_MPI_MB_GetPtr(mb), rga_arg->u32SrcWidth,
+                        rga_arg->u32RgaHeight, x, y, w, h, 0, 0, 255);
           }
           long after_time = getCurrentTimeMsec();
-          printf("nv12-board time-consuming is %ld\n", (after_time - before_time));
+          printf("nv12-board time-consuming is %ld\n",
+                 (after_time - before_time));
           RK_MPI_SYS_SendMediaBuffer(RK_ID_VENC, 0, mb);
           RK_MPI_MB_ReleaseBuffer(mb);
         }
@@ -283,13 +284,15 @@ static void *GetMediaBuffer(void *arg) {
   return NULL;
 }
 
-static RK_CHAR optstr[] = "?::a::o:r:p:m:";
+static RK_CHAR optstr[] = "?::a::o:r:p:m:I:M:";
 static const struct option long_options[] = {
     {"aiq", optional_argument, NULL, 'a'},
     {"output", required_argument, NULL, 'o'},
     {"raw_frame", required_argument, NULL, 'r'},
     {"processed_frame", required_argument, NULL, 'p'},
     {"mode", required_argument, NULL, 'm'},
+    {"camid", required_argument, NULL, 'I'},
+    {"multictx", required_argument, NULL, 'M'},
     {"help", optional_argument, NULL, '?'},
     {NULL, 0, NULL, 0},
 };
@@ -298,6 +301,8 @@ static void print_usage(const RK_CHAR *name) {
   printf("usage example:\n");
 #ifdef RKAIQ
   printf("\t%s [-a [iqfiles_dir]] "
+         "[-I 0] "
+         "[-M 0] "
          "[-o output_dir] "
          "[-r 0] "
          "[-p 1] "
@@ -308,6 +313,9 @@ static void print_usage(const RK_CHAR *name) {
          "/oem/etc/iqfiles/, "
          "set dirpath empty to using path by default, without this option aiq "
          "should run in other application\n");
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
+  printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
+         "1 to enable. Default: 0\n");
 #else
   printf("\t%s [-o output_dir] "
          "[-r 0] "
@@ -335,6 +343,8 @@ int main(int argc, char *argv[]) {
   rga_arg.u32RgaWidth = 320;
   rga_arg.u32RgaHeight = 320;
   IMAGE_TYPE_E enPixFmt = IMAGE_TYPE_NV12;
+  RK_S32 s32CamId = 0;
+  RK_BOOL bMultictx = RK_FALSE;
   const RK_CHAR *pcVideoNode = "rkispp_scale0";
   int c;
   char *iq_file_dir = NULL;
@@ -363,6 +373,14 @@ int main(int argc, char *argv[]) {
     case 'm':
       rga_arg.u32Mode = atoi(optarg);
       break;
+    case 'I':
+      s32CamId = atoi(optarg);
+      break;
+    case 'M':
+      if (atoi(optarg)) {
+        bMultictx = RK_TRUE;
+      }
+      break;
     case '?':
     default:
       print_usage(argv[0]);
@@ -374,15 +392,19 @@ int main(int argc, char *argv[]) {
   printf("#processed frame number: %d\n", g_snap_limit);
   printf("#output dirpath: %s\n", g_pOutPath);
   printf("#mode: %d\n", rga_arg.u32Mode);
+
+  signal(SIGINT, sigterm_handler);
+
   if (iq_file_dir) {
 #ifdef RKAIQ
     printf("#Aiq xml dirpath: %s\n\n", iq_file_dir);
+    printf("#####cam id: %d\n\n", s32CamId);
+    printf("#####bMultictx: %d\n\n", bMultictx);
     rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-    RK_BOOL fec_enable = RK_FALSE;
     int fps = 30;
-    SAMPLE_COMM_ISP_Init(hdr_mode, fec_enable, iq_file_dir);
-    SAMPLE_COMM_ISP_Run();
-    SAMPLE_COMM_ISP_SetFrameRate(fps);
+    SAMPLE_COMM_ISP_Init(s32CamId, hdr_mode, bMultictx, iq_file_dir);
+    SAMPLE_COMM_ISP_Run(s32CamId);
+    SAMPLE_COMM_ISP_SetFrameRate(s32CamId, fps);
 #endif
   }
 
@@ -399,8 +421,8 @@ int main(int argc, char *argv[]) {
   vi_chn_attr.u32Height = rga_arg.u32SrcHeight;
   vi_chn_attr.enPixFmt = enPixFmt;
   vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
-  ret = RK_MPI_VI_SetChnAttr(0, 0, &vi_chn_attr);
-  ret |= RK_MPI_VI_EnableChn(0, 0);
+  ret = RK_MPI_VI_SetChnAttr(s32CamId, 0, &vi_chn_attr);
+  ret |= RK_MPI_VI_EnableChn(s32CamId, 0);
   if (ret) {
     printf("Create VI[0] failed! ret=%d\n", ret);
     return -1;
@@ -429,21 +451,20 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  signal(SIGINT, sigterm_handler);
   pthread_t media_thread;
   pthread_create(&media_thread, NULL, GetMediaBuffer, &rga_arg);
-  RK_MPI_VI_StartStream(0, 0);
+  RK_MPI_VI_StartStream(s32CamId, 0);
 
   while (!quit) {
     usleep(500000);
   }
 
   RK_MPI_VENC_DestroyChn(0);
-  RK_MPI_VI_DisableChn(0, 0);
+  RK_MPI_VI_DisableChn(s32CamId, 0);
 
   if (iq_file_dir) {
 #ifdef RKAIQ
-    SAMPLE_COMM_ISP_Stop();
+    SAMPLE_COMM_ISP_Stop(s32CamId);
 #endif
   }
 

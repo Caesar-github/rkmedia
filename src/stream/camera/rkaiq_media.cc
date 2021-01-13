@@ -10,6 +10,44 @@ static media_entity *media_get_entity_by_name_rk(struct media_device *device,
   return media_get_entity_by_name(device, name, strlen(name));
 }
 
+int RKAiqMedia::SetCameraOrder(int idx) {
+  if (idx >= MAX_CAM_NUM) {
+    RKMEDIA_LOGE("RKAIQ: index(%d) over max(%d)!", idx, MAX_CAM_NUM);
+    return -1;
+  }
+  for (int i = 0; i < MAX_CAM_NUM; i++) {
+    if (cam_id2ispp_id[i] == ISP_ORDER_FREE) {
+      cam_id2ispp_id[i] = idx;
+      return 0;
+    }
+  }
+  RKMEDIA_LOGE("RKAIQ: set %d fail, cam_id2ispp_id is full!", idx);
+  return -1;
+}
+
+void RKAiqMedia::BindCameraWithIsp() {
+  int free_cam_id2ispp_id;
+  for (int i = 0; i < MAX_CAM_NUM; i++) {
+    free_cam_id2ispp_id = ISP_ORDER_FREE;
+    if (media_info[i].isp.model_idx < 0 || media_info[i].ispp.model_idx < 0) {
+      break;
+    }
+    for (int j = 0; j < MAX_CAM_NUM; j++) {
+      if (cam_id2ispp_id[j] == ISP_ORDER_OCCUPY &&
+          free_cam_id2ispp_id == ISP_ORDER_FREE) {
+        free_cam_id2ispp_id = j;
+      }
+      if (cam_id2ispp_id[j] == media_info[i].isp.model_idx) {
+        free_cam_id2ispp_id = ISP_ORDER_FREE;
+        break;
+      }
+    }
+    if (free_cam_id2ispp_id != ISP_ORDER_FREE) {
+      cam_id2ispp_id[free_cam_id2ispp_id] = media_info[i].isp.model_idx;
+    }
+  }
+}
+
 std::string RKAiqMedia::GetSensorName(struct media_device *device) {
   std::string sensor_name;
   media_entity *entity = NULL;
@@ -49,21 +87,22 @@ void RKAiqMedia::GetIsppSubDevs(int id, struct media_device *device,
                                 const char *devpath) {
   media_entity *entity = NULL;
   const char *entity_name = NULL;
-  int index = 0;
   ispp_info_t *ispp_info = NULL;
 
-  for (index = 0; index < MAX_CAM_NUM; index++) {
+  if (id >= MAX_CAM_NUM || id < 0)
+    return;
+
+  for (int index = 0; index < MAX_CAM_NUM; index++) {
     ispp_info = &media_info[index].ispp;
     if (ispp_info->media_dev_path.empty())
       break;
     if (ispp_info->media_dev_path.compare(devpath) == 0) {
-      RKMEDIA_LOGE("RKAIQ: isp info of path %s exists!", devpath);
+      RKMEDIA_LOGE("RKAIQ: isp info of path %s exists!\n", devpath);
       return;
     }
   }
 
-  if (index >= MAX_CAM_NUM)
-    return;
+  ispp_info = &media_info[id].ispp;
 
   ispp_info->model_idx = id;
   ispp_info->media_dev_path = devpath;
@@ -126,32 +165,36 @@ void RKAiqMedia::GetIsppSubDevs(int id, struct media_device *device,
   }
 
   RKMEDIA_LOGI("RKAIQ: model(%s): ispp_info(%d): ispp-subdev entity name: %s\n",
-               device->info.model, index, ispp_info->pp_dev_path.c_str());
+               device->info.model, id, ispp_info->pp_dev_path.c_str());
 }
 
 void RKAiqMedia::GetIspSubDevs(int id, struct media_device *device,
                                const char *devpath) {
   media_entity *entity = NULL;
   const char *entity_name = NULL;
-  int index = 0;
   isp_info_t *isp_info = NULL;
 
-  for (index = 0; index < MAX_CAM_NUM; index++) {
+  if (id >= MAX_CAM_NUM) {
+    RKMEDIA_LOGW("RKAIQ: path %s set id(%d) over max(%d)!\n", devpath, id,
+                 MAX_CAM_NUM - 1);
+    return;
+  }
+
+  for (int index = 0; index < MAX_CAM_NUM; index++) {
     isp_info = &media_info[index].isp;
-    if (isp_info->media_dev_path.empty())
-      break;
     if (isp_info->media_dev_path.compare(devpath) == 0) {
-      RKMEDIA_LOGE("RKAIQ: isp info of path %s exists!", devpath);
+      RKMEDIA_LOGE("RKAIQ: isp info of path %s exists!\n", devpath);
       return;
     }
   }
 
-  if (index >= MAX_CAM_NUM)
-    return;
+  isp_info = &media_info[id].isp;
 
   isp_info->linked_sensor = IsLinkSensor(device);
-  if (isp_info->linked_sensor)
+  if (isp_info->linked_sensor) {
     isp_info->sensor_name = GetSensorName(device);
+    SetCameraOrder(id);
+  }
   isp_info->model_idx = id;
   isp_info->media_dev_path = devpath;
 
@@ -277,26 +320,30 @@ void RKAiqMedia::GetIspSubDevs(int id, struct media_device *device,
   }
 
   RKMEDIA_LOGI("RKAIQ: model(%s): isp_info(%d): isp-subdev entity name: %s\n",
-               device->info.model, index, isp_info->isp_dev_path.c_str());
+               device->info.model, id, isp_info->isp_dev_path.c_str());
 }
 
 void RKAiqMedia::GetCifSubDevs(int id, struct media_device *device,
                                const char *devpath) {
+  (void)id;
   media_entity *entity = NULL;
   const char *entity_name = NULL;
   int index = 0;
   cif_info_t *cif_info = nullptr;
 
   int link_sensor = IsLinkSensor(device);
-  if (!link_sensor)
+  if (!link_sensor) {
     return;
+  } else {
+    SetCameraOrder(ISP_ORDER_OCCUPY);
+  }
 
   for (index = 0; index < MAX_CAM_NUM; index++) {
     cif_info = &media_info[index].cif;
     if (cif_info->media_dev_path.empty())
       break;
     if (cif_info->media_dev_path.compare(devpath) == 0) {
-      RKMEDIA_LOGE("RKAIQ: isp info of path %s exists!", devpath);
+      RKMEDIA_LOGE("RKAIQ: isp info of path %s exists!\n", devpath);
       return;
     }
   }
@@ -304,7 +351,7 @@ void RKAiqMedia::GetCifSubDevs(int id, struct media_device *device,
   if (index >= MAX_CAM_NUM)
     return;
 
-  cif_info->model_idx = id;
+  cif_info->model_idx = index;
   cif_info->linked_sensor = link_sensor;
   if (cif_info->linked_sensor)
     cif_info->sensor_name = GetSensorName(device);
@@ -407,26 +454,24 @@ int RKAiqMedia::GetMediaInfo() {
     }
 
     if (strcmp(device->info.model, "rkispp0") == 0 ||
-        strcmp(device->info.model, "rkispp1") == 0 ||
         strcmp(device->info.model, "rkispp") == 0) {
-      GetIsppSubDevs(index, device, sys_path);
-      goto media_unref;
+      GetIsppSubDevs(0, device, sys_path);
+    } else if (strcmp(device->info.model, "rkispp1") == 0) {
+      GetIsppSubDevs(1, device, sys_path);
     } else if (strcmp(device->info.model, "rkisp0") == 0 ||
-               strcmp(device->info.model, "rkisp1") == 0 ||
                strcmp(device->info.model, "rkisp") == 0) {
-      GetIspSubDevs(index, device, sys_path);
+      GetIspSubDevs(0, device, sys_path);
+    } else if (strcmp(device->info.model, "rkisp1") == 0) {
+      GetIspSubDevs(1, device, sys_path);
     } else if (strcmp(device->info.model, "rkcif") == 0 ||
                strcmp(device->info.model, "rkcif_mipi_lvds") == 0 ||
                strcmp(device->info.model, "rkcif_lite_mipi_lvds") == 0) {
       GetCifSubDevs(index, device, sys_path);
-    } else {
-      goto media_unref;
     }
 
-  media_unref:
     media_device_unref(device);
   }
-
+  BindCameraWithIsp();
   return ret;
 }
 
@@ -531,6 +576,32 @@ int RKAiqMedia::DumpMediaInfo() {
   return 0;
 }
 
+std::string RKAiqMedia::GetVideoNode(int camera_id, const char *chn_name) {
+  RKMEDIA_LOGW("camera_id: %d, chn: %s\n", camera_id, chn_name);
+  if (camera_id >= MAX_CAM_NUM || camera_id < 0)
+    return "";
+
+  if (camera_id >= 2) {
+    RKMEDIA_LOGW("video node may only support 2 sensor!\n");
+  }
+
+  int idx = cam_id2ispp_id[camera_id];
+  if (idx >= MAX_CAM_NUM || idx < 0)
+    return "";
+
+  RKMEDIA_LOGW("camera_id: %d, chn: %s, idx: %d\n", camera_id, chn_name, idx);
+  if (strstr(chn_name, "bypass"))
+    return media_info[idx].ispp.pp_m_bypass_path;
+  else if (strstr(chn_name, "scale0"))
+    return media_info[idx].ispp.pp_scale0_path;
+  else if (strstr(chn_name, "scale1"))
+    return media_info[idx].ispp.pp_scale1_path;
+  else if (strstr(chn_name, "scale2"))
+    return media_info[idx].ispp.pp_scale2_path;
+
+  return "";
+}
+
 RKAiqMedia::RKAiqMedia() {
   for (int i = 0; i < MAX_CAM_NUM; i++) {
     media_info[i].cif.model_idx = -1;
@@ -538,6 +609,8 @@ RKAiqMedia::RKAiqMedia() {
     media_info[i].ispp.model_idx = -1;
     media_info[i].cif.linked_sensor = 0;
     media_info[i].isp.linked_sensor = 0;
+    cam_id2ispp_id[i] = ISP_ORDER_FREE;
   }
+
   GetMediaInfo();
 }
