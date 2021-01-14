@@ -6,6 +6,7 @@
 #include <condition_variable> // std::condition_variable, std::cv_status
 #include <math.h>
 #include <mutex> // std::mutex, std::unique_lock
+#include <inttypes.h>
 
 #include <move_detect/move_detection.h>
 
@@ -197,7 +198,7 @@ bool md_process(Flow *f, MediaBufferVector &input_vector) {
     }
   }
 
-  RKMEDIA_LOGD("[MoveDetection]: insert list time:%lldms\n",
+  RKMEDIA_LOGD("[MoveDetection]: insert list time:%" PRId64 "ms\n",
                src->GetAtomicClock() / 1000);
 
   dst->SetValidSize(result_size);

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "muxer.h"
-
+#include <inttypes.h>
 #include <assert.h>
 
 #include "buffer.h"
@@ -337,7 +337,7 @@ FFMPEGMuxer::Write(std::shared_ptr<MediaBuffer> data, int stream_no) {
       pre_pts[stream_no] = pts;
     }
     avpkt.dts = avpkt.pts = pts;
-    RKMEDIA_LOGD("[%d] pts = %lld, num/den =%d/%d\n", stream_no, pts,
+    RKMEDIA_LOGD("[%d] pts = %" PRId64 ", num/den =%d/%d\n", stream_no, pts,
                  s->time_base.num, s->time_base.den);
     ret = av_write_frame(context, &avpkt);
     av_packet_unref(&avpkt);
