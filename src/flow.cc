@@ -135,6 +135,15 @@ void FlowCoroutine::RunOnce() {
   bool ret = true;
   (this->*fetch_input_func)(in_vector);
 
+#ifdef RKMEDIA_TIMESTAMP_DEBUG
+  for (unsigned int i = 0; i < in_vector.size(); i++) {
+    if (in_vector[i]) {
+      std::string node_name = std::string(flow->GetFlowTag()) + ":FetchInput";
+      in_vector[i]->TimeStampRecord(node_name, gettimeofday());
+    }
+  }
+#endif //RKMEDIA_TIMESTAMP_DEBUG
+
   if (flow->GetRunTimesRemaining()) {
 #ifndef NDEBUG
     {
@@ -777,6 +786,12 @@ void Flow::SendInput(std::shared_ptr<MediaBuffer> &input, int in_slot_index) {
   }
   if (enable) {
     auto &in = v_input[in_slot_index];
+#ifdef RKMEDIA_TIMESTAMP_DEBUG
+    if (input) {
+      std::string node_name = std::string(GetFlowTag()) + ":SendInput";
+      input->TimeStampRecord(node_name, gettimeofday());
+    }
+#endif // RKMEDIA_TIMESTAMP_DEBUG
     CALL_MEMBER_FN(in, in.send_input_behavior)(input);
   }
 }
@@ -788,6 +803,11 @@ bool Flow::SetOutput(const std::shared_ptr<MediaBuffer> &output,
     RKMEDIA_LOGE("Output slot[%d] is vaild!\n", out_slot_index);
     return false;
   }
+
+#ifdef RKMEDIA_TIMESTAMP_DEBUG
+  std::string node_name = std::string(GetFlowTag()) + ":SetOutput";
+  output->TimeStampRecord(node_name, gettimeofday());
+#endif // RKMEDIA_TIMESTAMP_DEBUG
 
   if (out_callback_ && output)
     out_callback_(out_handler_, output);

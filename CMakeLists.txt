@@ -166,6 +166,11 @@ set(EASY_MEDIA_DEPENDENT_LIBS
 add_definitions(-DRKMEDIA_SUPPORT_MINILOG)
 endif()
 
+option(TIMESTAMP_DEBUG "Time-consuming statistics of each stage of MB" OFF)
+if (TIMESTAMP_DEBUG)
+  add_definitions(-DRKMEDIA_TIMESTAMP_DEBUG)
+endif()
+
 include_directories(include/easymedia)
 include_directories(include/rkmedia)
 add_subdirectory(src)

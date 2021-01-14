@@ -220,6 +220,11 @@ bool do_filters(Flow *f, MediaBufferVector &input_vector) {
     } else {
       if (filter->Process(in, out_buffer))
         return false;
+#ifdef RKMEDIA_TIMESTAMP_DEBUG
+      // Pass TsNodeInfo to new buffer.
+      if (in && out_buffer)
+        out_buffer->TimeStampCopy(in);
+#endif // RKMEDIA_TIMESTAMP_DEBUG
     }
     i++;
   }
