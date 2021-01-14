@@ -111,14 +111,14 @@ int main(int argc, char *argv[]) {
 
   RK_MPI_SYS_Init();
 
-  // VI[0]: 2688x1520
   VI_CHN_ATTR_S vi_chn_attr;
-  vi_chn_attr.pcVideoNode = "rkispp_scale2";
+  vi_chn_attr.pcVideoNode = "rkispp_scale0";
   vi_chn_attr.u32BufCnt = 20;
   vi_chn_attr.u32Width = u32VideWidth;
   vi_chn_attr.u32Height = u32VideoHeight;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
   vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
+  vi_chn_attr.enBufType = VI_CHN_BUF_TYPE_MMAP;
   ret = RK_MPI_VI_SetChnAttr(s32CamId, 0, &vi_chn_attr);
   ret |= RK_MPI_VI_EnableChn(s32CamId, 0);
   if (ret) {
@@ -168,6 +168,31 @@ int main(int argc, char *argv[]) {
       printf("Enable VM[0]:Chn[%d] failed! ret=%d\n", i, ret);
       return -1;
     }
+  }
+
+  VMIX_LINE_INFO_S stVmLine;
+  memset(&stVmLine, 0, sizeof(stVmLine));
+  for (RK_U8 u8HorIdx = 1; u8HorIdx < u8LayoutHor; u8HorIdx++) {
+    stVmLine.stLines[stVmLine.u32LineCnt].s32X =
+        u32DispWidth * u8HorIdx / u8LayoutHor;
+    stVmLine.stLines[stVmLine.u32LineCnt].s32Y = 0;
+    stVmLine.stLines[stVmLine.u32LineCnt].u32Width = 2;
+    stVmLine.stLines[stVmLine.u32LineCnt].u32Height = u32DispHeight;
+    stVmLine.u32LineCnt++;
+  }
+  for (RK_U8 u8VerIdx = 1; u8VerIdx < u8LayoutVer; u8VerIdx++) {
+    stVmLine.stLines[stVmLine.u32LineCnt].s32X = 0;
+    stVmLine.stLines[stVmLine.u32LineCnt].s32Y =
+        u32DispHeight * u8VerIdx / u8LayoutVer;
+    stVmLine.stLines[stVmLine.u32LineCnt].u32Width = u32DispWidth;
+    stVmLine.stLines[stVmLine.u32LineCnt].u32Height = 2;
+    stVmLine.u32LineCnt++;
+  }
+  /* only last channel need line info */
+  ret = RK_MPI_VMIX_SetLineInfo(0, stDevInfo.u16ChnCnt - 1, stVmLine);
+  if (ret) {
+    printf("Set VM[0] line info failed! ret=%d\n", ret);
+    return -1;
   }
 
   // VO[1] for overlay plane

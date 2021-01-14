@@ -259,6 +259,8 @@ _CAPI RK_S32 RK_MPI_VMIX_CreateDev(VMIX_DEV VmDev, VMIX_DEV_INFO_S *pstDevInfo);
 _CAPI RK_S32 RK_MPI_VMIX_DestroyDev(VMIX_DEV VmDev);
 _CAPI RK_S32 RK_MPI_VMIX_EnableChn(VMIX_DEV VmDev, VMIX_CHN VmChn);
 _CAPI RK_S32 RK_MPI_VMIX_DisableChn(VMIX_DEV VmDev, VMIX_CHN VmChn);
+_CAPI RK_S32 RK_MPI_VMIX_SetLineInfo(VMIX_DEV VmDev, VMIX_CHN VmChn,
+                                     VMIX_LINE_INFO_S VmLine);
 
 #ifdef __cplusplus
 }

@@ -163,6 +163,8 @@ enum {
    * *******************************/
   S_RGA_CFG = 11000,
   G_RGA_CFG,
+  S_RGA_LINE_INFO,
+  G_RGA_LINE_INFO,
 
 };
 
