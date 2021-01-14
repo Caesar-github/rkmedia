@@ -120,6 +120,11 @@ typedef struct {
   int qp_max; // 8-51
   int qp_min_i;
   int qp_max_i;
+
+  unsigned int thrd_i[16];
+  unsigned int thrd_p[16];
+  unsigned int row_qp_delta_i;
+  unsigned int row_qp_delta_p;
 } VideoEncoderQp;
 
 typedef enum {

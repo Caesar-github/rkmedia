@@ -177,6 +177,7 @@ int main(int argc, char *argv[]) {
   VENC_GOP_ATTR_S stGopModeAttr;
   stGopModeAttr.enGopMode = VENC_GOPMODE_SMARTP;
   stGopModeAttr.s32IPQpDelta = 3;
+  stGopModeAttr.s32ViQpDelta = 3;
   stGopModeAttr.u32BgInterval = 300;
   stGopModeAttr.u32GopSize = 30;
   ret = RK_MPI_VENC_SetGopMode(0, &stGopModeAttr);

@@ -225,18 +225,6 @@ restart:
 
   RK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
 
-  VENC_RC_PARAM_S venc_rc_param;
-  venc_rc_param.s32FirstFrameStartQp = 30;
-  venc_rc_param.stParamH264.u32StepQp = 6;
-  venc_rc_param.stParamH264.u32MinQp = 20;
-  venc_rc_param.stParamH264.u32MaxQp = 51;
-  venc_rc_param.stParamH264.u32MinIQp = 24;
-  venc_rc_param.stParamH264.u32MaxIQp = 51;
-  sleep(3);
-  printf("%s: start set qp.\n", __func__);
-  RK_MPI_VENC_SetRcParam(stDestChn.s32ChnId, &venc_rc_param);
-  printf("%s: after set qp.\n", __func__);
-
   running = RK_TRUE;
   /*
        printf(" |   0. quit   \n");

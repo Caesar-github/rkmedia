@@ -462,8 +462,9 @@ int video_encoder_set_qp(std::shared_ptr<Flow> &enc_flow, VideoEncoderQp &qps) {
     return -EINVAL;
   }
 
-  if ((qps.qp_init > qps.qp_max) || (qps.qp_init < qps.qp_min)) {
-    RKMEDIA_LOGE("qp_init should be within [qp_min, qp_max]\n");
+  if ((qps.qp_init != -1) &&
+      ((qps.qp_init > qps.qp_max) || (qps.qp_init < qps.qp_min))) {
+    RKMEDIA_LOGE("qp_init should be within [qp_min, qp_max] or equal -1.\n");
     return -EINVAL;
   }
 

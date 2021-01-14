@@ -11,6 +11,9 @@ extern "C" {
 #include "rkmedia_common.h"
 
 typedef RK_U32 RK_FR32;
+
+#define RC_TEXTURE_THR_SIZE 16
+
 /* rc quality */
 typedef enum rkVENC_RC_QUALITY_E {
   VENC_RC_QUALITY_HIGHEST,
@@ -241,8 +244,12 @@ typedef struct rkVENC_PARAM_MJPEG_S {
 
 /* The param of rc*/
 typedef struct rkVENC_RC_PARAM_S {
-  RK_U32
-  s32FirstFrameStartQp; // RW; Start QP value of the first frame
+  RK_U32 u32ThrdI[RC_TEXTURE_THR_SIZE]; // [0, 255]
+  RK_U32 u32ThrdP[RC_TEXTURE_THR_SIZE]; // [0, 255]
+  RK_U32 u32RowQpDeltaI;                // [0, 10]
+  RK_U32 u32RowQpDeltaP;                // [0, 10]
+
+  RK_U32 s32FirstFrameStartQp; // RW; Start QP value of the first frame
   union {
     VENC_PARAM_H264_S stParamH264;
     VENC_PARAM_H265_S stParamH265;
