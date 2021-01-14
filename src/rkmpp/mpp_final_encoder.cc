@@ -1309,6 +1309,11 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
       ret = mpp_enc_cfg_set_s32(enc_cfg, "rc:gop", smartp_gop_len);
       ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_ip", smartp_ip_qp_delta);
       ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_vi", smartp_vi_qp_delta);
+      // Set a special qp value to protect the effect of this mode
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max", 48);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min", 30);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max_i", 48);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min_i", 30);
       if (ret) {
         RKMEDIA_LOGE("MPP Encoder: gop mode: cfg set s32 failed ret %d\n", ret);
         return false;
@@ -1330,6 +1335,11 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
 
       ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:gop", vconfig.gop_size);
       ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_ip", gop_param->ip_qp_delta);
+      // Reset qp value frome smartp
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max", vconfig.qp_max);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min", vconfig.qp_min);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max_i", vconfig.qp_max_i);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min_i", vconfig.qp_min_i);
       if (ret) {
         RKMEDIA_LOGE("MPP Encoder: gop mode: cfg set s32 failed ret %d\n", ret);
         return false;
