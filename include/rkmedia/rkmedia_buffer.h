@@ -69,6 +69,7 @@ _CAPI RK_S32 RK_MPI_MB_GetImageInfo(MEDIA_BUFFER mb,
 _CAPI RK_S32 RK_MPI_MB_BeginCPUAccess(MEDIA_BUFFER mb, RK_BOOL bReadonly);
 _CAPI RK_S32 RK_MPI_MB_EndCPUAccess(MEDIA_BUFFER mb, RK_BOOL bReadonly);
 _CAPI RK_S32 RK_MPI_MB_TsNodeDump(MEDIA_BUFFER mb);
+_CAPI MEDIA_BUFFER RK_MPI_MB_Copy(MEDIA_BUFFER mb, RK_BOOL bZeroCopy);
 #ifdef __cplusplus
 }
 #endif

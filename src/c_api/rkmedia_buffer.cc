@@ -372,3 +372,20 @@ RK_S32 RK_MPI_MB_TsNodeDump(MEDIA_BUFFER mb) {
 #endif
 }
 
+MEDIA_BUFFER RK_MPI_MB_Copy(MEDIA_BUFFER mb, RK_BOOL bZeroCopy) {
+  MEDIA_BUFFER_IMPLE *mb_old = (MEDIA_BUFFER_IMPLE *)mb;
+  MEDIA_BUFFER_IMPLE *mb_new = new MEDIA_BUFFER_IMPLE;
+  if (!mb_new) {
+    RKMEDIA_LOGE("%s: no space left!\n", __func__);
+    return NULL;
+  }
+  if (bZeroCopy) {
+    *mb_new = *mb_old;
+  } else {
+    RKMEDIA_LOGE("%s: not support DeepCopy\n", __func__);
+    delete mb_new;
+    return NULL;
+  }
+
+  return mb_new;
+}
