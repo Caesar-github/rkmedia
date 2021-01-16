@@ -525,7 +525,8 @@ private:
 };
 
 static int CalcQpWithRcQuality(const char *level, VideoEncoderQp &qps) {
-  VideoEncoderQp qp_table[7] = {
+  VideoEncoderQp qp_table[7];
+  int RcQulaitQpArray[7][6] = {
       {-1, 6, 20, 51, 24, 51}, // Highest
       {-1, 6, 24, 51, 24, 51}, // Higher
       {-1, 6, 26, 51, 24, 51}, // High
@@ -534,6 +535,16 @@ static int CalcQpWithRcQuality(const char *level, VideoEncoderQp &qps) {
       {-1, 6, 35, 51, 24, 51}, // Lower
       {-1, 6, 38, 51, 24, 51}  // Lowest
   };
+
+  memset(qp_table, 0, 7 * sizeof(VideoEncoderQp));
+  for (int i = 0; i < 7; i++) {
+    qp_table[i].qp_init = RcQulaitQpArray[i][0];
+    qp_table[i].qp_step = RcQulaitQpArray[i][1];
+    qp_table[i].qp_min = RcQulaitQpArray[i][2];
+    qp_table[i].qp_max = RcQulaitQpArray[i][3];
+    qp_table[i].qp_min_i = RcQulaitQpArray[i][4];
+    qp_table[i].qp_max_i = RcQulaitQpArray[i][5];
+  }
 
   // Read From qp cfg file.
   // To Do...
@@ -766,16 +777,23 @@ bool MPPCommonConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
   ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:fps_out_num", fps_out_num);
   ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:fps_out_denorm", fps_out_den);
   ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:gop", gop);
+  ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_init", vconfig.qp_init);
+  ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max", vconfig.qp_max);
+  ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min", vconfig.qp_min);
+  // ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_step", vconfig.qp_step);
+  ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max_i", vconfig.qp_max_i);
+  ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min_i", vconfig.qp_min_i);
 
   vconfig.frame_rate = fps_in_num;
-  RKMEDIA_LOGI("MPP Encoder: bps:[%d,%d,%d] fps: [%d/%d]->[%d/%d], gop:%d\n",
+  RKMEDIA_LOGI("MPP Encoder: bps:[%d,%d,%d] fps: [%d/%d]->[%d/%d], gop:%d "
+               "qpInit:%d, qpMin:%d, qpMax:%d, qpMinI:%d, qpMaxI:%d.\n",
                bps_max, bps_target, bps_min, fps_in_num, fps_in_den,
-               fps_out_num, fps_out_den, gop);
+               fps_out_num, fps_out_den, gop, vconfig.qp_init, vconfig.qp_min,
+               vconfig.qp_max, vconfig.qp_min_i, vconfig.qp_max_i);
 
   // codeccfg set.
   ret |= mpp_enc_cfg_set_s32(enc_cfg, "codec:type", code_type);
-  switch (code_type) {
-  case MPP_VIDEO_CodingAVC:
+  if (code_type == MPP_VIDEO_CodingAVC) {
     // H.264 profile_idc parameter
     // 66  - Baseline profile
     // 77  - Main profile
@@ -799,28 +817,8 @@ bool MPPCommonConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
     ret |= mpp_enc_cfg_set_s32(
         enc_cfg, "h264:trans8x8",
         (vconfig.trans_8x8 && (vconfig.profile == 100)) ? 1 : 0);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_init", vconfig.qp_init);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_max", vconfig.qp_max);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_min", vconfig.qp_min);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_step", vconfig.qp_step);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_max_i", vconfig.qp_max_i);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_min_i", vconfig.qp_min_i);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_delta_ip", 8);
-    RKMEDIA_LOGI("MPP Encoder: AVC: encode profile %d level %d init_qp %d\n",
-                 vconfig.profile, vconfig.level, vconfig.qp_init);
-    break;
-  case MPP_VIDEO_CodingHEVC:
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_init", vconfig.qp_init);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_max", vconfig.qp_max);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_min", vconfig.qp_min);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_step", vconfig.qp_step);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_max_i", vconfig.qp_max_i);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_min_i", vconfig.qp_min_i);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_delta_ip", 8);
-    break;
-  default:
-    // will never go here, avoid gcc warning
-    return false;
+    RKMEDIA_LOGI("MPP Encoder: AVC: encode profile %d level %d\n",
+                 vconfig.profile, vconfig.level);
   }
 
   if (ret) {
@@ -1040,24 +1038,12 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:bps_min", bps_min);
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:bps_max", bps_max);
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:bps_target", bps_target);
-
-    if (code_type == MPP_VIDEO_CodingAVC) {
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_init", -1);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_step", 2);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_delta_ip", 8);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_max", qp_max);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_min", qp_min);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_max_i", qp_max_i);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_min_i", qp_min_i);
-    } else if (code_type == MPP_VIDEO_CodingHEVC) {
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_init", -1);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_step", 2);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_delta_ip", 8);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_max", qp_max);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_min", qp_min);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_max_i", qp_max_i);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_min_i", qp_min_i);
-    }
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_init", -1);
+    // ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_step", 2);
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max", qp_max);
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min", qp_min);
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max_i", qp_max_i);
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min_i", qp_min_i);
     if (ret) {
       RKMEDIA_LOGE("MPP Encoder: rc mode: cfg set s32 failed ret %d\n", ret);
       return false;
@@ -1138,27 +1124,12 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
                  qps.qp_step, qps.qp_min, qps.qp_max, qps.qp_min_i,
                  qps.qp_max_i);
 
-    if (code_type == MPP_VIDEO_CodingAVC) {
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_init", qps.qp_init);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_max", qps.qp_max);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_min", qps.qp_min);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_step", qps.qp_step);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_max_i", qps.qp_max_i);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_min_i", qps.qp_min_i);
-      // when qp changes qp_delta_ip will reset 0,
-      // so we should set default 8 again.
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_delta_ip", 8);
-    } else if (code_type == MPP_VIDEO_CodingHEVC) {
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_init", qps.qp_init);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_max", qps.qp_max);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_min", qps.qp_min);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_step", qps.qp_step);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_max_i", qps.qp_max_i);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_min_i", qps.qp_min_i);
-      // when qp changes qp_delta_ip will reset 0,
-      // so we should set default 8 again.
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_delta_ip", 8);
-    }
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_init", qps.qp_init);
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max", qps.qp_max);
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min", qps.qp_min);
+    // ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_step", qps.qp_step);
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max_i", qps.qp_max_i);
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min_i", qps.qp_min_i);
     if (ret) {
       RKMEDIA_LOGE("MPP Encoder: qp: cfg set s32 failed ret %d\n", ret);
       return false;
@@ -1202,31 +1173,29 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
       RKMEDIA_LOGE("MPP Encoder: Incomplete VideoEncoderQp information\n");
       return false;
     }
-    RKMEDIA_LOGI("MPP Encoder: new qp:[%d, %d, %d, %d, %d, %d]\n", qps->qp_init,
-                 qps->qp_step, qps->qp_min, qps->qp_max, qps->qp_min_i,
-                 qps->qp_max_i);
+    RKMEDIA_LOGI("MPP Encoder: new qp value:\n"
+                 "\tQpInit:%d\n"
+                 "\tQpStep:%d\n"
+                 "\tQpMin:%d\n"
+                 "\tQpMax:%d\n"
+                 "\tQpMinI:%d\n"
+                 "\tQpMaxI:%d\n"
+                 "\tQpRowDeltaI:%d\n"
+                 "\tQpRowDeltaP:%d\n",
+                 qps->qp_init, qps->qp_step, qps->qp_min, qps->qp_max,
+                 qps->qp_min_i, qps->qp_max_i, qps->row_qp_delta_i,
+                 qps->row_qp_delta_p);
 
-    if (code_type == MPP_VIDEO_CodingAVC) {
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_init", qps->qp_init);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_max", qps->qp_max);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_min", qps->qp_min);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_step", qps->qp_step);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_max_i", qps->qp_max_i);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_min_i", qps->qp_min_i);
-      // when qp changes qp_delta_ip will reset 0,
-      // so we should set default 8 again.
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_delta_ip", 8);
-    } else if (code_type == MPP_VIDEO_CodingHEVC) {
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_init", qps->qp_init);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_max", qps->qp_max);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_min", qps->qp_min);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_step", qps->qp_step);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_max_i", qps->qp_max_i);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_min_i", qps->qp_min_i);
-      // when qp changes qp_delta_ip will reset 0,
-      // so we should set default 8 again.
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_delta_ip", 8);
-    }
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_init", qps->qp_init);
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max", qps->qp_max);
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min", qps->qp_min);
+    // ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_step", qps->qp_step);
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max_i", qps->qp_max_i);
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min_i", qps->qp_min_i);
+    // hardware cfg. If the hardware does not support it,
+    // the interface will do nothing
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "hw:qp_row", qps->row_qp_delta_i);
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "hw:qp_row_i", qps->row_qp_delta_p);
     if (ret) {
       RKMEDIA_LOGE("MPP Encoder: qp: cfg set s32 failed ret %d\n", ret);
       return false;
@@ -1312,12 +1281,14 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
       // virtual intra frame gap.
       int smartp_vi_len = gop_param->gop_size;
       int smartp_gop_len = gop_param->interval;
-      int smartp_qp_delta = gop_param->ip_qp_delta;
+      int smartp_ip_qp_delta = gop_param->ip_qp_delta;
+      int smartp_vi_qp_delta = gop_param->vi_qp_delta;
 
       RKMEDIA_LOGI("MPP Encoder: Set GopMode to \"SMARTP\" mode. "
-                   "gop_size:%d, interval:%d, ip_qp_delta:%d...\n",
+                   "gop_size:%d, interval:%d, ip_qp_delta:%d, "
+                   "vi_qp_delta:%d\n",
                    gop_param->gop_size, gop_param->interval,
-                   gop_param->ip_qp_delta);
+                   gop_param->ip_qp_delta, gop_param->vi_qp_delta);
 
       if (mpp_enc_ref_cfg_init(&ref)) {
         RKMEDIA_LOGE("MPP Encoder: ref cfg init failed!\n");
@@ -1330,41 +1301,18 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
       }
       ret = mpp_enc.EncodeControl(MPP_ENC_SET_REF_CFG, ref);
       mpp_enc_ref_cfg_deinit(&ref);
+      if (ret) {
+        RKMEDIA_LOGE("MPP Encoder: SMARTP: set ref cfg failed!\n");
+        return false;
+      }
 
-      /*********************************************************
-       * Set Gop size
-       * *******************************************************/
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:gop", smartp_gop_len);
+      ret = mpp_enc_cfg_set_s32(enc_cfg, "rc:gop", smartp_gop_len);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_ip", smartp_ip_qp_delta);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_vi", smartp_vi_qp_delta);
       if (ret) {
         RKMEDIA_LOGE("MPP Encoder: gop mode: cfg set s32 failed ret %d\n", ret);
         return false;
       }
-
-      /*********************************************************
-       * Set qp delta
-       * *******************************************************/
-      if (vconfig.image_cfg.codec_type == CODEC_TYPE_H265) {
-        ret |=
-            mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_delta_ip", smartp_qp_delta);
-        if (ret) {
-          RKMEDIA_LOGE("MPP Encoder: gop mode: cfg set s32 failed ret %d\n",
-                       ret);
-          return false;
-        }
-      } else if (vconfig.image_cfg.codec_type == CODEC_TYPE_H264) {
-        ret |=
-            mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_delta_ip", smartp_qp_delta);
-        if (ret) {
-          RKMEDIA_LOGE("MPP Encoder: gop mode: cfg set s32 failed ret %d\n",
-                       ret);
-          return false;
-        }
-      }
-
-      /*********************************************************
-       * Set vi gop size
-       * *******************************************************/
-      // ToDo...
 
       if (mpp_enc.EncodeControl(MPP_ENC_SET_CFG, enc_cfg) != 0) {
         RKMEDIA_LOGE("MPP Encoder: change gop cfg failed!\n");
@@ -1374,35 +1322,17 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
     case GOP_MODE_NORMALP: {
       RKMEDIA_LOGI("MPP Encoder: Set GopMode to \"NORMALP\" mode...\n");
       ret = mpp_enc.EncodeControl(MPP_ENC_SET_REF_CFG, NULL);
+      if (ret) {
+        RKMEDIA_LOGE("MPP Encoder: gop mode: reset ref cfg failed ret %d\n",
+                     ret);
+        return false;
+      }
 
-      /*********************************************************
-       * Reset Gop size
-       * *******************************************************/
       ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:gop", vconfig.gop_size);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_ip", gop_param->ip_qp_delta);
       if (ret) {
         RKMEDIA_LOGE("MPP Encoder: gop mode: cfg set s32 failed ret %d\n", ret);
         return false;
-      }
-      /*********************************************************
-       * Set qp delta
-       * *******************************************************/
-      int normal_qp_delta = gop_param->ip_qp_delta;
-      if (vconfig.image_cfg.codec_type == CODEC_TYPE_H265) {
-        ret |=
-            mpp_enc_cfg_set_s32(enc_cfg, "h265:qp_delta_ip", normal_qp_delta);
-        if (ret) {
-          RKMEDIA_LOGE("MPP Encoder: gop mode: cfg set s32 failed ret %d\n",
-                       ret);
-          return false;
-        }
-      } else if (vconfig.image_cfg.codec_type == CODEC_TYPE_H264) {
-        ret |=
-            mpp_enc_cfg_set_s32(enc_cfg, "h264:qp_delta_ip", normal_qp_delta);
-        if (ret) {
-          RKMEDIA_LOGE("MPP Encoder: gop mode: cfg set s32 failed ret %d\n",
-                       ret);
-          return false;
-        }
       }
 
       if (mpp_enc.EncodeControl(MPP_ENC_SET_CFG, enc_cfg) != 0) {

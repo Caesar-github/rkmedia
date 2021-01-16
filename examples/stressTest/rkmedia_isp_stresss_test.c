@@ -92,7 +92,6 @@ static void StreamOnOff(RK_BOOL start) {
     venc_chn_attr.stVencAttr.enRotation = g_S32Rotation;
 
     venc_chn_attr.stRcAttr.enRcMode = VENC_RC_MODE_H264CBR;
-
     venc_chn_attr.stRcAttr.stH264Cbr.u32Gop = 30;
     venc_chn_attr.stRcAttr.stH264Cbr.u32BitRate = g_width * g_height * 30 / 14;
     venc_chn_attr.stRcAttr.stH264Cbr.fr32DstFrameRateDen = 0;
@@ -111,21 +110,9 @@ static void StreamOnOff(RK_BOOL start) {
     RK_MPI_VI_SetChnAttr(stSrcChn.s32DevId, stSrcChn.s32ChnId, &vi_chn_attr);
     RK_MPI_VI_EnableChn(stSrcChn.s32DevId, stSrcChn.s32ChnId);
     RK_MPI_VENC_CreateChn(stDestChn.s32ChnId, &venc_chn_attr);
-
     RK_MPI_SYS_RegisterOutCb(&stDestChn, video_packet_cb);
-
     RK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
 
-    VENC_RC_PARAM_S venc_rc_param;
-    venc_rc_param.s32FirstFrameStartQp = 30;
-    venc_rc_param.stParamH264.u32StepQp = 6;
-    venc_rc_param.stParamH264.u32MinQp = 20;
-    venc_rc_param.stParamH264.u32MaxQp = 51;
-    venc_rc_param.stParamH264.u32MinIQp = 24;
-    venc_rc_param.stParamH264.u32MaxIQp = 51;
-    printf("%s: start set qp.\n", __func__);
-    RK_MPI_VENC_SetRcParam(stDestChn.s32ChnId, &venc_rc_param);
-    printf("%s: after set qp.\n", __func__);
     printf("%s exit!\n", __func__);
   } else {
     RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);

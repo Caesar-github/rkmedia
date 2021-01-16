@@ -2977,30 +2977,37 @@ RK_S32 RK_MPI_VENC_SetRcParam(VENC_CHN VeChn,
 
   g_venc_mtx.lock();
 
-  VideoEncoderQp qp;
+  VideoEncoderQp stVencQp;
 
-  qp.qp_init = pstRcParam->s32FirstFrameStartQp;
+  memcpy(stVencQp.thrd_i, pstRcParam->u32ThrdI,
+         RC_TEXTURE_THR_SIZE * sizeof(RK_U32));
+  memcpy(stVencQp.thrd_p, pstRcParam->u32ThrdP,
+         RC_TEXTURE_THR_SIZE * sizeof(RK_U32));
+  stVencQp.row_qp_delta_i = pstRcParam->u32RowQpDeltaI;
+  stVencQp.row_qp_delta_p = pstRcParam->u32RowQpDeltaP;
+
+  stVencQp.qp_init = pstRcParam->s32FirstFrameStartQp;
   switch (g_venc_chns[VeChn].venc_attr.attr.stVencAttr.enType) {
   case RK_CODEC_TYPE_H264:
-    qp.qp_step = pstRcParam->stParamH264.u32StepQp;
-    qp.qp_max = pstRcParam->stParamH264.u32MaxQp;
-    qp.qp_min = pstRcParam->stParamH264.u32MinQp;
-    qp.qp_max_i = pstRcParam->stParamH264.u32MaxIQp;
-    qp.qp_min_i = pstRcParam->stParamH264.u32MinIQp;
+    stVencQp.qp_step = pstRcParam->stParamH264.u32StepQp;
+    stVencQp.qp_max = pstRcParam->stParamH264.u32MaxQp;
+    stVencQp.qp_min = pstRcParam->stParamH264.u32MinQp;
+    stVencQp.qp_max_i = pstRcParam->stParamH264.u32MaxIQp;
+    stVencQp.qp_min_i = pstRcParam->stParamH264.u32MinIQp;
     break;
   case RK_CODEC_TYPE_H265:
-    qp.qp_step = pstRcParam->stParamH265.u32StepQp;
-    qp.qp_max = pstRcParam->stParamH265.u32MaxQp;
-    qp.qp_min = pstRcParam->stParamH265.u32MinQp;
-    qp.qp_max_i = pstRcParam->stParamH265.u32MaxIQp;
-    qp.qp_min_i = pstRcParam->stParamH265.u32MinIQp;
+    stVencQp.qp_step = pstRcParam->stParamH265.u32StepQp;
+    stVencQp.qp_max = pstRcParam->stParamH265.u32MaxQp;
+    stVencQp.qp_min = pstRcParam->stParamH265.u32MinQp;
+    stVencQp.qp_max_i = pstRcParam->stParamH265.u32MaxIQp;
+    stVencQp.qp_min_i = pstRcParam->stParamH265.u32MinIQp;
     break;
   case RK_CODEC_TYPE_JPEG:
     break;
   default:
     break;
   }
-  int ret = video_encoder_set_qp(g_venc_chns[VeChn].rkmedia_flow, qp);
+  int ret = video_encoder_set_qp(g_venc_chns[VeChn].rkmedia_flow, stVencQp);
   if (!ret) {
     memcpy(&g_venc_chns[VeChn].venc_attr.stRcPara, pstRcParam,
            sizeof(VENC_RC_PARAM_S));
@@ -3601,6 +3608,7 @@ RK_S32 RK_MPI_VENC_SetGopMode(VENC_CHN VeChn, VENC_GOP_ATTR_S *pstGopModeAttr) {
     rkmedia_param.ip_qp_delta = pstGopModeAttr->s32IPQpDelta;
     rkmedia_param.interval = pstGopModeAttr->u32BgInterval;
     rkmedia_param.gop_size = pstGopModeAttr->u32GopSize;
+    rkmedia_param.vi_qp_delta = pstGopModeAttr->s32ViQpDelta;
     break;
   default:
     RKMEDIA_LOGE("invalid gop mode(%d)!\n", pstGopModeAttr->enGopMode);
