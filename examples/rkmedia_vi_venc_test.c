@@ -69,6 +69,9 @@ static const struct option long_options[] = {
     {"encode", required_argument, NULL, 'e'},
     {"camid", required_argument, NULL, 'I'},
     {"multictx", required_argument, NULL, 'M'},
+    {"fps", required_argument, NULL, 'f'},
+    {"hdr_mode", required_argument, NULL, 'h' + 'm'},
+    {"vi_buf_cnt", required_argument, NULL, 'b' + 'c'},
     {"help", optional_argument, NULL, '?'},
     {NULL, 0, NULL, 0},
 };
@@ -91,6 +94,9 @@ static void print_usage(const RK_CHAR *name) {
          "should run in other application\n");
   printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
          "1 to enable. Default: 0\n");
+  printf("\t--fps fps of vi.\n");
+  printf("\t--hdr_mode [normal hdr2 hdr3].\n");
+  printf("\t--vi_buf_cnt buffer count of vi.\n");
 #else
   printf("\t%s [-w 1920] "
          "[-h 1080]"
@@ -121,9 +127,13 @@ int main(int argc, char *argv[]) {
   CODEC_TYPE_E enCodecType = RK_CODEC_TYPE_H264;
   RK_CHAR *pCodecName = "H264";
   RK_S32 s32CamId = 0;
+  RK_U32 u32BufCnt = 3;
 #ifdef RKAIQ
   RK_BOOL bMultictx = RK_FALSE;
+  RK_U32 u32Fps = 30;
+  rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
 #endif
+
   int c;
   int ret = 0;
   while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
@@ -178,7 +188,28 @@ int main(int argc, char *argv[]) {
         bMultictx = RK_TRUE;
       }
       break;
+    case 'f':
+      u32Fps = atoi(optarg);
+      printf("#u32Fps = %u.\n", u32Fps);
+      break;
+    case 'h' + 'm':
+      if (strcmp(optarg, "normal") == 0) {
+        hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
+      } else if (strcmp(optarg, "hdr2") == 0) {
+        hdr_mode = RK_AIQ_WORKING_MODE_ISP_HDR2;
+      } else if (strcmp(optarg, "hdr3") == 0) {
+        hdr_mode = RK_AIQ_WORKING_MODE_ISP_HDR3;
+      } else {
+        print_usage(argv[0]);
+        return 0;
+      }
+      printf("#hdr_mode = %u.\n", hdr_mode);
+      break;
 #endif
+    case 'b' + 'c':
+      u32BufCnt = atoi(optarg);
+      printf("#vi buffer conunt = %u.\n", u32BufCnt);
+      break;
     case '?':
     default:
       print_usage(argv[0]);
@@ -199,11 +230,9 @@ int main(int argc, char *argv[]) {
 
   if (pIqfilesPath) {
 #ifdef RKAIQ
-    rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-    int fps = 30;
     SAMPLE_COMM_ISP_Init(s32CamId, hdr_mode, bMultictx, pIqfilesPath);
     SAMPLE_COMM_ISP_Run(s32CamId);
-    SAMPLE_COMM_ISP_SetFrameRate(s32CamId, fps);
+    SAMPLE_COMM_ISP_SetFrameRate(s32CamId, u32Fps);
 #endif
   }
 
@@ -218,7 +247,7 @@ int main(int argc, char *argv[]) {
   RK_MPI_SYS_Init();
   VI_CHN_ATTR_S vi_chn_attr;
   vi_chn_attr.pcVideoNode = pDeviceName;
-  vi_chn_attr.u32BufCnt = 3;
+  vi_chn_attr.u32BufCnt = u32BufCnt;
   vi_chn_attr.u32Width = u32Width;
   vi_chn_attr.u32Height = u32Height;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
