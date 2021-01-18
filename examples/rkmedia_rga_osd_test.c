@@ -313,11 +313,11 @@ static void print_usage(const RK_CHAR *name) {
          "/oem/etc/iqfiles/, "
          "set dirpath empty to using path by default, without this option aiq "
          "should run in other application\n");
-  printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
          "1 to enable. Default: 0\n");
 #else
   printf("\t%s [-o output_dir] "
+         "[-I 0] "
          "[-r 0] "
          "[-p 1] "
          "[-m 0] "
@@ -325,6 +325,7 @@ static void print_usage(const RK_CHAR *name) {
          name);
 #endif
   printf("\t-o | --output: output dirpath, Default:/tmp/\n");
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-r | --raw_frame: number of output raw frames, Default:0\n");
   printf("\t-p | --processed_frame: number of output processed frames, "
          "Default:1\n");
@@ -344,7 +345,9 @@ int main(int argc, char *argv[]) {
   rga_arg.u32RgaHeight = 320;
   IMAGE_TYPE_E enPixFmt = IMAGE_TYPE_NV12;
   RK_S32 s32CamId = 0;
+#ifdef RKAIQ
   RK_BOOL bMultictx = RK_FALSE;
+#endif
   const RK_CHAR *pcVideoNode = "rkispp_scale0";
   int c;
   char *iq_file_dir = NULL;
@@ -376,11 +379,13 @@ int main(int argc, char *argv[]) {
     case 'I':
       s32CamId = atoi(optarg);
       break;
+#ifdef RKAIQ
     case 'M':
       if (atoi(optarg)) {
         bMultictx = RK_TRUE;
       }
       break;
+#endif
     case '?':
     default:
       print_usage(argv[0]);
@@ -392,13 +397,13 @@ int main(int argc, char *argv[]) {
   printf("#processed frame number: %d\n", g_snap_limit);
   printf("#output dirpath: %s\n", g_pOutPath);
   printf("#mode: %d\n", rga_arg.u32Mode);
+  printf("#####cam id: %d\n\n", s32CamId);
 
   signal(SIGINT, sigterm_handler);
 
   if (iq_file_dir) {
 #ifdef RKAIQ
     printf("#Aiq xml dirpath: %s\n\n", iq_file_dir);
-    printf("#####cam id: %d\n\n", s32CamId);
     printf("#####bMultictx: %d\n\n", bMultictx);
     rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
     int fps = 30;

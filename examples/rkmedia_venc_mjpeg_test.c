@@ -72,14 +72,14 @@ static void print_usage(char *name) {
          name);
   printf("\t[-a | --aiq] the dirpath of iqfiles. set dirpath empty to using "
          "path:\"/oem/etc/iqfiles/\", default: NULL\n");
-  printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
          "1 to enable. Default: 0\n");
 #else
-  printf("\t%s [-m cbr] [-o out.mjpg]\n", name);
+  printf("\t%s [-m cbr] [-o out.mjpg] [-I 0]\n", name);
 #endif
   printf("\t[-m | --mode] Set RcMode:cbr/vbr. defalut:vbr\n");
   printf("\t-o | --output: output path, Default:/tmp/test.mjpg\n");
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -89,7 +89,9 @@ int main(int argc, char *argv[]) {
   const char *iq_file_dir = NULL;
   RK_CHAR *pOutPath = "/tmp/test.mjpg";
   RK_S32 s32CamId = 0;
+#ifdef RKAIQ
   RK_BOOL bMultictx = RK_FALSE;
+#endif
   opterr = 1;
   while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
     const char *tmp_optarg = optarg;
@@ -113,11 +115,13 @@ int main(int argc, char *argv[]) {
     case 'I':
       s32CamId = atoi(optarg);
       break;
+#ifdef RKAIQ
     case 'M':
       if (atoi(optarg)) {
         bMultictx = RK_TRUE;
       }
       break;
+#endif
     case '?':
     default:
       print_usage(argv[0]);
@@ -127,6 +131,7 @@ int main(int argc, char *argv[]) {
 
   printf("#IN ARGS: pcRcMode: %s\n", pcRcMode);
   printf("#IN ARGS: output path: %s\n", pOutPath);
+  printf("#####cam id: %d\n\n", s32CamId);
   save_file = fopen(pOutPath, "w");
   if (!save_file) {
     printf("WARN: open %s failed!\n", pOutPath);
@@ -135,7 +140,6 @@ int main(int argc, char *argv[]) {
   if (iq_file_dir) {
 #ifdef RKAIQ
     printf("#IN ARGS:Aiq xml dirpath: %s\n\n", iq_file_dir);
-    printf("#####cam id: %d\n\n", s32CamId);
     printf("#####bMultictx: %d\n\n", bMultictx);
     rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
     int fps = 30;

@@ -1087,17 +1087,18 @@ static void print_usage(const RK_CHAR *name) {
          "/oem/etc/iqfiles/, "
          "set dirpath empty to using path by default, without this option aiq "
          "should run in other application\n");
-  printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
          "1 to enable. Default: 0\n");
 #else
   printf("\t%s "
+         "[-I 0] "
          "[-b box_priors.txt] "
          "[-l coco_labels_list.txt] "
          "[-p ssd_inception_v2_rv1109_rv1126.rknn] "
          "[-c rtsp-nn.cfg]\n",
          name);
 #endif
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-b | --box_priors: box_priors path, Default: "
          "\"/oem/usr/share/rknn_model/box_priors.txt\"\n");
   printf("\t-l | --labels_list: labels_list path, Default: "
@@ -1113,7 +1114,9 @@ int main(int argc, char **argv) {
   RK_CHAR *pCfgPath = "/oem/usr/share/rtsp-nn.cfg";
   RK_CHAR *pIqfilesPath = NULL;
   RK_S32 s32CamId = 0;
+#ifdef RKAIQ
   RK_BOOL bMultictx = RK_FALSE;
+#endif
   int c;
   while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
     const char *tmp_optarg = optarg;
@@ -1143,11 +1146,13 @@ int main(int argc, char **argv) {
     case 'I':
       s32CamId = atoi(optarg);
       break;
+#ifdef RKAIQ
     case 'M':
       if (atoi(optarg)) {
         bMultictx = RK_TRUE;
       }
       break;
+#endif
     case '?':
     default:
       print_usage(argv[0]);
@@ -1159,6 +1164,7 @@ int main(int argc, char **argv) {
   printf("BOX_PRIORS_TXT_PATH is %s\n", g_box_priors);
   printf("LABEL_NALE_TXT_PATH is %s\n", g_labels_list);
   printf("MODEL_PATH is %s\n", g_ssd_path);
+  printf("#####cam id: %d\n\n", s32CamId);
   load_cfg(pCfgPath);
 
   signal(SIGINT, sig_proc);
@@ -1166,7 +1172,6 @@ int main(int argc, char **argv) {
   if (pIqfilesPath) {
 #ifdef RKAIQ
     printf("xml dirpath: %s\n\n", pIqfilesPath);
-    printf("#####cam id: %d\n\n", s32CamId);
     printf("#####bMultictx: %d\n\n", bMultictx);
     int fps = 30;
     rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;

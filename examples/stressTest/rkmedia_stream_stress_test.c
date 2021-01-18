@@ -43,7 +43,9 @@ typedef struct _streamInfo {
 
 static bool quit = false;
 static RK_S32 s32CamId = 0;
+#ifdef RKAIQ
 static RK_BOOL bMultictx = RK_FALSE;
+#endif
 static void sigterm_handler(int sig) {
   fprintf(stderr, "signal %d\n", sig);
   quit = true;
@@ -395,12 +397,14 @@ int main(int argc, char *argv[]) {
       s32CamId = atoi(optarg);
       printf("#IN ARGS: s32CamId: %d\n", s32CamId);
       break;
+#ifdef RKAIQ
     case 'M':
       if (atoi(optarg)) {
         bMultictx = RK_TRUE;
       }
       printf("#IN ARGS: bMultictx: %d\n", bMultictx);
       break;
+#endif
     case '?':
     default:
       print_usage(argv[0]);
