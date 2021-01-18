@@ -136,8 +136,8 @@ static int get_rga_format(PixelFormat f) {
       {PIX_FMT_YUV422P, RK_FORMAT_YCbCr_422_P},
       {PIX_FMT_NV16, RK_FORMAT_YCbCr_422_SP},
       {PIX_FMT_NV61, RK_FORMAT_YCrCb_422_SP},
-      {PIX_FMT_YUYV422, -1},
-      {PIX_FMT_UYVY422, -1},
+      {PIX_FMT_YUYV422, RK_FORMAT_YUYV_422},
+      {PIX_FMT_UYVY422, RK_FORMAT_UYVY_422},
       {PIX_FMT_RGB565, RK_FORMAT_RGB_565},
       {PIX_FMT_BGR565, -1},
       {PIX_FMT_RGB888, RK_FORMAT_BGR_888},
@@ -356,8 +356,8 @@ public:
     types.append(TYPENEAR(IMAGE_YUV422P));
     types.append(TYPENEAR(IMAGE_NV16));
     types.append(TYPENEAR(IMAGE_NV61));
-    // types.append(TYPENEAR(IMAGE_YUYV422));
-    // types.append(TYPENEAR(IMAGE_UYVY422));
+    types.append(TYPENEAR(IMAGE_YUYV422));
+    types.append(TYPENEAR(IMAGE_UYVY422));
     types.append(TYPENEAR(IMAGE_RGB565));
     types.append(TYPENEAR(IMAGE_BGR565));
     types.append(TYPENEAR(IMAGE_RGB888));
