@@ -197,6 +197,7 @@ bool do_filters(Flow *f, MediaBufferVector &input_vector) {
       continue;
     }
     last_filter = filter;
+#if 0
     if (flow->input_pix_fmt != PIX_FMT_NONE && in->GetType() == Type::Image) {
       auto in_img = std::static_pointer_cast<ImageBuffer>(in);
       // hack for n4 cif
@@ -213,6 +214,7 @@ bool do_filters(Flow *f, MediaBufferVector &input_vector) {
         info.pix_fmt = flow->input_pix_fmt;
       }
     }
+#endif
     if (flow->support_async) {
       int ret = filter->SendInput(in);
       if (ret == -EAGAIN)
