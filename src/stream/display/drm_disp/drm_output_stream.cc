@@ -21,7 +21,10 @@ struct plane_property_ids {
   uint32_t crtc_h;
   uint32_t zpos;
   uint32_t feature;
+  uint32_t async_commit;
 };
+
+#define USING_AYNC_COMMIT 1
 
 class DRMDisplayBuffer {
 public:
@@ -220,6 +223,7 @@ int DRMOutPutStream::Open() {
       {KEY_CRTC_H, &plane_prop_ids.crtc_h},
       {KEY_ZPOS, &plane_prop_ids.zpos},
       {KEY_FEATURE, &plane_prop_ids.feature},
+      {KEY_ASYNC_COMMIT, &plane_prop_ids.async_commit},
   };
   for (auto &m : plane_prop_id_map) {
     uint64_t value = 0;
@@ -254,6 +258,19 @@ int DRMOutPutStream::Open() {
     return -1;
   }
 
+#if USING_ASYNC_COMMIT
+  // set aync commit
+  uint32_t async_commit = 1;
+  drmModeAtomicReq *req = drmModeAtomicAlloc();
+  drmModeAtomicAddProperty(req, plane_id, plane_prop_ids.async_commit,
+                           async_commit);
+  ret = drmModeAtomicCommit(fd, req, DRM_MODE_ATOMIC_ALLOW_MODESET, NULL);
+  drmModeAtomicFree(req);
+  if (ret) {
+    RKMEDIA_LOGE("DrmDisp: set async commit failed!\n");
+    return ret;
+  }
+#endif
   // no need it
   // dev->free_resources(res);
   // res = nullptr;
@@ -392,6 +409,22 @@ bool DRMOutPutStream::Write(std::shared_ptr<MediaBuffer> input) {
   if (!disp || (disp_fb_id = disp->GetFBID()) == 0)
     return false;
   int ret = 0;
+
+#if USING_ASYNC_COMMIT
+  uint32_t flags = 0;
+  ret = drmModeSetPlane(
+      fd, plane_id, crtc_id, disp_fb_id, flags, dst_rect_tmp.x, dst_rect_tmp.y,
+      dst_rect_tmp.w, dst_rect_tmp.h, src_rect_tmp.x << 16,
+      src_rect_tmp.y << 16, src_rect_tmp.w << 16, src_rect_tmp.h << 16);
+  /* Wait VBlank.*/
+  drmVBlank vbl;
+  memset(&vbl, 0, sizeof(vbl));
+  vbl.request.type = DRM_VBLANK_RELATIVE;
+  vbl.request.sequence = 1;
+  int vbl_ret = drmWaitVBlank(fd, &vbl);
+  if (vbl_ret != 0)
+    RKMEDIA_LOGE("drmWaitVBlank (relative) failed ret: %i\n", ret);
+#else
   drmModeAtomicReq *req = drmModeAtomicAlloc();
   drmModeAtomicAddProperty(req, plane_id, plane_prop_ids.crtc_id, crtc_id);
   drmModeAtomicAddProperty(req, plane_id, plane_prop_ids.fb_id, disp_fb_id);
@@ -403,16 +436,17 @@ bool DRMOutPutStream::Write(std::shared_ptr<MediaBuffer> input) {
                            dst_rect_tmp.w);
   drmModeAtomicAddProperty(req, plane_id, plane_prop_ids.crtc_h,
                            dst_rect_tmp.h);
-  drmModeAtomicAddProperty(req, plane_id, plane_prop_ids.src_x, src_rect_tmp.x
-                                                                    << 16);
-  drmModeAtomicAddProperty(req, plane_id, plane_prop_ids.src_y, src_rect_tmp.y
-                                                                    << 16);
-  drmModeAtomicAddProperty(req, plane_id, plane_prop_ids.src_w, src_rect_tmp.w
-                                                                    << 16);
-  drmModeAtomicAddProperty(req, plane_id, plane_prop_ids.src_h, src_rect_tmp.h
-                                                                    << 16);
+  drmModeAtomicAddProperty(req, plane_id, plane_prop_ids.src_x,
+                           src_rect_tmp.x << 16);
+  drmModeAtomicAddProperty(req, plane_id, plane_prop_ids.src_y,
+                           src_rect_tmp.y << 16);
+  drmModeAtomicAddProperty(req, plane_id, plane_prop_ids.src_w,
+                           src_rect_tmp.w << 16);
+  drmModeAtomicAddProperty(req, plane_id, plane_prop_ids.src_h,
+                           src_rect_tmp.h << 16);
   ret = drmModeAtomicCommit(fd, req, 0, NULL);
   drmModeAtomicFree(req);
+#endif
   if (!ret) {
     disp_buffer = disp;
     return true;

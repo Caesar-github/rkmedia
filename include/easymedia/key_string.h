@@ -192,6 +192,7 @@
 #define KEY_SRC_H "SRC_H"
 #define KEY_ZPOS "ZPOS"
 #define KEY_FEATURE "FEATURE"
+#define KEY_ASYNC_COMMIT "ASYNC_COMMIT"
 
 // rknn
 #define KEY_DETECT_RECT "detect_rect"
