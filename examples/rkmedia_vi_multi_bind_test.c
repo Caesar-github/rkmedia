@@ -52,8 +52,9 @@ static void print_usage(const RK_CHAR *name) {
          "set dirpath empty to using path by default, without this option aiq "
          "should run in other application\n");
 #else
-  printf("\t%s\n", name);
+  printf("\t%s [-I 0]\n", name);
 #endif
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -61,7 +62,9 @@ int main(int argc, char *argv[]) {
   int c;
   char *iq_file_dir = NULL;
   RK_S32 s32CamId = 0;
+#ifdef RKAIQ
   RK_BOOL bMultictx = RK_FALSE;
+#endif
   while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
     const char *tmp_optarg = optarg;
     switch (c) {
@@ -78,11 +81,13 @@ int main(int argc, char *argv[]) {
     case 'I':
       s32CamId = atoi(optarg);
       break;
+#ifdef RKAIQ
     case 'M':
       if (atoi(optarg)) {
         bMultictx = RK_TRUE;
       }
       break;
+#endif
     case '?':
     default:
       print_usage(argv[0]);
@@ -90,10 +95,10 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  printf("#####cam id: %d\n\n", s32CamId);
   if (iq_file_dir) {
 #ifdef RKAIQ
     printf("#Aiq xml dirpath: %s\n\n", iq_file_dir);
-    printf("#####cam id: %d\n\n", s32CamId);
     printf("#####bMultictx: %d\n\n", bMultictx);
     rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
     int fps = 30;

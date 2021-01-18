@@ -112,7 +112,6 @@ static void print_usage(const RK_CHAR *name) {
          "/oem/etc/iqfiles/, "
          "set dirpath emtpty to using path by default, without this option aiq "
          "should run in other application\n");
-  printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
          "1 to enable. Default: 0\n");
 #else
@@ -120,6 +119,7 @@ static void print_usage(const RK_CHAR *name) {
          "[-h 1080] "
          "[-c 10] "
          "[-d rkispp_scale0] "
+         "[-I 0] "
          "[-o out.nv12] \n",
          name);
 #endif
@@ -127,6 +127,7 @@ static void print_usage(const RK_CHAR *name) {
   printf("\t-h | --heght: VI height, Default:1080\n");
   printf(
       "\t-d | --device_name: set device node(v4l2), Default:rkispp_scale0\n");
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-c | --frame_cnt: record frame, Default:-1(unlimit)\n");
   printf("\t-o | --output: output path, Default:NULL\n");
   printf("Notice: fmt always NV12\n");
@@ -140,7 +141,9 @@ int main(int argc, char *argv[]) {
   RK_CHAR *pOutPath = NULL;
   RK_CHAR *pIqfilesPath = NULL;
   RK_S32 s32CamId = 0;
+#ifdef RKAIQ
   RK_BOOL bMultictx = RK_FALSE;
+#endif
   int c;
   int ret = 0;
   while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
@@ -174,11 +177,13 @@ int main(int argc, char *argv[]) {
     case 'I':
       s32CamId = atoi(optarg);
       break;
+#ifdef RKAIQ
     case 'M':
       if (atoi(optarg)) {
         bMultictx = RK_TRUE;
       }
       break;
+#endif
     case '?':
     default:
       print_usage(argv[0]);
@@ -190,13 +195,13 @@ int main(int argc, char *argv[]) {
   printf("#####Resolution: %dx%d\n", u32Width, u32Height);
   printf("#####Frame Count to save: %d\n", frameCnt);
   printf("#####Output Path: %s\n", pOutPath);
-  printf("#####Aiq xml dirpath: %s\n\n", pIqfilesPath);
   printf("#####cam id: %d\n\n", s32CamId);
-  printf("#####bMultictx: %d\n\n", bMultictx);
   signal(SIGINT, sigterm_handler);
 
   if (pIqfilesPath) {
 #ifdef RKAIQ
+    printf("#####Aiq xml dirpath: %s\n\n", pIqfilesPath);
+    printf("#####bMultictx: %d\n\n", bMultictx);
     rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
     int fps = 30;
     SAMPLE_COMM_ISP_Init(s32CamId, hdr_mode, bMultictx, pIqfilesPath);

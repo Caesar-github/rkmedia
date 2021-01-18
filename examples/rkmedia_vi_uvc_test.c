@@ -115,12 +115,12 @@ static void print_usage(const RK_CHAR *name) {
          "/oem/etc/iqfiles/, "
          "set dirpath emtpty to using path by default, without this option aiq "
          "should run in other application\n");
-  printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
          "1 to enable. Default: 0\n");
 #else
-  printf("\t%s [-d rkispp_scale0] [-r]\n", name);
+  printf("\t%s [-d rkispp_scale0] [-r] [-I 0]\n", name);
 #endif
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-d | --device_name set pcDeviceName, Default:rkispp_scale0\n");
   printf("\t-r | --rndis use uvc+rndis\n");
   printf("Notice: fmt always NV12\n");

@@ -73,17 +73,18 @@ static void print_usage(const RK_CHAR *name) {
          "/oem/etc/iqfiles/, "
          "set dirpath emtpty to using path by default, without this option aiq "
          "should run in other application\n");
-  printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
          "1 to enable. Default: 0\n");
 #else
   printf("\t%s [-w 1920] "
          "[-h 1080]"
+         "[-I 0] "
          "[-d rkispp_scale0] "
          "[-e 0] "
          "\n",
          name);
 #endif
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-w | --width: VI width, Default:1920\n");
   printf("\t-h | --heght: VI height, Default:1080\n");
   printf("\t-d | --device_name set pcDeviceName, Default:rkispp_scale0, "
@@ -99,7 +100,9 @@ int main(int argc, char *argv[]) {
   CODEC_TYPE_E enCodecType = RK_CODEC_TYPE_H264;
   RK_CHAR *pCodecName = "H264";
   RK_S32 s32CamId = 0;
+#ifdef RKAIQ
   RK_BOOL bMultictx = RK_FALSE;
+#endif
   int c;
   int ret = 0;
   while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
@@ -139,11 +142,13 @@ int main(int argc, char *argv[]) {
     case 'I':
       s32CamId = atoi(optarg);
       break;
+#ifdef RKAIQ
     case 'M':
       if (atoi(optarg)) {
         bMultictx = RK_TRUE;
       }
       break;
+#endif
     case '?':
     default:
       print_usage(argv[0]);
@@ -154,8 +159,8 @@ int main(int argc, char *argv[]) {
   printf("#Device: %s\n", pDeviceName);
   printf("#CodecName:%s\n", pCodecName);
   printf("#Resolution: %dx%d\n", u32Width, u32Height);
-#ifdef RKAIQ
   printf("#####cam id: %d\n\n", s32CamId);
+#ifdef RKAIQ
   printf("#####bMultictx: %d\n\n", bMultictx);
   printf("#Aiq xml dirpath: %s\n\n", pIqfilesPath);
 #endif

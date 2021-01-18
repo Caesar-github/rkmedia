@@ -99,12 +99,12 @@ static void print_usage(const RK_CHAR *name) {
          name);
   printf("\t-a | --aiq: enable aiq with dirpath provided,"
          "set dirpath emtpty to using path by default\n");
-  printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
          "1 to enable. Default: 0\n");
 #else
-  printf("\t%s [-o output_dir] \n", name);
+  printf("\t%s [-o output_dir] [-I 0]\n", name);
 #endif
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-o | --output: output path, Default:/tmp/\n");
   printf("\t-? | --help: show help info.\n");
 }
@@ -118,7 +118,9 @@ int main(int argc, char *argv[]) {
   IMAGE_TYPE_E enPixFmt = IMAGE_TYPE_FBC0;
   const RK_CHAR *pcVideoNode = "rkispp_m_bypass";
   RK_S32 s32CamId = 0;
+#ifdef RKAIQ
   RK_BOOL bMultictx = RK_FALSE;
+#endif
 
   char *iq_file_dir = NULL;
   int c;
@@ -141,11 +143,13 @@ int main(int argc, char *argv[]) {
     case 'I':
       s32CamId = atoi(optarg);
       break;
+#ifdef RKAIQ
     case 'M':
       if (atoi(optarg)) {
         bMultictx = RK_TRUE;
       }
       break;
+#endif
     case '?':
     default:
       print_usage(argv[0]);

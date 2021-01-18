@@ -901,11 +901,11 @@ static void print_usage(const RK_CHAR *name) {
          "/oem/etc/iqfiles/, "
          "set dirpath empty to using path by default, without this option aiq "
          "should run in other application\n");
-  printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
          "1 to enable. Default: 0\n");
 #else
   printf("\t%s "
+         "[-I 0] "
          "[-v 0] "
          "[-c rtsp-nn.cfg] "
          "[-r librknn_runtime.so] "
@@ -917,6 +917,7 @@ static void print_usage(const RK_CHAR *name) {
          "[-s] \n",
          name);
 #endif
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-v | --data_version [0~3]; Default: 0\n"
          "\t\t-->0: ROCKX_MODULE_PERSON_DETECTION_V2\n"
          "\t\t-->1: ROCKX_MODULE_PERSON_DETECTION_V3\n"
@@ -954,8 +955,8 @@ int main(int argc, char **argv) {
   sub_arg.face_score = -1.0f;
   sub_arg.data_version = ROCKX_MODULE_PERSON_DETECTION_V2;
   RK_S32 s32CamId = 0;
-  RK_BOOL bMultictx = RK_FALSE;
 #ifdef RKAIQ
+  RK_BOOL bMultictx = RK_FALSE;
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   int fps = 30;
 #endif
@@ -1037,11 +1038,13 @@ int main(int argc, char **argv) {
     case 'I':
       s32CamId = atoi(optarg);
       break;
+#ifdef RKAIQ
     case 'M':
       if (atoi(optarg)) {
         bMultictx = RK_TRUE;
       }
       break;
+#endif
     case '?':
     default:
       print_usage(argv[0]);
@@ -1074,9 +1077,9 @@ int main(int argc, char **argv) {
   printf("####Aiq xml dirpath: %s\n\n", pIqfilesPath);
   printf("####hdr mode: %d\n\n", hdr_mode);
   printf("####fps: %d\n\n", fps);
-  printf("#####cam id: %d\n\n", s32CamId);
   printf("#####bMultictx: %d\n\n", bMultictx);
 #endif
+  printf("#####cam id: %d\n\n", s32CamId);
   printf("####data version: %d\n\n", sub_arg.data_version);
   printf("####config dirpath: %s\n\n", pCfgPath);
   printf("####runtime path: %s\n\n", sub_arg.runtime_path);

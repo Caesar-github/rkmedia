@@ -70,13 +70,13 @@ static void print_usage(char *name) {
          "/oem/etc/iqfiles/, "
          "set dirpath empty to using path by default, without this option aiq "
          "should run in other application\n");
-  printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-M | --multictx: switch of multictx in isp, set 0 to disable, set "
          "1 to enable. Default: 0\n");
 #else
-  printf("\t%s [-o output_dir]\n", name);
+  printf("\t%s [-o output_dir] [-I 0]\n", name);
 #endif
   printf("\t-o | --output: output dirpath, Default:/tmp/\n");
+  printf("\t-I | --camid: camera ctx id, Default 0\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -90,7 +90,9 @@ int main(int argc, char *argv[]) {
   RK_U32 u32RectH = (u32Height / 2) & (~0x0000000F);
   const RK_CHAR *pDeviceNode = "rkispp_scale0";
   RK_S32 s32CamId = 0;
+#ifdef RKAIQ
   RK_BOOL bMultictx = RK_FALSE;
+#endif
   int c = 0, ret = 0;
 
   opterr = 1;
@@ -113,11 +115,13 @@ int main(int argc, char *argv[]) {
     case 'I':
       s32CamId = atoi(optarg);
       break;
+#ifdef RKAIQ
     case 'M':
       if (atoi(optarg)) {
         bMultictx = RK_TRUE;
       }
       break;
+#endif
     case '?':
     default:
       print_usage(argv[0]);
@@ -126,6 +130,7 @@ int main(int argc, char *argv[]) {
   }
 
   printf("#output path:%s\n", pOutPath);
+  printf("#####cam id: %d\n\n", s32CamId);
   g_save_file = fopen(pOutPath, "w");
   if (!g_save_file)
     printf("ERROR: open %s fail\n", pOutPath);
@@ -133,7 +138,6 @@ int main(int argc, char *argv[]) {
   if (iq_file_dir) {
 #ifdef RKAIQ
     printf("#Aiq xml dirpath: %s\n\n", iq_file_dir);
-    printf("#####cam id: %d\n\n", s32CamId);
     printf("#####bMultictx: %d\n\n", bMultictx);
     rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
     int fps = 30;
