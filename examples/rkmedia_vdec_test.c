@@ -227,7 +227,7 @@ int main(int argc, char *argv[]) {
         break;
       }
     }
-    RK_MPI_MB_SetSzie(mb, read_size);
+    RK_MPI_MB_SetSize(mb, read_size);
     printf("#Send packet(%p, %zuBytes) to VDEC[0].\n", RK_MPI_MB_GetPtr(mb),
            RK_MPI_MB_GetSize(mb));
     ret = RK_MPI_SYS_SendMediaBuffer(RK_ID_VDEC, 0, mb);

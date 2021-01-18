@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
       printf("# Get end of file!\n");
       break;
     }
-    RK_MPI_MB_SetSzie(mb, s32ReadSize);
+    RK_MPI_MB_SetSize(mb, s32ReadSize);
     printf("#%d Send %dBytes to ADEC[0]...\n", u32Cnt++, s32ReadSize);
     ret = RK_MPI_SYS_SendMediaBuffer(RK_ID_ADEC, mpp_chn_adec.s32ChnId, mb);
     if (ret) {
@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
   // flush decoder
   printf("# Flush decoder...\n");
   mb = RK_MPI_MB_CreateAudioBuffer(0, RK_FALSE);
-  RK_MPI_MB_SetSzie(mb, 0);
+  RK_MPI_MB_SetSize(mb, 0);
   RK_MPI_SYS_SendMediaBuffer(RK_ID_ADEC, mpp_chn_adec.s32ChnId, mb);
   RK_MPI_MB_ReleaseBuffer(mb);
 

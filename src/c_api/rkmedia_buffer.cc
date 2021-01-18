@@ -190,7 +190,7 @@ MEDIA_BUFFER RK_MPI_MB_CreateImageBuffer(MB_IMAGE_INFO_S *pstImageInfo,
   return mb;
 }
 
-RK_S32 RK_MPI_MB_SetSzie(MEDIA_BUFFER mb, RK_U32 size) {
+RK_S32 RK_MPI_MB_SetSize(MEDIA_BUFFER mb, RK_U32 size) {
   MEDIA_BUFFER_IMPLE *mb_impl = (MEDIA_BUFFER_IMPLE *)mb;
   if (!mb_impl || !mb_impl->rkmedia_mb)
     return -RK_ERR_SYS_ILLEGAL_PARAM;

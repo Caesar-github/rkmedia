@@ -59,7 +59,7 @@ _CAPI MEDIA_BUFFER RK_MPI_MB_CreateImageBuffer(MB_IMAGE_INFO_S *pstImageInfo,
                                                RK_U8 u8Flag);
 _CAPI MEDIA_BUFFER RK_MPI_MB_CreateAudioBuffer(RK_U32 u32BufferSize,
                                                RK_BOOL boolHardWare);
-_CAPI RK_S32 RK_MPI_MB_SetSzie(MEDIA_BUFFER mb, RK_U32 size);
+_CAPI RK_S32 RK_MPI_MB_SetSize(MEDIA_BUFFER mb, RK_U32 size);
 _CAPI RK_S32 RK_MPI_MB_SetTimestamp(MEDIA_BUFFER mb, RK_U64 timestamp);
 _CAPI RK_S32 RK_MPI_MB_GetFlag(MEDIA_BUFFER mb);
 _CAPI RK_S32 RK_MPI_MB_GetTsvcLevel(MEDIA_BUFFER mb);

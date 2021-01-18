@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
       printf("# Get end of file!\n");
       break;
     }
-    RK_MPI_MB_SetSzie(mb, u32ReadSize);
+    RK_MPI_MB_SetSize(mb, u32ReadSize);
     ret = RK_MPI_SYS_SendMediaBuffer(RK_ID_AO, 0, mb);
     if (ret) {
       printf("ERROR: RK_MPI_SYS_SendMediaBuffer failed! ret = %d\n", ret);

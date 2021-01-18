@@ -231,7 +231,7 @@ int main(int argc, char *argv[]) {
       printf("Get end of file!\n");
       quit = true;
     }
-    RK_MPI_MB_SetSzie(mb, s32ReadSize);
+    RK_MPI_MB_SetSize(mb, s32ReadSize);
     RK_MPI_MB_SetTimestamp(mb, u32FrameId * u64TimePeriod);
     printf("#Send frame[%d] fd=%d to out...\n", u32FrameId++,
            RK_MPI_MB_GetFD(mb));

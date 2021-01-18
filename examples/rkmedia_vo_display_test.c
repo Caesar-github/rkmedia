@@ -190,7 +190,7 @@ int main(int argc, char *argv[]) {
     }
     u32FrameSize = (RK_U32)(u32DispWidth * u32DispHeight * fltImgRatio);
     memset(RK_MPI_MB_GetPtr(mb), 0xFF, u32FrameSize);
-    RK_MPI_MB_SetSzie(mb, u32FrameSize);
+    RK_MPI_MB_SetSize(mb, u32FrameSize);
     printf("#Display Image[%d]:<%d,%d,%u,%u> to VO[0]:<%d,%d,%u,%u>...\n",
            u32FrameId++, 0, 0, u32DispWidth, u32DispHeight, s32Xpos, s32Ypos,
            u32DispWidth, u32DispHeight);

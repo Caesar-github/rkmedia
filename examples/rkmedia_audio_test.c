@@ -205,7 +205,7 @@ static RK_VOID FILE_ADEC_AO(char *file_path) {
 
     s32ReadSize = fread(RK_MPI_MB_GetPtr(mb), 1, buffer_size, read_file);
 
-    RK_MPI_MB_SetSzie(mb, s32ReadSize);
+    RK_MPI_MB_SetSize(mb, s32ReadSize);
     RK_MPI_SYS_SendMediaBuffer(RK_ID_ADEC, mpp_chn_adec.s32ChnId, mb);
     RK_MPI_MB_ReleaseBuffer(mb);
     if (s32ReadSize != buffer_size) {
@@ -218,7 +218,7 @@ static RK_VOID FILE_ADEC_AO(char *file_path) {
     // flush decoder
     printf("start flush decoder.\n");
     MEDIA_BUFFER mb = RK_MPI_MB_CreateAudioBuffer(0, RK_FALSE);
-    RK_MPI_MB_SetSzie(mb, 0);
+    RK_MPI_MB_SetSize(mb, 0);
     RK_MPI_SYS_SendMediaBuffer(RK_ID_ADEC, mpp_chn_adec.s32ChnId, mb);
     RK_MPI_MB_ReleaseBuffer(mb);
     printf("end flush decoder.\n");
