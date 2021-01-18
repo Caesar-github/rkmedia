@@ -430,7 +430,7 @@ endif()
 ############################################################
 # UNINT TEST
 ############################################################
-option(COMPILES_UINT_TEST "Enable unit tests" OFF)
-if(COMPILES_UINT_TEST)
-  add_subdirectory(uintTest)
+option(COMPILES_UNIT_TEST "Enable unit tests" OFF)
+if(COMPILES_UNIT_TEST)
+  add_subdirectory(unitTest)
 endif()
