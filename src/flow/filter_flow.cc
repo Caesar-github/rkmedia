@@ -23,6 +23,7 @@ public:
   }
   static const char *GetFlowName() { return "filter"; }
   virtual int Control(unsigned long int request, ...) final {
+    int i = 0;
     int ret = 0;
     if (!filters.size())
       return -1;
@@ -31,7 +32,18 @@ public:
       va_start(vl, request);
       void *arg = va_arg(vl, void *);
       va_end(vl);
-      ret |= filter->IoCtrl(request, arg);
+      switch (request) {
+      case S_RGA_LINE_INFO: {
+        ImageBorder *line = (ImageBorder *)arg;
+        if (line->priv == i)
+          ret |= filter->IoCtrl(request, arg);
+        break;
+      }
+      default:
+        ret |= filter->IoCtrl(request, arg);
+        break;
+      }
+      i++;
     }
     return ret;
   }

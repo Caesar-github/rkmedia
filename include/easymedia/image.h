@@ -47,6 +47,15 @@ typedef struct {
   int w, h; // width, height
 } ImageRect;
 
+typedef struct {
+  int priv;
+  int x;
+  int y;
+  int w;
+  int h;
+  int color;
+} ImageBorder;
+
 #ifdef __cplusplus
 }
 #endif

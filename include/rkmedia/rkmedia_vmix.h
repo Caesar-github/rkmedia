@@ -13,6 +13,7 @@ extern "C" {
 
 #define VMIX_MAX_CHN_NUM 16
 #define VMIX_MAX_DEV_NUM 16
+#define VMIX_MAX_LINE_NUM 64
 
 typedef struct rkVMIX_CHN_INFO_S {
   IMAGE_TYPE_E enImgInType;
@@ -29,6 +30,12 @@ typedef struct rkVMIX_DEV_INFO_S {
   IMAGE_TYPE_E enImgType;
   VMIX_CHN_INFO_S stChnInfo[VMIX_MAX_CHN_NUM];
 } VMIX_DEV_INFO_S;
+
+typedef struct rkVMIX_LINE_INFO_S {
+  RK_U32 u32LineCnt;
+  RK_U32 u32Color;
+  RECT_S stLines[VMIX_MAX_LINE_NUM];
+} VMIX_LINE_INFO_S;
 
 #ifdef __cplusplus
 }

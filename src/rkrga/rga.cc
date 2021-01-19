@@ -106,6 +106,7 @@ int RgaFilter::Process(std::shared_ptr<MediaBuffer> input,
   src_rect = vec_rect[0];
   dst_rect = vec_rect[1];
   cur_rotate = rotate;
+  std::vector<ImageBorder> cur_lines = lines;
   param_mtx.unlock();
 
   if ((!dst_rect.w || !dst_rect.h) && !dst->IsValid()) {
@@ -124,7 +125,7 @@ int RgaFilter::Process(std::shared_ptr<MediaBuffer> input,
     }
     assert(dst->IsValid());
   }
-  return rga_blit(src, dst, &src_rect, &dst_rect, cur_rotate);
+  return rga_blit(src, dst, cur_lines, &src_rect, &dst_rect, cur_rotate);
 }
 RgaFilter::~RgaFilter() { RgaFilter::gRkRga.RkRgaDeInit(); }
 static int get_rga_format(PixelFormat f) {
@@ -216,6 +217,16 @@ int RgaFilter::IoCtrl(unsigned long int request, ...) {
       param_mtx.unlock();
       break;
     }
+    case S_RGA_LINE_INFO: {
+      ImageBorder *line = (ImageBorder*)arg;
+      param_mtx.lock();
+      lines.push_back(*line);
+      param_mtx.unlock();
+      break;
+    }
+    case G_RGA_LINE_INFO:
+      /* TODO */
+      break;
     default:
       ret = -1;
       RKMEDIA_LOGE("Not support IoCtrl cmd(%ld)\n", request);
@@ -246,7 +257,8 @@ static void dummp_rga_info(rga_info_t info, std::string name) {
 #endif
 
 int rga_blit(std::shared_ptr<ImageBuffer> src, std::shared_ptr<ImageBuffer> dst,
-             ImageRect *src_rect, ImageRect *dst_rect, int rotate) {
+             std::vector<ImageBorder> &lines, ImageRect *src_rect,
+             ImageRect *dst_rect, int rotate) {
   if (!src || !src->IsValid())
     return -EINVAL;
   if (!dst || !dst->IsValid())
@@ -318,6 +330,14 @@ int rga_blit(std::shared_ptr<ImageBuffer> src, std::shared_ptr<ImageBuffer> dst,
     if (src->GetUSTimeStamp() > dst->GetUSTimeStamp())
       dst->SetUSTimeStamp(src->GetUSTimeStamp());
     dst->SetAtomicClock(src->GetAtomicClock());
+  }
+
+  for (auto &line : lines) {
+    dst_info.color = line.color;
+    rga_set_rect(&dst_info.rect, line.x, line.y, line.w, line.h,
+                 dst->GetVirWidth(), dst->GetVirHeight(),
+                 get_rga_format(dst->GetPixelFormat()));
+    RgaFilter::gRkRga.RkRgaCollorFill(&dst_info);
   }
 
   // invalidate cache, 2688x1520 NV12 cost  1072us, 1080P cost 779us

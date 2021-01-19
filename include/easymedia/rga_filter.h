@@ -37,11 +37,12 @@ private:
   ConditionLockMutex param_mtx;
   std::vector<ImageRect> vec_rect;
   int rotate;
+  std::vector<ImageBorder> lines;
 };
 
 int rga_blit(std::shared_ptr<ImageBuffer> src, std::shared_ptr<ImageBuffer> dst,
-             ImageRect *src_rect = nullptr, ImageRect *dst_rect = nullptr,
-             int rotate = 0);
+             std::vector<ImageBorder> &lines, ImageRect *src_rect = nullptr,
+             ImageRect *dst_rect = nullptr, int rotate = 0);
 
 } // namespace easymedia
 

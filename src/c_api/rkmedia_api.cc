@@ -5532,6 +5532,9 @@ RK_S32 RK_MPI_VDEC_DestroyChn(VDEC_CHN VdChn) {
   return RK_ERR_SYS_OK;
 }
 
+/********************************************************************
+ * VMIX api
+ ********************************************************************/
 RK_S32 RK_MPI_VMIX_CreateDev(VMIX_DEV VmDev, VMIX_DEV_INFO_S *pstDevInfo) {
   if ((VmDev < 0) || (VmDev >= VMIX_MAX_DEV_NUM))
     return -RK_ERR_VMIX_INVALID_DEVID;
@@ -5661,6 +5664,39 @@ RK_S32 RK_MPI_VMIX_DisableChn(VMIX_DEV VmDev, VMIX_CHN VmChn) {
     g_vmix_dev[VmDev].u16RefCnt--;
 
   g_vmix_dev[VmDev].VmChns[VmChn].status = CHN_STATUS_CLOSED;
+  g_vmix_dev[VmDev].VmMtx.unlock();
+
+  return RK_ERR_SYS_OK;
+}
+
+RK_S32 RK_MPI_VMIX_SetLineInfo(VMIX_DEV VmDev, VMIX_CHN VmChn,
+                               VMIX_LINE_INFO_S VmLine) {
+  if ((VmDev < 0) || (VmDev > VMIX_MAX_DEV_NUM))
+    return -RK_ERR_VMIX_INVALID_DEVID;
+
+  if ((VmChn < 0) || (VmChn > VMIX_MAX_CHN_NUM))
+    return -RK_ERR_VMIX_INVALID_CHNID;
+
+  g_vmix_dev[VmDev].VmMtx.lock();
+  if (g_vmix_dev[VmDev].VmChns[VmChn].status < CHN_STATUS_OPEN) {
+    g_vmix_dev[VmDev].VmMtx.unlock();
+    return -RK_ERR_VMIX_NOTOPEN;
+  }
+
+  for (unsigned int i = 0;
+       i < VmLine.u32LineCnt && i < ARRAY_ELEMS(VmLine.stLines); i++) {
+    ImageBorder line;
+    line.x = VmLine.stLines[i].s32X;
+    line.y = VmLine.stLines[i].s32Y;
+    line.w = VmLine.stLines[i].u32Width;
+    line.h = VmLine.stLines[i].u32Height;
+    line.color = VmLine.u32Color;
+    line.priv = VmChn;
+    RKMEDIA_LOGI("%s: chn = %d, line = [%d %d %d %d]\n", __func__, line.priv,
+                 line.x, line.y, line.w, line.h);
+    g_vmix_dev[VmDev].rkmedia_flow->Control(easymedia::S_RGA_LINE_INFO, &line);
+  }
+
   g_vmix_dev[VmDev].VmMtx.unlock();
 
   return RK_ERR_SYS_OK;
