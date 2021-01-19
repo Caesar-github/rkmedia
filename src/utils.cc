@@ -24,7 +24,7 @@ enum { LOG_METHOD_MINILOG, LOG_METHOD_PRINT };
 int rkmedia_log_method = LOG_METHOD_PRINT;
 static int rkmedia_log_level = LOG_LEVEL_INFO;
 
-short g_level_list[LOG_MOD_MAX_NUM] = {
+_API short g_level_list[LOG_MOD_MAX_NUM] = {
     LOG_LEVEL_INFO, // g_unknow_log_level
     LOG_LEVEL_INFO, // g_vb_log_level
     LOG_LEVEL_INFO, // g_sys_log_level
@@ -45,7 +45,7 @@ short g_level_list[LOG_MOD_MAX_NUM] = {
     LOG_LEVEL_INFO  // g_rga_log_level
 };
 
-char mod_tag_list[][LOG_MOD_MAX_LEN] = {
+_API char mod_tag_list[][LOG_MOD_MAX_LEN] = {
     "UNKNOW", "VB",      "SYS",     "VDEC", "VENC", "H264E", "JPEGE",
     "H265E",  "VO",      "VI",      "AIO",  "AI",   "AO",    "AENC",
     "ADEC",   "ALGO_MD", "ALGO_OD", "RGA",  "VMIX"};
