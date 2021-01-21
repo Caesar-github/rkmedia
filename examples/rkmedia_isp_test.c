@@ -115,10 +115,19 @@ int main(int argc, char *argv[]) {
   RK_S32 s32CamId = 0;
   RK_BOOL bMultictx = RK_FALSE;
   int c;
+  opterr = 1;
   while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
+    const char *tmp_optarg = optarg;
     switch (c) {
     case 'a':
-      iq_file_dir = optarg;
+      if (!optarg && NULL != argv[optind] && '-' != argv[optind][0]) {
+        tmp_optarg = argv[optind++];
+      }
+      if (tmp_optarg) {
+        iq_file_dir = (char *)tmp_optarg;
+      } else {
+        iq_file_dir = "/oem/etc/iqfiles/";
+      }
       break;
     case 'I':
       s32CamId = atoi(optarg);

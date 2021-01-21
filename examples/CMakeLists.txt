@@ -137,6 +137,26 @@ endif() #if(RKMPP)
 
 
 ############################################################
+# ISP Module tests
+############################################################
+if(USE_RKAIQ)
+if(RKMPP)
+if(V4L2_CAPTURE)
+#--------------------------
+#  rkmedia_isp_test
+#--------------------------
+add_executable(rkmedia_isp_test rkmedia_isp_test.c ${COMMON_SRC})
+add_dependencies(rkmedia_isp_test easymedia)
+target_link_libraries(rkmedia_isp_test easymedia)
+target_include_directories(rkmedia_isp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+install(TARGETS rkmedia_isp_test RUNTIME DESTINATION "bin")
+
+endif() #if(V4L2_CAPTURE)
+endif() #if(RKMPP)
+endif() #if(USE_RKAIQ)
+
+
+############################################################
 # AUDIO Module tests
 ############################################################
 if(ALSA_CAPTURE)
