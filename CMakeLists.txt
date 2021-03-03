@@ -159,6 +159,11 @@ if(LIBION_FOUND)
 endif()
 endif()
 
+option(RKMEDIA_SOCKET "Enable rkmedia socket" OFF)
+if(RKMEDIA_SOCKET)
+add_definitions(-DRKMEDIA_SOCKET)
+endif()
+
 if (MINILOGGER)
 find_package(MiniLogger REQUIRED)
 set(EASY_MEDIA_DEPENDENT_LIBS

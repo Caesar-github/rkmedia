@@ -470,6 +470,17 @@ endif() #if(V4L2_CAPTURE)
 ############################################################
 if(DRM_DISPLAY)
 if(V4L2_CAPTURE)
+if(RKMEDIA_SOCKET)
+#--------------------------
+#  rkmedia_vo_sw_client_test
+#--------------------------
+add_executable(rkmedia_vo_sw_client_test rkmedia_vo_sw_client_test.c)
+add_dependencies(rkmedia_vo_sw_client_test easymedia)
+target_link_libraries(rkmedia_vo_sw_client_test easymedia_client)
+target_include_directories(rkmedia_vo_sw_client_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+install(TARGETS rkmedia_vo_sw_client_test RUNTIME DESTINATION "bin")
+endif() #if(RKMEDIA_SOCKET)
+
 #--------------------------
 #  rkmedia_vi_vo_test
 #--------------------------

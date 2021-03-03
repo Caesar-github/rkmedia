@@ -85,7 +85,10 @@ if(FILTER)
   add_subdirectory(filter)
   add_subdirectory(rknn)
 endif()
-
+if(RKMEDIA_SOCKET)
+  add_subdirectory(client)
+  add_subdirectory(server)
+endif()
   add_subdirectory(c_api)
 
 if(MOVE_DETECTION)

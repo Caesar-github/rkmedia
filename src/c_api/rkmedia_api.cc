@@ -21,6 +21,9 @@
 #include "stream.h"
 #include "utils.h"
 
+#ifdef RKMEDIA_SOCKET
+#include "../server/server.h"
+#endif
 #include "osd/color_table.h"
 #include "rkmedia_adec.h"
 #include "rkmedia_api.h"
@@ -390,6 +393,10 @@ RK_S32 RK_MPI_SYS_Init() {
   }
 
   g_sys_init = 1; // init sucess.
+#ifdef RKMEDIA_SOCKET
+  rkmedia_server_run();
+#endif
+
   return RK_ERR_SYS_OK;
 }
 
