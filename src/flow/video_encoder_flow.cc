@@ -388,8 +388,9 @@ void VideoEncoderFlow::Dump(std::string &dump_info) {
     sprintf(
         str_line,
         "  QpArray: init:%d min:%d, max:%d, step:%d, min_i:%d, max_i:%d\r\n",
-        vcfg.qp_init, vcfg.qp_min, vcfg.qp_max, vcfg.qp_step, vcfg.qp_min_i,
-        vcfg.qp_max_i);
+        vcfg.encode_qp.qp_init, vcfg.encode_qp.qp_min, vcfg.encode_qp.qp_max,
+        vcfg.encode_qp.qp_step, vcfg.encode_qp.qp_min_i,
+        vcfg.encode_qp.qp_max_i);
     dump_info.append(str_line);
     memset(str_line, 0, sizeof(str_line));
     sprintf(str_line, "  BitRate: target:%d, min:%d, max:%d\r\n", vcfg.bit_rate,

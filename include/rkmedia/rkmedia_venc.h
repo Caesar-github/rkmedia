@@ -249,8 +249,8 @@ typedef struct rkVENC_CHN_PARAM_S {
 
 /* The param of H264e cbr*/
 typedef struct rkVENC_PARAM_H264_S {
-  RK_U32 u32StepQp;
-  RK_U32 u32MaxQp; // RW; Range:[8, 51];the max QP value
+  RK_U32 u32StepQp; // keep alive, meaningless
+  RK_U32 u32MaxQp;  // RW; Range:[8, 51];the max QP value
   RK_U32 u32MinQp; // RW; Range:[0, 48]; the min QP value,can not be larger than
                    // u32MaxQp
   RK_U32 u32MaxIQp; // RW; max qp for i frame
@@ -262,8 +262,8 @@ typedef struct rkVENC_PARAM_H264_S {
 
 /* The param of h265e cbr*/
 typedef struct rkVENC_PARAM_H265_S {
-  RK_U32 u32StepQp;
-  RK_U32 u32MaxQp; // RW; Range:[8, 51];the max QP value
+  RK_U32 u32StepQp; // keep alive, meaningless
+  RK_U32 u32MaxQp;  // RW; Range:[8, 51];the max QP value
   RK_U32 u32MinQp; // RW; Range:[0, 48];the min QP value ,can not be larger than
                    // u32MaxQp
   RK_U32 u32MaxIQp; // RW; max qp for i frame

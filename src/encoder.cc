@@ -21,6 +21,13 @@ bool Encoder::InitConfig(const MediaConfig &cfg) {
 void VideoEncoder::RequestChange(uint32_t change,
                                  std::shared_ptr<ParameterBuffer> value) {
   change_mtx.lock();
+  if (change & VideoEncoder::kGetFlag) {
+    auto p = std::pair<uint32_t, std::shared_ptr<ParameterBuffer>>(
+        change, std::move(value));
+    CheckConfigChange(p);
+    change_mtx.unlock();
+    return;
+  }
   if (VideoEncoder::kOSDDataChange == change) {
     OsdRegionData *osd = (OsdRegionData *)value->GetPtr();
     for (auto it = change_list.begin(); it != change_list.end();) {

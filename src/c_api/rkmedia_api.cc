@@ -3879,10 +3879,46 @@ RK_S32 RK_MPI_VENC_GetRcParam(VENC_CHN VeChn, VENC_RC_PARAM_S *pstRcParam) {
     return -RK_ERR_VENC_INVALID_CHNID;
   if (g_venc_chns[VeChn].status < CHN_STATUS_OPEN)
     return -RK_ERR_VENC_NOTREADY;
-
+  VideoEncoderQp stVencQp;
   g_venc_mtx.lock();
-  memcpy(&pstRcParam, &g_venc_chns[VeChn].venc_attr.stRcPara,
-         sizeof(VENC_RC_PARAM_S));
+  int ret = video_encoder_get_qp(g_venc_chns[VeChn].rkmedia_flow, stVencQp);
+  if (!ret) {
+    memcpy(pstRcParam->u32ThrdI, stVencQp.thrd_i,
+           RC_TEXTURE_THR_SIZE * sizeof(RK_U32));
+    memcpy(pstRcParam->u32ThrdP, stVencQp.thrd_p,
+           RC_TEXTURE_THR_SIZE * sizeof(RK_U32));
+    pstRcParam->u32RowQpDeltaI = stVencQp.row_qp_delta_i;
+    pstRcParam->u32RowQpDeltaP = stVencQp.row_qp_delta_p;
+
+    pstRcParam->bEnableHierQp = (RK_BOOL)stVencQp.hier_qp_en;
+    memcpy(pstRcParam->s32HierQpDelta, stVencQp.hier_qp_delta,
+           RC_HEIR_SIZE * sizeof(RK_S32));
+    memcpy(pstRcParam->s32HierFrameNum, stVencQp.hier_frame_num,
+           RC_HEIR_SIZE * sizeof(RK_S32));
+
+    pstRcParam->s32FirstFrameStartQp = stVencQp.qp_init;
+    switch (g_venc_chns[VeChn].venc_attr.attr.stVencAttr.enType) {
+    case RK_CODEC_TYPE_H264:
+      pstRcParam->stParamH264.u32MaxQp = stVencQp.qp_max;
+      pstRcParam->stParamH264.u32MinQp = stVencQp.qp_min;
+      pstRcParam->stParamH264.u32MaxIQp = stVencQp.qp_max_i;
+      pstRcParam->stParamH264.u32MinIQp = stVencQp.qp_min_i;
+      break;
+    case RK_CODEC_TYPE_H265:
+      pstRcParam->stParamH265.u32MaxQp = stVencQp.qp_max;
+      pstRcParam->stParamH265.u32MinQp = stVencQp.qp_min;
+      pstRcParam->stParamH265.u32MaxIQp = stVencQp.qp_max_i;
+      pstRcParam->stParamH265.u32MinIQp = stVencQp.qp_min_i;
+      break;
+    case RK_CODEC_TYPE_JPEG:
+      break;
+    default:
+      break;
+    }
+  } else {
+    memcpy(&pstRcParam, &g_venc_chns[VeChn].venc_attr.stRcPara,
+           sizeof(VENC_RC_PARAM_S));
+  }
   g_venc_mtx.unlock();
 
   return RK_ERR_SYS_OK;

@@ -80,10 +80,6 @@ protected:
   std::string rc_api_brief_name;
   // call before Init()
   void SetMppCodeingType(MppCodingType type);
-  virtual bool
-  CheckConfigChange(std::pair<uint32_t, std::shared_ptr<ParameterBuffer>>) {
-    return true;
-  }
   // Control before encoding.
   int EncodeControl(int cmd, void *param);
 

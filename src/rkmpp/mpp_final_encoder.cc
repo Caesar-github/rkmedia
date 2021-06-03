@@ -660,6 +660,7 @@ static int CalcQpWithRcQuality(const char *level, VideoEncoderQp &qps) {
 
 bool MPPCommonConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
   VideoConfig vconfig = cfg.vid_cfg;
+  VideoEncoderQp &qp = vconfig.encode_qp;
   ImageConfig &img_cfg = vconfig.image_cfg;
   ImageInfo &image_info = cfg.img_cfg.image_info;
   ImageRect &rect_info = cfg.img_cfg.rect_info;
@@ -686,7 +687,7 @@ bool MPPCommonConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
   // In VBR mode, and the user has not set qp,
   // at this time, the qp value is obtained according to RcQuality.
   if (vconfig.rc_quality && (!strcmp(vconfig.rc_mode, KEY_VBR)) &&
-      (!vconfig.qp_max || !vconfig.qp_min)) {
+      (!qp.qp_max || !qp.qp_min)) {
     VideoEncoderQp qps;
     if (CalcQpWithRcQuality(vconfig.rc_quality, qps))
       return false;
@@ -694,12 +695,7 @@ bool MPPCommonConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
                  "max:%d, min_i:%d, max_i:%d\n",
                  vconfig.rc_mode, vconfig.rc_quality, qps.qp_init, qps.qp_step,
                  qps.qp_min, qps.qp_max, qps.qp_min_i, qps.qp_max_i);
-    vconfig.qp_init = qps.qp_init;
-    vconfig.qp_step = qps.qp_step;
-    vconfig.qp_min = qps.qp_min;
-    vconfig.qp_max = qps.qp_max;
-    vconfig.qp_min_i = qps.qp_min_i;
-    vconfig.qp_max_i = qps.qp_max_i;
+    memcpy(&qp, &qps, sizeof(VideoEncoderQp));
   }
 
   // Encoder param check.
@@ -713,32 +709,32 @@ bool MPPCommonConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
                     "gopSize");
 
   if (rc_mode == MPP_ENC_RC_MODE_AVBR) {
-    ENCODER_CFG_CHECK(vconfig.qp_max_i, 8, 51, 48, "qpMaxi");
-    ENCODER_CFG_CHECK(vconfig.qp_min_i, 1, VALUE_MIN(vconfig.qp_max_i, 48),
-                      VALUE_MIN(vconfig.qp_max_i, 28), "qpMini");
-    ENCODER_CFG_CHECK(vconfig.qp_max, 8, 51, 48, "qpMax");
-    ENCODER_CFG_CHECK(vconfig.qp_min, 1, VALUE_MIN(vconfig.qp_max, 48),
-                      VALUE_MIN(vconfig.qp_max, 32), "qpMin");
+    ENCODER_CFG_CHECK(qp.qp_max_i, 8, 51, 48, "qpMaxi");
+    ENCODER_CFG_CHECK(qp.qp_min_i, 1, VALUE_MIN(qp.qp_max_i, 48),
+                      VALUE_MIN(qp.qp_max_i, 28), "qpMini");
+    ENCODER_CFG_CHECK(qp.qp_max, 8, 51, 48, "qpMax");
+    ENCODER_CFG_CHECK(qp.qp_min, 1, VALUE_MIN(qp.qp_max, 48),
+                      VALUE_MIN(qp.qp_max, 32), "qpMin");
   } else {
-    ENCODER_CFG_CHECK(vconfig.qp_max_i, 8, 51, 48, "qpMaxi");
-    ENCODER_CFG_CHECK(vconfig.qp_min_i, 1, VALUE_MIN(vconfig.qp_max_i, 48),
-                      VALUE_MIN(vconfig.qp_max_i, 8), "qpMini");
-    ENCODER_CFG_CHECK(vconfig.qp_max, 8, 51, 48, "qpMax");
-    ENCODER_CFG_CHECK(vconfig.qp_min, 1, VALUE_MIN(vconfig.qp_max, 48),
-                      VALUE_MIN(vconfig.qp_max, 8), "qpMin");
+    ENCODER_CFG_CHECK(qp.qp_max_i, 8, 51, 48, "qpMaxi");
+    ENCODER_CFG_CHECK(qp.qp_min_i, 1, VALUE_MIN(qp.qp_max_i, 48),
+                      VALUE_MIN(qp.qp_max_i, 8), "qpMini");
+    ENCODER_CFG_CHECK(qp.qp_max, 8, 51, 48, "qpMax");
+    ENCODER_CFG_CHECK(qp.qp_min, 1, VALUE_MIN(qp.qp_max, 48),
+                      VALUE_MIN(qp.qp_max, 8), "qpMin");
   }
 
-  if (vconfig.qp_init <= 0) {
+  if (qp.qp_init <= 0) {
     // qp_init = -1: mpp encoder automatically generate
     // a value for qp_init.
-    vconfig.qp_init = -1;
+    qp.qp_init = -1;
     RKMEDIA_LOGI("MPP Encoder: qpInit use default value:-1\n");
   } else {
-    ENCODER_CFG_CHECK(vconfig.qp_init, vconfig.qp_min, vconfig.qp_max,
-                      ENCODER_CFG_INVALID, "qpInit");
+    ENCODER_CFG_CHECK(qp.qp_init, qp.qp_min, qp.qp_max, ENCODER_CFG_INVALID,
+                      "qpInit");
   }
-  ENCODER_CFG_CHECK(vconfig.qp_step, 1, (vconfig.qp_max - vconfig.qp_min),
-                    VALUE_MIN((vconfig.qp_max - vconfig.qp_min), 2), "qpStep");
+  ENCODER_CFG_CHECK(qp.qp_step, 1, (qp.qp_max - qp.qp_min),
+                    VALUE_MIN((qp.qp_max - qp.qp_min), 2), "qpStep");
   ENCODER_CFG_CHECK(img_cfg.image_info.width, 1, 8192, ENCODER_CFG_INVALID,
                     "width");
   ENCODER_CFG_CHECK(img_cfg.image_info.height, 1, 8192, ENCODER_CFG_INVALID,
@@ -872,19 +868,19 @@ bool MPPCommonConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
   ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:fps_out_num", fps_out_num);
   ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:fps_out_denorm", fps_out_den);
   ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:gop", gop);
-  ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_init", vconfig.qp_init);
-  ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max", vconfig.qp_max);
-  ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min", vconfig.qp_min);
+  ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_init", qp.qp_init);
+  ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max", qp.qp_max);
+  ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min", qp.qp_min);
   // ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_step", vconfig.qp_step);
-  ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max_i", vconfig.qp_max_i);
-  ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min_i", vconfig.qp_min_i);
+  ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max_i", qp.qp_max_i);
+  ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min_i", qp.qp_min_i);
 
   vconfig.frame_rate = fps_in_num;
   RKMEDIA_LOGI("MPP Encoder: bps:[%d,%d,%d] fps: [%d/%d]->[%d/%d], gop:%d "
                "qpInit:%d, qpMin:%d, qpMax:%d, qpMinI:%d, qpMaxI:%d.\n",
                bps_max, bps_target, bps_min, fps_in_num, fps_in_den,
-               fps_out_num, fps_out_den, gop, vconfig.qp_init, vconfig.qp_min,
-               vconfig.qp_max, vconfig.qp_min_i, vconfig.qp_max_i);
+               fps_out_num, fps_out_den, gop, qp.qp_init, qp.qp_min, qp.qp_max,
+               qp.qp_min_i, qp.qp_max_i);
 
   // codeccfg set.
   ret |= mpp_enc_cfg_set_s32(enc_cfg, "codec:type", code_type);
@@ -1003,6 +999,7 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
                                         std::shared_ptr<ParameterBuffer> val) {
   VideoConfig &vconfig = mpp_enc.GetConfig().vid_cfg;
   ImageConfig &iconfig = mpp_enc.GetConfig().img_cfg;
+  VideoEncoderQp &qp = vconfig.encode_qp;
   int ret = 0;
 
   if (!enc_cfg) {
@@ -1214,7 +1211,7 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
       RKMEDIA_LOGE("MPP Encoder: only vbr mode support rcQuality changes!\n");
       return false;
     }
-
+    memcpy(&qps, &qp, sizeof(VideoEncoderQp));
     if (CalcQpWithRcQuality(rc_quality, qps))
       return false;
 
@@ -1239,12 +1236,7 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
       RKMEDIA_LOGE("MPP Encoder: change qp cfg failed!\n");
       return false;
     }
-    vconfig.qp_init = qps.qp_init;
-    vconfig.qp_min = qps.qp_min;
-    vconfig.qp_max = qps.qp_max;
-    vconfig.qp_step = qps.qp_step;
-    vconfig.qp_max_i = qps.qp_max_i;
-    vconfig.qp_min_i = qps.qp_min_i;
+    memcpy(&qp, &qps, sizeof(VideoEncoderQp));
     vconfig.rc_quality = ConvertRcQuality(rc_quality);
   } else if (change & VideoEncoder::kGopChange) {
     int new_gop_size = val->GetValue();
@@ -1273,53 +1265,76 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
       RKMEDIA_LOGE("MPP Encoder: Incomplete VideoEncoderQp information\n");
       return false;
     }
-    RKMEDIA_LOGI("MPP Encoder: new qp value:\n"
+    if (change & VideoEncoder::kGetFlag) {
+      if (mpp_enc.EncodeControl(MPP_ENC_GET_CFG, enc_cfg) != 0) {
+        RKMEDIA_LOGE("MPP Encoder: change qp cfg failed!\n");
+        return false;
+      }
+      ret |= mpp_enc_cfg_get_s32(enc_cfg, "rc:qp_init", &qps->qp_init);
+      ret |= mpp_enc_cfg_get_s32(enc_cfg, "rc:qp_max", &qps->qp_max);
+      ret |= mpp_enc_cfg_get_s32(enc_cfg, "rc:qp_min", &qps->qp_min);
+      ret |= mpp_enc_cfg_get_s32(enc_cfg, "rc:qp_max_i", &qps->qp_max_i);
+      ret |= mpp_enc_cfg_get_s32(enc_cfg, "rc:qp_min_i", &qps->qp_min_i);
+      ret |= mpp_enc_cfg_get_s32(enc_cfg, "hw:qp_row_i", &qps->row_qp_delta_i);
+      ret |= mpp_enc_cfg_get_s32(enc_cfg, "hw:qp_row", &qps->row_qp_delta_p);
+      ret |= mpp_enc_cfg_get_s32(enc_cfg, "rc:hier_qp_en", &qps->hier_qp_en);
+      ret |=
+          mpp_enc_cfg_get_st(enc_cfg, "rc:hier_qp_delta", &qps->hier_qp_delta);
+      ret |= mpp_enc_cfg_get_st(enc_cfg, "rc:hier_frame_num",
+                                &qps->hier_frame_num);
+      ret |= mpp_enc_cfg_get_st(enc_cfg, "hw:aq_thrd_i", qps->thrd_i);
+      ret |= mpp_enc_cfg_get_st(enc_cfg, "hw:aq_thrd_p", qps->thrd_p);
+      if (ret) {
+        RKMEDIA_LOGE("MPP Encoder: qp: cfg get s32 failed ret %d\n", ret);
+        return false;
+      }
+    } else {
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_init", qps->qp_init);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max", qps->qp_max);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min", qps->qp_min);
+      // ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_step", qps->qp_step);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max_i", qps->qp_max_i);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min_i", qps->qp_min_i);
+      // hardware cfg. If the hardware does not support it,
+      // the interface will do nothing
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "hw:qp_row_i", qps->row_qp_delta_i);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "hw:qp_row", qps->row_qp_delta_p);
+      // hierachy qp cfg
+      if (qps->hier_qp_en) {
+        ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:hier_qp_en", 1);
+        ret |=
+            mpp_enc_cfg_set_st(enc_cfg, "rc:hier_qp_delta", qps->hier_qp_delta);
+        ret |= mpp_enc_cfg_set_st(enc_cfg, "rc:hier_frame_num",
+                                  qps->hier_frame_num);
+      }
+
+      ret |= mpp_enc_cfg_set_st(enc_cfg, "hw:aq_thrd_i", qps->thrd_i);
+      ret |= mpp_enc_cfg_set_st(enc_cfg, "hw:aq_thrd_p", qps->thrd_p);
+
+      if (ret) {
+        RKMEDIA_LOGE("MPP Encoder: qp: cfg set s32 failed ret %d\n", ret);
+        return false;
+      }
+
+      if (mpp_enc.EncodeControl(MPP_ENC_SET_CFG, enc_cfg) != 0) {
+        RKMEDIA_LOGE("MPP Encoder: change qp cfg failed!\n");
+        return false;
+      }
+    }
+    RKMEDIA_LOGI("MPP Encoder: cur qp value:\n"
                  "\tQpInit:%d\n"
-                 "\tQpStep:%d\n"
                  "\tQpMin:%d\n"
                  "\tQpMax:%d\n"
                  "\tQpMinI:%d\n"
                  "\tQpMaxI:%d\n"
                  "\tQpRowDeltaI:%d\n"
-                 "\tQpRowDeltaP:%d\n",
-                 qps->qp_init, qps->qp_step, qps->qp_min, qps->qp_max,
-                 qps->qp_min_i, qps->qp_max_i, qps->row_qp_delta_i,
-                 qps->row_qp_delta_p);
-
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_init", qps->qp_init);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max", qps->qp_max);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min", qps->qp_min);
-    // ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_step", qps->qp_step);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max_i", qps->qp_max_i);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min_i", qps->qp_min_i);
-    // hardware cfg. If the hardware does not support it,
-    // the interface will do nothing
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "hw:qp_row_i", qps->row_qp_delta_i);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "hw:qp_row", qps->row_qp_delta_p);
-    // hierachy qp cfg
-    if (qps->hier_qp_en) {
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:hier_qp_en", 1);
-      ret |=
-          mpp_enc_cfg_set_st(enc_cfg, "rc:hier_qp_delta", qps->hier_qp_delta);
-      ret |=
-          mpp_enc_cfg_set_st(enc_cfg, "rc:hier_frame_num", qps->hier_frame_num);
-    }
-
-    if (ret) {
-      RKMEDIA_LOGE("MPP Encoder: qp: cfg set s32 failed ret %d\n", ret);
-      return false;
-    }
-
-    if (mpp_enc.EncodeControl(MPP_ENC_SET_CFG, enc_cfg) != 0) {
-      RKMEDIA_LOGE("MPP Encoder: change qp cfg failed!\n");
-      return false;
-    }
-    vconfig.qp_init = qps->qp_init;
-    vconfig.qp_min = qps->qp_min;
-    vconfig.qp_max = qps->qp_max;
-    vconfig.qp_step = qps->qp_step;
-    vconfig.qp_max_i = qps->qp_max_i;
-    vconfig.qp_min_i = qps->qp_min_i;
+                 "\tQpRowDeltaP:%d\n"
+                 "\tthri[0]:%d, p= %p\n"
+                 "\tthrp[0]:%d\n",
+                 qps->qp_init, qps->qp_min, qps->qp_max, qps->qp_min_i,
+                 qps->qp_max_i, qps->row_qp_delta_i, qps->row_qp_delta_p,
+                 qps->thrd_i[0], qps->thrd_i, qps->thrd_p[0]);
+    memcpy(&qp, qps, sizeof(VideoEncoderQp));
   } else if (change & VideoEncoder::kROICfgChange) {
     EncROIRegion *regions = (EncROIRegion *)val->GetPtr();
     if (val->GetSize() && (val->GetSize() < sizeof(EncROIRegion))) {
@@ -1445,10 +1460,10 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
       ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:gop", vconfig.gop_size);
       ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_ip", gop_param->ip_qp_delta);
       // Reset qp value frome smartp
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max", vconfig.qp_max);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min", vconfig.qp_min);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max_i", vconfig.qp_max_i);
-      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min_i", vconfig.qp_min_i);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max", qp.qp_max);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min", qp.qp_min);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_max_i", qp.qp_max_i);
+      ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:qp_min_i", qp.qp_min_i);
       if (ret) {
         RKMEDIA_LOGE("MPP Encoder: gop mode: cfg set s32 failed ret %d\n", ret);
         return false;

@@ -140,18 +140,19 @@ bool ParseMediaConfigFromMap(std::map<std::string, std::string> &params,
   } else if (video_in) {
     VideoConfig &vid_cfg = mc.vid_cfg;
     ImageConfig &img_cfg = vid_cfg.image_cfg;
+    VideoEncoderQp &qp = mc.vid_cfg.encode_qp;
     img_cfg.image_info = info;
     img_cfg.codec_type = codec_type;
     GET_STRING_TO_INT(img_cfg.qfactor, params, KEY_JPEG_QFACTOR, 0)
-    GET_STRING_TO_INT(vid_cfg.qp_init, params, KEY_COMPRESS_QP_INIT, 0)
-    GET_STRING_TO_INT(vid_cfg.qp_step, params, KEY_COMPRESS_QP_STEP, 0)
-    GET_STRING_TO_INT(vid_cfg.qp_min, params, KEY_COMPRESS_QP_MIN, 0)
-    GET_STRING_TO_INT(vid_cfg.qp_max, params, KEY_COMPRESS_QP_MAX, 0)
+    GET_STRING_TO_INT(qp.qp_init, params, KEY_COMPRESS_QP_INIT, 0)
+    GET_STRING_TO_INT(qp.qp_step, params, KEY_COMPRESS_QP_STEP, 0)
+    GET_STRING_TO_INT(qp.qp_min, params, KEY_COMPRESS_QP_MIN, 0)
+    GET_STRING_TO_INT(qp.qp_max, params, KEY_COMPRESS_QP_MAX, 0)
     GET_STRING_TO_INT(vid_cfg.bit_rate, params, KEY_COMPRESS_BITRATE, 0)
     GET_STRING_TO_INT(vid_cfg.bit_rate_min, params, KEY_COMPRESS_BITRATE_MIN, 0)
     GET_STRING_TO_INT(vid_cfg.bit_rate_max, params, KEY_COMPRESS_BITRATE_MAX, 0)
-    GET_STRING_TO_INT(vid_cfg.qp_max_i, params, KEY_COMPRESS_QP_MAX_I, 0)
-    GET_STRING_TO_INT(vid_cfg.qp_min_i, params, KEY_COMPRESS_QP_MIN_I, 0)
+    GET_STRING_TO_INT(qp.qp_max_i, params, KEY_COMPRESS_QP_MAX_I, 0)
+    GET_STRING_TO_INT(qp.qp_min_i, params, KEY_COMPRESS_QP_MIN_I, 0)
     GET_STRING_TO_INT(vid_cfg.trans_8x8, params, KEY_H264_TRANS_8x8, 0)
     GET_STRING_TO_INT(vid_cfg.level, params, KEY_LEVEL, 0)
     GET_STRING_TO_INT(vid_cfg.gop_size, params, KEY_VIDEO_GOP, 0)
@@ -250,11 +251,12 @@ std::string to_param_string(const ImageConfig &img_cfg) {
 
 std::string to_param_string(const VideoConfig &vid_cfg) {
   const ImageConfig &img_cfg = vid_cfg.image_cfg;
+  const VideoEncoderQp &qp = vid_cfg.encode_qp;
   std::string ret = to_param_string(img_cfg);
-  PARAM_STRING_APPEND_TO(ret, KEY_COMPRESS_QP_INIT, vid_cfg.qp_init);
-  PARAM_STRING_APPEND_TO(ret, KEY_COMPRESS_QP_STEP, vid_cfg.qp_step);
-  PARAM_STRING_APPEND_TO(ret, KEY_COMPRESS_QP_MIN, vid_cfg.qp_min);
-  PARAM_STRING_APPEND_TO(ret, KEY_COMPRESS_QP_MAX, vid_cfg.qp_max);
+  PARAM_STRING_APPEND_TO(ret, KEY_COMPRESS_QP_INIT, qp.qp_init);
+  PARAM_STRING_APPEND_TO(ret, KEY_COMPRESS_QP_STEP, qp.qp_step);
+  PARAM_STRING_APPEND_TO(ret, KEY_COMPRESS_QP_MIN, qp.qp_min);
+  PARAM_STRING_APPEND_TO(ret, KEY_COMPRESS_QP_MAX, qp.qp_max);
   PARAM_STRING_APPEND_TO(ret, KEY_COMPRESS_BITRATE, vid_cfg.bit_rate);
   PARAM_STRING_APPEND_TO(ret, KEY_COMPRESS_BITRATE_MAX, vid_cfg.bit_rate_max);
   PARAM_STRING_APPEND_TO(ret, KEY_COMPRESS_BITRATE_MIN, vid_cfg.bit_rate_min);
@@ -278,8 +280,8 @@ std::string to_param_string(const VideoConfig &vid_cfg) {
     PARAM_STRING_APPEND(ret, KEY_COMPRESS_RC_QUALITY, vid_cfg.rc_quality);
   if (vid_cfg.rc_mode)
     PARAM_STRING_APPEND(ret, KEY_COMPRESS_RC_MODE, vid_cfg.rc_mode);
-  PARAM_STRING_APPEND_TO(ret, KEY_COMPRESS_QP_MAX_I, vid_cfg.qp_max_i);
-  PARAM_STRING_APPEND_TO(ret, KEY_COMPRESS_QP_MIN_I, vid_cfg.qp_min_i);
+  PARAM_STRING_APPEND_TO(ret, KEY_COMPRESS_QP_MAX_I, qp.qp_max_i);
+  PARAM_STRING_APPEND_TO(ret, KEY_COMPRESS_QP_MIN_I, qp.qp_min_i);
   PARAM_STRING_APPEND_TO(ret, KEY_H264_TRANS_8x8, vid_cfg.trans_8x8);
   PARAM_STRING_APPEND_TO(ret, KEY_FULL_RANGE, vid_cfg.full_range);
   PARAM_STRING_APPEND_TO(ret, KEY_REF_FRM_CFG, vid_cfg.ref_frm_cfg);
@@ -500,6 +502,17 @@ int video_encoder_set_qp(std::shared_ptr<Flow> &enc_flow, VideoEncoderQp &qps) {
   pbuff->SetPtr(qp_struct, sizeof(VideoEncoderQp));
   enc_flow->Control(VideoEncoder::kQPChange, pbuff);
 
+  return 0;
+}
+
+int video_encoder_get_qp(std::shared_ptr<Flow> &enc_flow, VideoEncoderQp &qps) {
+  if (!enc_flow)
+    return -EINVAL;
+  auto pbuff = std::make_shared<ParameterBuffer>(0);
+  VideoEncoderQp *qp_struct = (VideoEncoderQp *)malloc(sizeof(VideoEncoderQp));
+  pbuff->SetPtr(qp_struct, sizeof(VideoEncoderQp));
+  enc_flow->Control(VideoEncoder::kQPChange | VideoEncoder::kGetFlag, pbuff);
+  memcpy(&qps, qp_struct, sizeof(VideoEncoderQp));
   return 0;
 }
 

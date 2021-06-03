@@ -23,13 +23,41 @@ typedef struct {
 } ImageConfig;
 
 typedef struct {
-  ImageConfig image_cfg;
+  char *type;
+  uint32_t max_bps;
+  // KEY_WORST/KEY_WORSE/KEY_MEDIUM/KEY_BETTER/KEY_BEST
+  const char *rc_quality;
+  // KEY_VBR/KEY_CBR
+  const char *rc_mode;
+  uint16_t fps;
+  uint16_t gop;
+  // For AVC
+  uint8_t profile;
+  uint8_t enc_levle;
+} VideoEncoderCfg;
+
+typedef struct {
   int qp_init;
   int qp_step;
-  int qp_min;
-  int qp_max;
-  int qp_max_i;
+  int qp_min; // 0~48
+  int qp_max; // 8-51
   int qp_min_i;
+  int qp_max_i;
+
+  int thrd_i[16];
+  int thrd_p[16];
+  int row_qp_delta_i;
+  int row_qp_delta_p;
+
+  // hierachy qp cfg
+  int hier_qp_en;
+  int hier_qp_delta[4];
+  int hier_frame_num[4];
+} VideoEncoderQp;
+
+typedef struct {
+  ImageConfig image_cfg;
+  VideoEncoderQp encode_qp;
   int bit_rate;
   int bit_rate_max;
   int bit_rate_min;
@@ -116,39 +144,6 @@ typedef struct {
   uint8_t abs_qp_en;    /**< absolute qp enable flag*/
 } EncROIRegion;
 
-typedef struct {
-  char *type;
-  uint32_t max_bps;
-  // KEY_WORST/KEY_WORSE/KEY_MEDIUM/KEY_BETTER/KEY_BEST
-  const char *rc_quality;
-  // KEY_VBR/KEY_CBR
-  const char *rc_mode;
-  uint16_t fps;
-  uint16_t gop;
-  // For AVC
-  uint8_t profile;
-  uint8_t enc_levle;
-} VideoEncoderCfg;
-
-typedef struct {
-  int qp_init;
-  int qp_step;
-  int qp_min; // 0~48
-  int qp_max; // 8-51
-  int qp_min_i;
-  int qp_max_i;
-
-  unsigned int thrd_i[16];
-  unsigned int thrd_p[16];
-  unsigned int row_qp_delta_i;
-  unsigned int row_qp_delta_p;
-
-  // hierachy qp cfg
-  bool hier_qp_en;
-  int hier_qp_delta[4];
-  int hier_frame_num[4];
-} VideoEncoderQp;
-
 typedef enum {
   GOP_MODE_NORMALP = 0, // normal p mode
   GOP_MODE_TSVC2,       // tsvc: 2 layer
@@ -231,6 +226,8 @@ _API int video_encoder_set_rc_quality(std::shared_ptr<Flow> &enc_flow,
 _API int video_encoder_set_rc_mode(std::shared_ptr<Flow> &enc_flow,
                                    const char *rc_mode);
 _API int video_encoder_set_qp(std::shared_ptr<Flow> &enc_flow,
+                              VideoEncoderQp &qps);
+_API int video_encoder_get_qp(std::shared_ptr<Flow> &enc_flow,
                               VideoEncoderQp &qps);
 _API int video_encoder_force_idr(std::shared_ptr<Flow> &enc_flow);
 _API int video_encoder_set_fps(std::shared_ptr<Flow> &enc_flow, uint8_t out_num,

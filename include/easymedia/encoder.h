@@ -26,12 +26,6 @@ DECLARE_REFLECTOR(Encoder)
   DEFINE_MEDIA_CHILD_FACTORY_EXTRA(REAL_PRODUCT)                               \
   DEFINE_MEDIA_NEW_PRODUCT_BY(REAL_PRODUCT, Encoder, Init() != true)
 
-class Encoder : public Codec {
-public:
-  virtual ~Encoder() = default;
-  virtual bool InitConfig(const MediaConfig &cfg);
-};
-
 // self define by user
 class ParameterBuffer {
 public:
@@ -63,6 +57,16 @@ private:
   void *ptr;
 };
 
+class Encoder : public Codec {
+public:
+  virtual ~Encoder() = default;
+  virtual bool InitConfig(const MediaConfig &cfg);
+  virtual bool
+  CheckConfigChange(std::pair<uint32_t, std::shared_ptr<ParameterBuffer>>) {
+    return true;
+  }
+};
+
 #define DEFINE_VIDEO_ENCODER_FACTORY(REAL_PRODUCT)                             \
   DEFINE_ENCODER_FACTORY(REAL_PRODUCT, VideoEncoder)
 
@@ -88,7 +92,8 @@ public:
   static const uint32_t kSuperFrmChange = (1 << 16);
   static const uint32_t kRotationChange = (1 << 17);
   // enable fps/bps statistics.
-  static const uint32_t kEnableStatistics = (1 << 31);
+  static const uint32_t kEnableStatistics = (1 << 30);
+  static const uint32_t kGetFlag = (1 << 31);
 
   VideoEncoder() : codec_type(CODEC_TYPE_NONE) {}
   virtual ~VideoEncoder() = default;
