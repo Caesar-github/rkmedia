@@ -487,7 +487,7 @@ bool MPPMJPEGConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
     vconfig.rc_mode = ConvertRcMode(new_mode);
   } else if (change & VideoEncoder::kQPChange) {
     int qfactor = val->GetValue();
-    RKMEDIA_LOGI("MPP Encoder[JPEG]: new qfactor:%d\n", qfactor);
+    RKMEDIA_LOGD("MPP Encoder[JPEG]: new qfactor:%d\n", qfactor);
     ENCODER_CFG_CHECK(qfactor, 1, 99, ENCODER_CFG_INVALID, "JPEG:qfactor");
     ret = mpp_enc_cfg_set_s32(enc_cfg, "jpeg:q_factor", qfactor);
     if (ret) {
@@ -507,7 +507,7 @@ bool MPPMJPEGConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
       return false;
     }
     VideoResolutionCfg *vid_cfg = (VideoResolutionCfg *)val->GetPtr();
-    RKMEDIA_LOGI("MPP Encoder[JPEG]: width = %d, height = %d, vwidth = %d, "
+    RKMEDIA_LOGD("MPP Encoder[JPEG]: width = %d, height = %d, vwidth = %d, "
                  "vheight = %d.\n",
                  vid_cfg->width, vid_cfg->height, vid_cfg->vir_width,
                  vid_cfg->vir_height);
