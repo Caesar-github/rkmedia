@@ -23,6 +23,7 @@ public:
   VideoDecoderFlow(const char *param);
   virtual ~VideoDecoderFlow() { StopAllThread(); }
   static const char *GetFlowName() { return "video_dec"; }
+  std::vector<std::shared_ptr<MediaBuffer>> input_buffers;
 
 private:
   std::shared_ptr<Decoder> decoder;
@@ -103,28 +104,50 @@ bool do_decode(Flow *f, MediaBufferVector &input_vector) {
   VideoDecoderFlow *flow = static_cast<VideoDecoderFlow *>(f);
   auto decoder = flow->decoder;
   auto &in = input_vector[0];
+  int pkt_done = 0;
+  int frm_got = 0;
+  int times = 0;
   if (!in)
     return false;
   bool ret = true;
   std::shared_ptr<MediaBuffer> output;
+  if (!flow->input_buffers.empty()) {
+    flow->input_buffers.emplace_back(input_vector[0]);
+    in = flow->input_buffers[0];
+  }
   if (flow->support_async) {
     int send_ret = 0;
     do {
       send_ret = decoder->SendInput(in);
-      if (send_ret != -EAGAIN)
-        break;
-      msleep(5);
-    } while (true);
-    if (send_ret)
-      return false;
-    do {
-      output = decoder->FetchOutput();
-      if (!output)
+      if (!send_ret) {
+        pkt_done = 1;
+      } else if (times == 0) {
+        flow->input_buffers.emplace_back(input_vector[0]);
+        in = flow->input_buffers[0];
+        times = 1;
+      }
+
+      do {
+        output = decoder->FetchOutput();
+        if (!output) {
+          break;
+        }
+
+        frm_got = 1;
+        ret = flow->SetOutput(output, 0);
+        if (flow->is_single_frame_out)
+          break;
+      } while (true);
+
+      if (pkt_done && !flow->input_buffers.empty()) {
+        std::vector<std::shared_ptr<MediaBuffer>>::iterator head =
+            flow->input_buffers.begin();
+        flow->input_buffers.erase(head);
+      }
+      if (pkt_done || frm_got)
         break;
 
-      ret = flow->SetOutput(output, 0);
-      if (flow->is_single_frame_out)
-        break;
+      msleep(3);
     } while (true);
   } else {
     output = std::make_shared<ImageBuffer>();
