@@ -31,6 +31,37 @@ struct rkAUDIO_VQE_S {
   AI_LAYOUT_E layout;
 };
 
+static int16_t get_bit_width(SampleFormat fmt) {
+  int16_t bit_width = -1;
+
+  switch (fmt) {
+  case SAMPLE_FMT_U8:
+  case SAMPLE_FMT_U8P:
+    bit_width = 8;
+    break;
+  case SAMPLE_FMT_S16:
+  case SAMPLE_FMT_S16P:
+    bit_width = 16;
+    break;
+  case SAMPLE_FMT_S32:
+  case SAMPLE_FMT_S32P:
+    bit_width = 32;
+    break;
+  case SAMPLE_FMT_FLT:
+  case SAMPLE_FMT_FLTP:
+    bit_width = sizeof(float);
+    break;
+  case SAMPLE_FMT_G711A:
+  case SAMPLE_FMT_G711U:
+    bit_width = 8;
+    break;
+  default:
+    break;
+  }
+
+  return bit_width;
+}
+
 static AUDIO_QUEUE_S *queue_create(int buf_size) {
   AUDIO_QUEUE_S *queue = (AUDIO_QUEUE_S *)calloc(sizeof(AUDIO_QUEUE_S), 1);
   if (!queue)
@@ -176,13 +207,13 @@ int AI_RECORDVQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {
   if (handle->layout == AI_LAYOUT_NORMAL) {
     if (sample_info.channels != 1) {
       RKMEDIA_LOGI(
-          "ANR check failed: layout == AI_LAYOUT_NORMAL, channels must be 1");
+          "ANR check failed: layout == AI_LAYOUT_NORMAL, channels must be 1\n");
       return -1;
     }
   } else {
     if (sample_info.channels != 2) {
       RKMEDIA_LOGI(
-          "ANR check failed: layout != AI_LAYOUT_NORMAL, channels must be 2");
+          "ANR check failed: layout != AI_LAYOUT_NORMAL, channels must be 2\n");
       return -1;
     }
   }
@@ -194,6 +225,11 @@ int AI_RECORDVQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {
   state.fGmin = config->stAiRecordConfig.stAnrConfig.fGmin;
   state.fPostAddGain = config->stAiRecordConfig.stAnrConfig.fPostAddGain;
   state.fNoiseFactor = config->stAiRecordConfig.stAnrConfig.fNoiseFactor;
+  state.enHpfSwitch = config->stAiRecordConfig.stAnrConfig.enHpfSwitch;
+  state.fHpfFc = config->stAiRecordConfig.stAnrConfig.fHpfFc;
+  state.enLpfSwitch = config->stAiRecordConfig.stAnrConfig.enLpfSwitch;
+  state.fLpfFc = config->stAiRecordConfig.stAnrConfig.fLpfFc;
+
   RKAP_ANR_DumpVersion();
   handle->ap_handle = RKAP_ANR_Init(&state);
   if (!handle->ap_handle) {
@@ -212,12 +248,20 @@ static int AI_RECORDVQE_Process(AUDIO_VQE_S *handle, unsigned char *in,
                                 unsigned char *out) {
   // for hardware refs signal
   int16_t *sigin;
-  int16_t bytes =
-      handle->stVqeConfig.stAiTalkConfig.s32FrameSample * 4; // S16 && 2 channel
+  int16_t byte_width;
+  SampleInfo sample_info = handle->sample_info;
 
+  byte_width = get_bit_width(sample_info.fmt) / 8;
+  if (byte_width < 0) {
+    RKMEDIA_LOGE("get byte width(%d) failed, SampleFormat: %d\n", byte_width,
+                 sample_info.fmt);
+    return -1;
+  }
+
+  int nb_samples = handle->stVqeConfig.stAiTalkConfig.s32FrameSample;
+  int16_t bytes = nb_samples * byte_width * sample_info.channels;
   unsigned char prebuf[bytes] = {0};
-  unsigned char sigout[bytes / 2] = {0};
-  int nb_samples = bytes / 4;
+  unsigned char sigout[bytes / sample_info.channels] = {0};
 
   sigin = (int16_t *)prebuf;
   if (handle->layout == AI_LAYOUT_MIC_REF) {
@@ -226,7 +270,10 @@ static int AI_RECORDVQE_Process(AUDIO_VQE_S *handle, unsigned char *in,
   } else if (handle->layout == AI_LAYOUT_REF_MIC) {
     for (int i = 0; i < nb_samples; i++)
       sigin[i] = *((int16_t *)in + i * 2 + 1);
+  } else if (handle->layout == AI_LAYOUT_NORMAL) {
+    return RKAP_ANR_Process(handle->ap_handle, (int16_t *)in, (int16_t *)out);
   }
+
   RKAP_ANR_Process(handle->ap_handle, sigin, (int16_t *)sigout);
 
   int16_t *tmp2 = (int16_t *)sigout;
@@ -235,6 +282,7 @@ static int AI_RECORDVQE_Process(AUDIO_VQE_S *handle, unsigned char *in,
     *tmp1++ = *tmp2;
     *tmp1++ = *tmp2++;
   }
+
   return 0;
 }
 

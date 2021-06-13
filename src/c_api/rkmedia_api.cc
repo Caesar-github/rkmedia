@@ -5387,6 +5387,12 @@ RK_S32 RK_MPI_AI_SetRecordVqeAttr(AI_CHN AiChn,
   config.stAiRecordConfig.stAnrConfig.fGmin = pstVqeConfig->stAnrConfig.fGmin;
   config.stAiRecordConfig.stAnrConfig.fNoiseFactor =
       pstVqeConfig->stAnrConfig.fNoiseFactor;
+  config.stAiRecordConfig.stAnrConfig.fHpfFc = pstVqeConfig->stAnrConfig.fHpfFc;
+  config.stAiRecordConfig.stAnrConfig.fLpfFc = pstVqeConfig->stAnrConfig.fLpfFc;
+  config.stAiRecordConfig.stAnrConfig.enHpfSwitch =
+      pstVqeConfig->stAnrConfig.enHpfSwitch;
+  config.stAiRecordConfig.stAnrConfig.enLpfSwitch =
+      pstVqeConfig->stAnrConfig.enLpfSwitch;
   g_ai_chns[AiChn].rkmedia_flow->Control(easymedia::S_VQE_ATTR, &config);
   g_ai_mtx.unlock();
   return RK_ERR_SYS_OK;

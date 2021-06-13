@@ -43,6 +43,10 @@ typedef struct rkAI_RECORDVQE_CONFIG_S {
     RK_FLOAT fPostAddGain; /* post-gain 0*/
     RK_FLOAT fGmin;        /* spectral gain floor,unit:(dB),default:-30dB */
     RK_FLOAT fNoiseFactor; /* noise suppression factor,default:0.98 */
+    RK_FLOAT fHpfFc;       /* High Pass Filter cut-off frequency */
+    RK_FLOAT fLpfFc;       /* Low Pass Filter cut-off frequency */
+    RK_S32 enHpfSwitch;    /* HighPass Filter Enable */
+    RK_S32 enLpfSwitch;    /* LowPass Filter Enable */
   } stAnrConfig;
 } AI_RECORDVQE_CONFIG_S;
 

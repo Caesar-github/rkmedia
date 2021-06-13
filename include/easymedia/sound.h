@@ -69,6 +69,10 @@ typedef struct rkVQE_CONFIG_S {
         float fPostAddGain; /* post-gain 0*/
         float fGmin;        /* spectral gain floor,unit:(dB),default:-30dB */
         float fNoiseFactor; /* noise suppression factor,default:0.98 */
+        float fHpfFc;       /* High Pass Filter cut-off frequency */
+        float fLpfFc;       /* Low Pass Filter cut-off frequency */
+        int enHpfSwitch;    /* HighPass Filter Enable */
+        int enLpfSwitch;    /* LowPass Filter Enable */
       } stAnrConfig;
     } stAiRecordConfig;
     struct {
