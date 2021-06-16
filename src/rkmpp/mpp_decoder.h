@@ -33,7 +33,7 @@ private:
   std::shared_ptr<MPPContext> mpp_ctx;
   bool support_sync;
   bool support_async;
-  static const RK_S32 kFRAMEGROUP_MAX_FRAMES = 16;
+  static const RK_S32 kFRAMEGROUP_MAX_FRAMES = 32;
 };
 
 } // namespace easymedia
