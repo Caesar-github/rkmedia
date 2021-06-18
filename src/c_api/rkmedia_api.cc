@@ -4719,8 +4719,15 @@ RK_S32 RK_MPI_VENC_RGN_SetBitMap(VENC_CHN VeChn,
     rkmedia_osd_rgn.region_id = pstRgnInfo->enRegionId;
     rkmedia_osd_rgn.enable = pstRgnInfo->u8Enable;
     rkmedia_osd_rgn.region_type = region_type;
-    ret = easymedia::video_encoder_set_osd_region(
-        g_venc_chns[VeChn].rkmedia_flow, &rkmedia_osd_rgn);
+
+    if (g_venc_chns[VeChn].venc_attr.bFullFunc)
+      ret = easymedia::video_encoder_set_osd_region(
+          g_venc_chns[VeChn].rkmedia_flow_list.back(), &rkmedia_osd_rgn,
+          u8PlaneCnt);
+    else
+      ret = easymedia::video_encoder_set_osd_region(
+          g_venc_chns[VeChn].rkmedia_flow, &rkmedia_osd_rgn);
+
     if (ret)
       ret = -RK_ERR_VENC_NOT_PERM;
     return ret;
