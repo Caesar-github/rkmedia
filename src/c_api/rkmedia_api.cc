@@ -2207,6 +2207,7 @@ RK_S32 RK_MPI_VI_GetStatus(VI_CHN ViChn) {
   assert(current_time - recent_time > 0);
   if (recent_time != 0 && current_time - recent_time > 3000000) {
     RKMEDIA_LOGW("VI timeout more than 3 seconds!\n");
+    g_vi_mtx.unlock();
     return RK_ERR_VI_TIMEOUT;
   }
   g_vi_mtx.unlock();
