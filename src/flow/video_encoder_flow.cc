@@ -141,6 +141,7 @@ bool encode(Flow *f, MediaBufferVector &input_vector) {
   // when output fps less len input fps, enc->Proccess() may
   // return a empty mediabuff.
   if (dst->GetValidSize() > 0) {
+    dst = MediaBuffer::Clone(*dst);
 #ifdef RKMEDIA_TIMESTAMP_DEBUG
     // Pass TsNodeInfo to new buffer.
     if (src && dst)
