@@ -1381,8 +1381,10 @@ int MPPEncoder::RgaOsdRegionProcess(ImageBuffer *hw_buffer) {
                           rga_osd_data[i].height, RK_FORMAT_BGRA_8888);
       im_rect pat_rect = {0, 0, (int)rga_osd_data[i].width,
                           (int)rga_osd_data[i].height};
-      STATUS = improcess(src, src, pat, src_rect, src_rect, pat_rect,
-                         IM_ALPHA_BLEND_DST_OVER);
+      int usgae = IM_ALPHA_BLEND_DST_OVER | IM_ALPHA_BLEND_PRE_MUL;
+      src.color_space_mode =
+          IM_YUV_TO_RGB_BT601_FULL | IM_RGB_TO_YUV_BT601_FULL;
+      STATUS = improcess(src, src, pat, src_rect, src_rect, pat_rect, usgae);
       if (STATUS != IM_STATUS_SUCCESS) {
         RKMEDIA_LOGE("MPP Encoder[OSD EX]: do overlay failed!\n");
         break;
