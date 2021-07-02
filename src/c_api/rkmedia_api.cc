@@ -481,7 +481,7 @@ RK_S32 RK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
   case RK_ID_AENC:
     src = g_aenc_chns[pstSrcChn->s32ChnId].rkmedia_flow;
     src_chn = &g_aenc_chns[pstSrcChn->s32ChnId];
-    src_mutex = &g_vi_mtx;
+    src_mutex = &g_aenc_mtx;
     break;
   case RK_ID_RGA:
     src = g_rga_chns[pstSrcChn->s32ChnId].rkmedia_flow;
@@ -669,7 +669,7 @@ RK_S32 RK_MPI_SYS_UnBind(const MPP_CHN_S *pstSrcChn,
   case RK_ID_AENC:
     src = g_aenc_chns[pstSrcChn->s32ChnId].rkmedia_flow;
     src_chn = &g_aenc_chns[pstSrcChn->s32ChnId];
-    src_mutex = &g_vi_mtx;
+    src_mutex = &g_aenc_mtx;
     break;
   case RK_ID_RGA:
     src = g_rga_chns[pstSrcChn->s32ChnId].rkmedia_flow;
@@ -7211,7 +7211,7 @@ RK_S32 RK_MPI_MUXER_Bind(const MPP_CHN_S *pstSrcChn,
   case RK_ID_AENC:
     src = g_aenc_chns[pstSrcChn->s32ChnId].rkmedia_flow;
     src_chn = &g_aenc_chns[pstSrcChn->s32ChnId];
-    src_mutex = &g_vi_mtx;
+    src_mutex = &g_aenc_mtx;
     break;
   default:
     return -RK_ERR_MUXER_NOTSUPPORT;
@@ -7304,7 +7304,7 @@ RK_S32 RK_MPI_MUXER_UnBind(const MPP_CHN_S *pstSrcChn,
   case RK_ID_AENC:
     src = g_aenc_chns[pstSrcChn->s32ChnId].rkmedia_flow;
     src_chn = &g_aenc_chns[pstSrcChn->s32ChnId];
-    src_mutex = &g_vi_mtx;
+    src_mutex = &g_aenc_mtx;
     break;
   default:
     return -RK_ERR_MUXER_NOTSUPPORT;
