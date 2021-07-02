@@ -112,6 +112,66 @@ RK_S32 RK_MPI_MB_EndCPUAccess(MEDIA_BUFFER mb, RK_BOOL bReadonly) {
   return RK_ERR_SYS_OK;
 }
 
+MEDIA_BUFFER RK_MPI_MB_CreateAudioBufferExt(MB_AUDIO_INFO_S *pstAudioInfo,
+                                            RK_BOOL boolHardWare,
+                                            RK_U8 u8Flag) {
+  if (!pstAudioInfo || !pstAudioInfo->u32Channels ||
+      !pstAudioInfo->u32SampleRate || !pstAudioInfo->u32NBSamples)
+    return NULL;
+
+  std::string strSampleFormat = SampleFormatToString(pstAudioInfo->enSampleFmt);
+  SampleFormat rkmediaSampleFormat = StringToSampleFmt(strSampleFormat.c_str());
+  if (rkmediaSampleFormat == SAMPLE_FMT_NONE) {
+    RKMEDIA_LOGE("%s: unsupport sample format!\n", __func__);
+    return NULL;
+  }
+
+  SampleInfo rkmediaSampleInfo = {
+      rkmediaSampleFormat, (int)pstAudioInfo->u32Channels,
+      (int)pstAudioInfo->u32SampleRate, (int)pstAudioInfo->u32NBSamples};
+  RK_U32 buf_size =
+      GetSampleSize(rkmediaSampleInfo) * pstAudioInfo->u32NBSamples;
+  if (buf_size == 0)
+    return NULL;
+
+  MEDIA_BUFFER_IMPLE *mb = new MEDIA_BUFFER_IMPLE;
+  if (!mb) {
+    RKMEDIA_LOGE("%s: no space left!\n", __func__);
+    return NULL;
+  }
+
+  RK_U32 u32RkmediaBufFlag = 2; // cached buffer type default
+  if (u8Flag == MB_FLAG_NOCACHED)
+    u32RkmediaBufFlag = 0;
+  else if (u8Flag == MB_FLAG_PHY_ADDR_CONSECUTIVE)
+    u32RkmediaBufFlag = 1;
+
+  auto &&rkmedia_mb = easymedia::MediaBuffer::Alloc(
+      buf_size,
+      boolHardWare ? easymedia::MediaBuffer::MemType::MEM_HARD_WARE
+                   : easymedia::MediaBuffer::MemType::MEM_COMMON,
+      u32RkmediaBufFlag);
+  if (!rkmedia_mb) {
+    delete mb;
+    RKMEDIA_LOGE("%s: no space left!\n", __func__);
+    return NULL;
+  }
+
+  mb->rkmedia_mb = std::make_shared<easymedia::SampleBuffer>(
+      *(rkmedia_mb.get()), rkmediaSampleInfo);
+  mb->ptr = mb->rkmedia_mb->GetPtr();
+  mb->fd = mb->rkmedia_mb->GetFD();
+  mb->size = 0;
+  mb->type = MB_TYPE_AUDIO;
+  mb->stAudioInfo = *pstAudioInfo;
+  mb->timestamp = 0;
+  mb->mode_id = RK_ID_UNKNOW;
+  mb->chn_id = 0;
+  mb->flag = 0;
+  mb->tsvc_level = 0;
+  return mb;
+}
+
 MEDIA_BUFFER RK_MPI_MB_CreateAudioBuffer(RK_U32 u32BufferSize,
                                          RK_BOOL boolHardWare) {
   std::shared_ptr<easymedia::MediaBuffer> rkmedia_mb;
@@ -350,6 +410,50 @@ MEDIA_BUFFER RK_MPI_MB_ConvertToImgBuffer(MEDIA_BUFFER mb,
   return mb_impl;
 }
 
+MEDIA_BUFFER RK_MPI_MB_ConvertToAudBufferExt(MEDIA_BUFFER mb,
+                                             MB_AUDIO_INFO_S *pstAudioInfo) {
+  if (!mb || !pstAudioInfo || !pstAudioInfo->u32Channels ||
+      !pstAudioInfo->u32NBSamples || !pstAudioInfo->u32SampleRate) {
+    RKMEDIA_LOGE("%s: invalid args!\n", __func__);
+    return NULL;
+  }
+
+  MEDIA_BUFFER_IMPLE *mb_impl = (MEDIA_BUFFER_IMPLE *)mb;
+  if (!mb_impl->rkmedia_mb) {
+    RKMEDIA_LOGE("%s: mediabuffer not init yet!\n", __func__);
+    return NULL;
+  }
+
+  std::string strSampleFormat = SampleFormatToString(pstAudioInfo->enSampleFmt);
+  SampleFormat rkmediaSampleFormat = StringToSampleFmt(strSampleFormat.c_str());
+  if (rkmediaSampleFormat == SAMPLE_FMT_NONE) {
+    RKMEDIA_LOGE("%s: unsupport sample format!\n", __func__);
+    return NULL;
+  }
+
+  SampleInfo rkmediaSampleInfo = {
+      rkmediaSampleFormat, (int)pstAudioInfo->u32Channels,
+      (int)pstAudioInfo->u32SampleRate, (int)pstAudioInfo->u32NBSamples};
+  RK_U32 buf_size =
+      GetSampleSize(rkmediaSampleInfo) * pstAudioInfo->u32NBSamples;
+  if (buf_size == 0)
+    return NULL;
+
+  if (buf_size > mb_impl->rkmedia_mb->GetSize()) {
+    RKMEDIA_LOGE("%s: buffer size:%zu do not match AudioInfo(%dx%d%d, %s)!\n",
+                 __func__, mb_impl->rkmedia_mb->GetSize(),
+                 pstAudioInfo->u32Channels, pstAudioInfo->u32SampleRate,
+                 pstAudioInfo->u32NBSamples, strSampleFormat.c_str());
+    return NULL;
+  }
+
+  mb_impl->rkmedia_mb = std::make_shared<easymedia::SampleBuffer>(
+      *(mb_impl->rkmedia_mb.get()), rkmediaSampleInfo);
+  mb_impl->type = MB_TYPE_AUDIO;
+  mb_impl->stAudioInfo = *pstAudioInfo;
+  return mb_impl;
+}
+
 MEDIA_BUFFER RK_MPI_MB_ConvertToAudBuffer(MEDIA_BUFFER mb) {
   if (!mb) {
     RKMEDIA_LOGE("%s: invalid args!\n", __func__);
@@ -374,6 +478,18 @@ RK_S32 RK_MPI_MB_GetImageInfo(MEDIA_BUFFER mb, MB_IMAGE_INFO_S *pstImageInfo) {
     return -RK_ERR_SYS_NOT_PERM;
 
   *pstImageInfo = mb_impl->stImageInfo;
+  return RK_ERR_SYS_OK;
+}
+
+RK_S32 RK_MPI_MB_GetAudioInfo(MEDIA_BUFFER mb, MB_AUDIO_INFO_S *pstAudioInfo) {
+  if (!mb || !pstAudioInfo)
+    return -RK_ERR_SYS_ILLEGAL_PARAM;
+
+  MEDIA_BUFFER_IMPLE *mb_impl = (MEDIA_BUFFER_IMPLE *)mb;
+  if (mb_impl->type != MB_TYPE_IMAGE)
+    return -RK_ERR_SYS_NOT_PERM;
+
+  *pstAudioInfo = mb_impl->stAudioInfo;
   return RK_ERR_SYS_OK;
 }
 

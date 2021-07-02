@@ -23,6 +23,7 @@ typedef struct _rkMEDIA_BUFFER_S {
   std::shared_ptr<easymedia::MediaBuffer> rkmedia_mb;
   union {
     MB_IMAGE_INFO_S stImageInfo;
+    MB_AUDIO_INFO_S stAudioInfo;
   };
 
 } MEDIA_BUFFER_IMPLE;
@@ -37,9 +38,11 @@ typedef struct _rkMEDIA_BUFFER_POOL_S {
   // between c structure and c++ structure.
   union {
     MB_IMAGE_INFO_S stImageInfo;
+    MB_AUDIO_INFO_S stAudioInfo;
   };
   union {
     ImageInfo rkmediaImgInfo;
+    SampleInfo rkmediaSampleInfo;
   };
 
 } MEDIA_BUFFER_POOL_IMPLE;

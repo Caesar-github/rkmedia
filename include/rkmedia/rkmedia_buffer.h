@@ -44,6 +44,13 @@ typedef struct rkMB_IMAGE_INFO {
   IMAGE_TYPE_E enImgType;
 } MB_IMAGE_INFO_S;
 
+typedef struct rkMB_AUDIO_INFO {
+  RK_U32 u32Channels;
+  RK_U32 u32SampleRate;
+  RK_U32 u32NBSamples;
+  SAMPLE_FORMAT_E enSampleFmt;
+} MB_AUDIO_INFO_S;
+
 typedef struct rkMB_POOL_PARAM_S {
   MB_TYPE_E enMediaType;
   RK_U32 u32Cnt;
@@ -71,10 +78,15 @@ _CAPI MEDIA_BUFFER RK_MPI_MB_CreateBuffer(RK_U32 u32Size, RK_BOOL boolHardWare,
                                           RK_U8 u8Flag);
 _CAPI MEDIA_BUFFER RK_MPI_MB_ConvertToImgBuffer(MEDIA_BUFFER mb,
                                                 MB_IMAGE_INFO_S *pstImageInfo);
+_CAPI MEDIA_BUFFER
+RK_MPI_MB_ConvertToAudBufferExt(MEDIA_BUFFER mb, MB_AUDIO_INFO_S *pstAudioInfo);
 _CAPI MEDIA_BUFFER RK_MPI_MB_ConvertToAudBuffer(MEDIA_BUFFER mb);
 _CAPI MEDIA_BUFFER RK_MPI_MB_CreateImageBuffer(MB_IMAGE_INFO_S *pstImageInfo,
                                                RK_BOOL boolHardWare,
                                                RK_U8 u8Flag);
+_CAPI MEDIA_BUFFER RK_MPI_MB_CreateAudioBufferExt(MB_AUDIO_INFO_S *pstAudioInfo,
+                                                  RK_BOOL boolHardWare,
+                                                  RK_U8 u8Flag);
 _CAPI MEDIA_BUFFER RK_MPI_MB_CreateAudioBuffer(RK_U32 u32BufferSize,
                                                RK_BOOL boolHardWare);
 _CAPI RK_S32 RK_MPI_MB_SetSize(MEDIA_BUFFER mb, RK_U32 size);
@@ -84,6 +96,8 @@ _CAPI RK_S32 RK_MPI_MB_GetTsvcLevel(MEDIA_BUFFER mb);
 _CAPI RK_BOOL RK_MPI_MB_IsViFrame(MEDIA_BUFFER mb);
 _CAPI RK_S32 RK_MPI_MB_GetImageInfo(MEDIA_BUFFER mb,
                                     MB_IMAGE_INFO_S *pstImageInfo);
+_CAPI RK_S32 RK_MPI_MB_GetAudioInfo(MEDIA_BUFFER mb,
+                                    MB_AUDIO_INFO_S *pstAudioInfo);
 _CAPI RK_S32 RK_MPI_MB_BeginCPUAccess(MEDIA_BUFFER mb, RK_BOOL bReadonly);
 _CAPI RK_S32 RK_MPI_MB_EndCPUAccess(MEDIA_BUFFER mb, RK_BOOL bReadonly);
 _CAPI RK_S32 RK_MPI_MB_TsNodeDump(MEDIA_BUFFER mb);
