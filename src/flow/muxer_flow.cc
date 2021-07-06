@@ -55,11 +55,12 @@ static int muxer_buffer_callback(void *handler, uint8_t *buf, int buf_size) {
 MuxerFlow::MuxerFlow(const char *param)
     : video_recorder(nullptr), video_in(false), audio_in(false),
       file_duration(-1), real_file_duration(-1), file_index(-1), last_ts(0),
-      file_time_en(false), enable_streaming(true), file_name_cb(nullptr),
-      file_name_handle(nullptr), muxer_id(0), manual_split(false),
-      manual_split_record(false), manual_split_file_duration(0),
-      pre_record_time(0), pre_record_cache_time(0), vid_buffer_size(0),
-      aud_buffer_size(0), is_lapse_record(false), lapse_time_stamp(0) {
+      file_time_en(false), enable_streaming(true), request_stop_stream(false),
+      file_name_cb(nullptr), file_name_handle(nullptr), muxer_id(0),
+      manual_split(false), manual_split_record(false),
+      manual_split_file_duration(0), pre_record_time(0),
+      pre_record_cache_time(0), vid_buffer_size(0), aud_buffer_size(0),
+      is_lapse_record(false), lapse_time_stamp(0) {
   std::list<std::string> separate_list;
   std::map<std::string, std::string> params;
 
@@ -314,7 +315,7 @@ int MuxerFlow::Control(unsigned long int request, ...) {
     StartStream();
   } break;
   case S_STOP_SRTEAM: {
-    enable_streaming = false;
+    request_stop_stream = true;
   } break;
   case S_MANUAL_SPLIT_STREAM: {
     int duration = va_arg(vl, int);
@@ -377,7 +378,14 @@ void MuxerFlow::StopStream() {
     video_recorder.reset();
     video_recorder = nullptr;
     video_extra = nullptr;
+  }
 
+  manual_split = false;
+  manual_split_record = false;
+  vid_cached_buffers.clear();
+  aud_cached_buffers.clear();
+
+  if (enable_streaming) {
     // Send Stream Stop event
     if (event_callback_) {
       MuxerEvent muxer_event;
@@ -386,11 +394,6 @@ void MuxerFlow::StopStream() {
       event_callback_(event_handler2_, (void *)&muxer_event);
     }
   }
-
-  manual_split = false;
-  manual_split_record = false;
-  vid_cached_buffers.clear();
-  aud_cached_buffers.clear();
 }
 
 void MuxerFlow::CheckRecordEnd(int64_t duration_us,
@@ -594,10 +597,15 @@ bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
   auto &vid_buffer = input_vector[0];
   auto &aud_buffer = input_vector[1];
 
-  if (!flow->enable_streaming) {
+  if (flow->request_stop_stream) {
     flow->StopStream();
+    flow->enable_streaming = false;
+    flow->request_stop_stream = false;
     return true;
   }
+
+  if (!flow->enable_streaming)
+    return true;
 
   if (flow->manual_split)
     flow->ManualSplit();

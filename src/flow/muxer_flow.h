@@ -73,6 +73,7 @@ private:
   bool file_time_en;
   bool is_use_customio;
   bool enable_streaming;
+  bool request_stop_stream;
   // get file name frome callback
   GET_FILE_NAMES_CB file_name_cb;
   void *file_name_handle;
