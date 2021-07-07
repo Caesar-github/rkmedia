@@ -345,10 +345,10 @@ int main(int argc, char *argv[]) {
     VENC_CHN_PARAM_S venc_chn_param;
     memset(&venc_chn_param, 0, sizeof(venc_chn_param));
     venc_chn_param.stCropCfg.bEnable = 1;
-    venc_chn_param.stCropCfg.stRect.s32X = qfactor;
-    venc_chn_param.stCropCfg.stRect.s32Y = qfactor;
-    venc_chn_param.stCropCfg.stRect.u32Width = 200 + qfactor;
-    venc_chn_param.stCropCfg.stRect.u32Height = 200 + qfactor;
+    venc_chn_param.stCropCfg.stRect.s32X = (qfactor / 2) * 2;
+    venc_chn_param.stCropCfg.stRect.s32Y = (qfactor / 2) * 2;
+    venc_chn_param.stCropCfg.stRect.u32Width = ((200 + qfactor) / 2) * 2;
+    venc_chn_param.stCropCfg.stRect.u32Height = ((200 + qfactor) / 2) * 2;
     ret = RK_MPI_VENC_SetChnParam(0, &venc_chn_param);
     if (ret) {
       printf("Set Venc Channel failed! ret=%d\n", ret);
