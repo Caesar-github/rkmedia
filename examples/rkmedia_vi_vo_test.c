@@ -55,12 +55,8 @@ int main(int argc, char *argv[]) {
   int ret = 0;
   int video_width = 1920;
   int video_height = 1080;
-  int video1_width = 640;
-  int video1_height = 360;
   int disp_width = 720;
   int disp_height = 1280;
-  int disp1_width = 360;
-  int disp1_height = 640;
   RK_S32 s32CamId = 0;
 #ifdef RKAIQ
   RK_BOOL bMultictx = RK_FALSE;
@@ -125,20 +121,6 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  memset(&vi_chn_attr, 0, sizeof(vi_chn_attr));
-  vi_chn_attr.pcVideoNode = "rkispp_scale1";
-  vi_chn_attr.u32BufCnt = 3;
-  vi_chn_attr.u32Width = video1_width;
-  vi_chn_attr.u32Height = video1_height;
-  vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
-  vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
-  ret = RK_MPI_VI_SetChnAttr(s32CamId, 1, &vi_chn_attr);
-  ret |= RK_MPI_VI_EnableChn(s32CamId, 1);
-  if (ret) {
-    printf("Create vi[1] failed! ret=%d\n", ret);
-    return -1;
-  }
-
   /* test rgn cover */
   COVER_INFO_S CoverInfo;
   OSD_REGION_INFO_S RngInfo;
@@ -158,7 +140,7 @@ int main(int argc, char *argv[]) {
   RGA_ATTR_S stRgaAttr;
   memset(&stRgaAttr, 0, sizeof(stRgaAttr));
   stRgaAttr.bEnBufPool = RK_TRUE;
-  stRgaAttr.u16BufPoolCnt = 2;
+  stRgaAttr.u16BufPoolCnt = 3;
   stRgaAttr.u16Rotaion = 90;
   stRgaAttr.stImgIn.u32X = 0;
   stRgaAttr.stImgIn.u32Y = 0;
@@ -180,30 +162,6 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  // rga1 for overlay plane
-  stRgaAttr.bEnBufPool = RK_TRUE;
-  stRgaAttr.u16BufPoolCnt = 2;
-  stRgaAttr.u16Rotaion = 90;
-  stRgaAttr.stImgIn.u32X = 0;
-  stRgaAttr.stImgIn.u32Y = 0;
-  stRgaAttr.stImgIn.imgType = IMAGE_TYPE_NV12;
-  stRgaAttr.stImgIn.u32Width = video1_width;
-  stRgaAttr.stImgIn.u32Height = video1_height;
-  stRgaAttr.stImgIn.u32HorStride = video1_width;
-  stRgaAttr.stImgIn.u32VirStride = video1_height;
-  stRgaAttr.stImgOut.u32X = 0;
-  stRgaAttr.stImgOut.u32Y = 0;
-  stRgaAttr.stImgOut.imgType = IMAGE_TYPE_NV12;
-  stRgaAttr.stImgOut.u32Width = disp1_width;
-  stRgaAttr.stImgOut.u32Height = disp1_height;
-  stRgaAttr.stImgOut.u32HorStride = disp1_width;
-  stRgaAttr.stImgOut.u32VirStride = disp1_height;
-  ret = RK_MPI_RGA_CreateChn(1, &stRgaAttr);
-  if (ret) {
-    printf("Create rga[0] falied! ret=%d\n", ret);
-    return -1;
-  }
-
   VO_CHN_ATTR_S stVoAttr = {0};
   // VO[0] for primary plane
   stVoAttr.pcDevNode = "/dev/dri/card0";
@@ -217,26 +175,6 @@ int main(int argc, char *argv[]) {
   ret = RK_MPI_VO_CreateChn(0, &stVoAttr);
   if (ret) {
     printf("Create vo[0] failed! ret=%d\n", ret);
-    return -1;
-  }
-
-  // VO[1] for overlay plane
-  memset(&stVoAttr, 0, sizeof(stVoAttr));
-  stVoAttr.pcDevNode = "/dev/dri/card0";
-  stVoAttr.emPlaneType = VO_PLANE_OVERLAY;
-  stVoAttr.enImgType = IMAGE_TYPE_NV12;
-  stVoAttr.u16Zpos = 1;
-  stVoAttr.stImgRect.s32X = 0;
-  stVoAttr.stImgRect.s32Y = 0;
-  stVoAttr.stImgRect.u32Width = disp1_width;
-  stVoAttr.stImgRect.u32Height = disp1_height;
-  stVoAttr.stDispRect.s32X = 0;
-  stVoAttr.stDispRect.s32Y = 0;
-  stVoAttr.stDispRect.u32Width = disp1_width;
-  stVoAttr.stDispRect.u32Height = disp1_height;
-  ret = RK_MPI_VO_CreateChn(1, &stVoAttr);
-  if (ret) {
-    printf("Create vo[1] failed! ret=%d\n", ret);
     return -1;
   }
 
@@ -265,28 +203,6 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  printf("#Bind VI[1] to RGA[1]....\n");
-  stSrcChn.enModId = RK_ID_VI;
-  stSrcChn.s32ChnId = 1;
-  stDestChn.enModId = RK_ID_RGA;
-  stDestChn.s32ChnId = 1;
-  ret = RK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
-  if (ret) {
-    printf("Bind vi[1] to rga[1] failed! ret=%d\n", ret);
-    return -1;
-  }
-
-  printf("# Bind RGA[1] to VO[1]....\n");
-  stSrcChn.enModId = RK_ID_RGA;
-  stSrcChn.s32ChnId = 1;
-  stDestChn.enModId = RK_ID_VO;
-  stDestChn.s32ChnId = 1;
-  ret = RK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
-  if (ret) {
-    printf("Bind rga[1] to vo[1] failed! ret=%d\n", ret);
-    return -1;
-  }
-
   printf("%s initial finish\n", __func__);
   signal(SIGINT, sigterm_handler);
   while (!quit) {
@@ -304,16 +220,6 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  stSrcChn.enModId = RK_ID_VI;
-  stSrcChn.s32ChnId = 1;
-  stDestChn.enModId = RK_ID_RGA;
-  stDestChn.s32ChnId = 1;
-  ret = RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
-  if (ret) {
-    printf("UnBind vi[1] to rga[1] failed! ret=%d\n", ret);
-    return -1;
-  }
-
   stSrcChn.enModId = RK_ID_RGA;
   stSrcChn.s32ChnId = 0;
   stDestChn.enModId = RK_ID_VO;
@@ -324,22 +230,9 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  stSrcChn.enModId = RK_ID_RGA;
-  stSrcChn.s32ChnId = 1;
-  stDestChn.enModId = RK_ID_VO;
-  stDestChn.s32ChnId = 1;
-  ret = RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
-  if (ret) {
-    printf("UnBind rga[1] to vo[1] failed! ret=%d\n", ret);
-    return -1;
-  }
-
   RK_MPI_VO_DestroyChn(0);
-  RK_MPI_VO_DestroyChn(1);
   RK_MPI_RGA_DestroyChn(0);
-  RK_MPI_RGA_DestroyChn(1);
   RK_MPI_VI_DisableChn(s32CamId, 0);
-  RK_MPI_VI_DisableChn(s32CamId, 1);
 
   if (iq_file_dir) {
 #ifdef RKAIQ
