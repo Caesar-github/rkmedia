@@ -27,9 +27,10 @@ namespace easymedia {
 
 MPPEncoder::MPPEncoder()
     : coding_type(MPP_VIDEO_CodingAutoDetect), output_mb_flags(0),
-      encoder_sta_en(false), stream_size_1s(0), frame_cnt_1s(0), last_ts(0),
-      cur_ts(0), userdata_len(0), userdata_frame_id(0),
-      userdata_all_frame_en(0) {
+      encoder_sta_en(false), encoded_bps(0), encoded_fps(0), stream_size_1s(0),
+      frame_cnt_1s(0), last_ts(0), cur_ts(0), userdata_len(0),
+      userdata_frame_id(0), userdata_all_frame_en(0), app2_len(0) {
+  mpp_ctx = NULL;
 #ifdef MPP_SUPPORT_HW_OSD
   // reset osd data.
   memset(&osd_data, 0, sizeof(osd_data));
@@ -52,9 +53,13 @@ MPPEncoder::MPPEncoder()
   }
   rga_osd_cnt = 0;
 #endif
-
+  memset(&ud_set, 0, sizeof(MppEncUserDataSet));
+  memset(ud_datas, 0, sizeof(ud_datas) * 2);
   memset(&roi_cfg, 0, sizeof(roi_cfg));
   rc_api_brief_name = "default";
+  memset(thumbnail_type, 0, sizeof(thumbnail_type));
+  memset(thumbnail_width, 0, sizeof(thumbnail_width));
+  memset(thumbnail_height, 0, sizeof(thumbnail_height));
 }
 
 MPPEncoder::~MPPEncoder() {
