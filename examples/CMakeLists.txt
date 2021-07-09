@@ -170,10 +170,18 @@ target_link_libraries(rkmedia_fake_vi_test easymedia)
 target_include_directories(rkmedia_fake_vi_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 install(TARGETS rkmedia_fake_vi_test RUNTIME DESTINATION "bin")
 
+#--------------------------
+#  rkmedia_snapshot_test
+#--------------------------
+add_executable(rkmedia_snapshot_test rkmedia_snapshot_test.c ${COMMON_SRC})
+add_dependencies(rkmedia_snapshot_test easymedia)
+target_link_libraries(rkmedia_snapshot_test easymedia)
+target_include_directories(rkmedia_snapshot_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+install(TARGETS rkmedia_snapshot_test RUNTIME DESTINATION "bin")
+
 endif() #if(V4L2_CAPTURE)
 endif() #if(RKMPP)
 endif() #if(USE_RKAIQ)
-
 
 ############################################################
 # AUDIO Module tests
