@@ -41,12 +41,11 @@ public:
 private:
   void StartStream();
   void StopStream();
-  void ManualSplit();
+  void ManualSplit(std::shared_ptr<MediaBuffer> vid_buffer);
   std::shared_ptr<VideoRecorder> NewRecorder(const char *path);
   std::string GenFilePath();
   int GetVideoExtradata(std::shared_ptr<MediaBuffer> vid_buffer);
-  void CheckRecordEnd(int64_t duration_us,
-                      std::shared_ptr<MediaBuffer> vid_buffer);
+  void CheckRecordEnd(int duration_s, std::shared_ptr<MediaBuffer> vid_buffer);
   void DequePushBack(std::deque<std::shared_ptr<MediaBuffer>> *deque,
                      std::shared_ptr<MediaBuffer> buffer, bool is_video);
   void PreRecordWrite();

@@ -396,32 +396,37 @@ void MuxerFlow::StopStream() {
   }
 }
 
-void MuxerFlow::CheckRecordEnd(int64_t duration_us,
+void MuxerFlow::CheckRecordEnd(int duration_s,
                                std::shared_ptr<MediaBuffer> vid_buffer) {
-  if (duration_us <= 0 || last_ts == 0)
+  if (duration_s <= 0 || last_ts == 0)
     return;
 
   if (!video_in || video_recorder == nullptr || vid_buffer == nullptr)
     return;
 
-  if (vid_buffer->GetUSTimeStamp() - last_ts >= duration_us * 1000000) {
+  if (!(vid_buffer->GetUserFlag() & MediaBuffer::kIntra))
+    return;
+
+  if (vid_buffer->GetUSTimeStamp() - last_ts >= duration_s * 1000000) {
     real_file_duration = (vid_buffer->GetUSTimeStamp() - last_ts) / 1000;
     video_recorder.reset();
     video_recorder = nullptr;
     video_extra = nullptr;
-
     manual_split = false;
     manual_split_record = false;
   }
 }
 
-void MuxerFlow::ManualSplit() {
-  if (video_recorder) {
-    video_recorder.reset();
-    video_recorder = nullptr;
-    video_extra = nullptr;
-  }
+void MuxerFlow::ManualSplit(std::shared_ptr<MediaBuffer> vid_buffer) {
+  if (!last_ts || !video_in || !video_recorder || !vid_buffer)
+    return;
 
+  if (!(vid_buffer->GetUserFlag() & MediaBuffer::kIntra))
+    return;
+
+  video_recorder.reset();
+  video_recorder = nullptr;
+  video_extra = nullptr;
   manual_split = false;
   manual_split_record = true;
 }
@@ -593,7 +598,7 @@ void MuxerFlow::PreRecordWrite() {
 bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
   MuxerFlow *flow = static_cast<MuxerFlow *>(f);
   auto &&recorder = flow->video_recorder;
-  int64_t duration_us;
+  int duration_s;
   auto &vid_buffer = input_vector[0];
   auto &aud_buffer = input_vector[1];
 
@@ -607,13 +612,10 @@ bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
   if (!flow->enable_streaming)
     return true;
 
-  if (flow->manual_split)
-    flow->ManualSplit();
-
   if (flow->manual_split_record)
-    duration_us = flow->manual_split_file_duration;
+    duration_s = flow->manual_split_file_duration;
   else
-    duration_us = flow->file_duration;
+    duration_s = flow->file_duration;
 
   if (flow->last_ts != 0 && flow->video_in && vid_buffer &&
       flow->is_lapse_record) {
@@ -632,7 +634,10 @@ bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
       flow->DequePushBack(&(flow->vid_cached_buffers), vid_buffer, true);
   }
 
-  flow->CheckRecordEnd(duration_us, vid_buffer);
+  if (flow->manual_split)
+    flow->ManualSplit(vid_buffer);
+
+  flow->CheckRecordEnd(duration_s, vid_buffer);
 
   if (recorder == nullptr) {
     recorder = flow->NewRecorder(flow->GenFilePath().c_str());
@@ -665,10 +670,14 @@ bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
     if (!flow->video_in || vid_buffer == nullptr)
       break;
 
-    if (!flow->video_extra &&
-        (vid_buffer->GetUserFlag() & MediaBuffer::kIntra)) {
-      if (flow->GetVideoExtradata(vid_buffer))
+    if (!flow->video_extra) {
+      if ((vid_buffer->GetUserFlag() & MediaBuffer::kIntra)) {
+        if (flow->GetVideoExtradata(vid_buffer))
+          break;
+      } else {
+        RKMEDIA_LOGW("Muxer: wait I frame\n");
         break;
+      }
     }
 
     if (!recorder->Write(flow, vid_buffer)) {
@@ -678,12 +687,13 @@ bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
       return true;
     }
 
-    flow->real_file_duration =
-        (vid_buffer->GetUSTimeStamp() - flow->last_ts) / 1000;
     if (flow->last_ts == 0 || vid_buffer->GetUSTimeStamp() < flow->last_ts) {
       flow->last_ts = vid_buffer->GetUSTimeStamp();
       flow->lapse_time_stamp = flow->last_ts;
     }
+
+    flow->real_file_duration =
+        (vid_buffer->GetUSTimeStamp() - flow->last_ts) / 1000;
   } while (0);
   return true;
 }
