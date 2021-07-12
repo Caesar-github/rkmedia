@@ -2494,6 +2494,7 @@ static RK_S32 RkmediaCreateJpegSnapPipeline(RkmediaChannel *VenChn) {
   std::shared_ptr<easymedia::Flow> video_jpeg_flow;
   std::shared_ptr<easymedia::Flow> video_rga_flow;
   RK_BOOL bEnableRga = RK_FALSE;
+  RK_BOOL bEnableH265 = RK_FALSE;
   RK_U32 u32InFpsNum = 1;
   RK_U32 u32InFpsDen = 1;
   RK_U32 u32OutFpsNum = 1;
@@ -2575,64 +2576,70 @@ static RK_S32 RkmediaCreateJpegSnapPipeline(RkmediaChannel *VenChn) {
   std::string flow_name = "video_enc";
   std::string flow_param = "";
   std::string enc_param = "";
-  PARAM_STRING_APPEND(flow_param, KEY_NAME, "rkmpp");
-  PARAM_STRING_APPEND(flow_param, KEY_INPUTDATATYPE, pixel_format);
-  PARAM_STRING_APPEND(flow_param, KEY_OUTPUTDATATYPE, VIDEO_H265);
-  PARAM_STRING_APPEND_TO(enc_param, KEY_BUFFER_WIDTH, video_width);
-  PARAM_STRING_APPEND_TO(enc_param, KEY_BUFFER_HEIGHT, video_height);
-  PARAM_STRING_APPEND_TO(enc_param, KEY_BUFFER_VIR_WIDTH, vir_width);
-  PARAM_STRING_APPEND_TO(enc_param, KEY_BUFFER_VIR_HEIGHT, vir_height);
-  PARAM_STRING_APPEND_TO(enc_param, KEY_RECT_X, 0);
-  PARAM_STRING_APPEND_TO(enc_param, KEY_RECT_Y, 0);
-  PARAM_STRING_APPEND_TO(enc_param, KEY_RECT_W, video_width);
-  PARAM_STRING_APPEND_TO(enc_param, KEY_RECT_H, video_height);
-  PARAM_STRING_APPEND_TO(enc_param, KEY_COMPRESS_BITRATE, pre_enc_bps);
-  PARAM_STRING_APPEND_TO(enc_param, KEY_COMPRESS_BITRATE_MAX, pre_enc_bps);
-  PARAM_STRING_APPEND_TO(enc_param, KEY_COMPRESS_BITRATE_MIN, pre_enc_bps);
-  PARAM_STRING_APPEND(enc_param, KEY_VIDEO_GOP, "1");
   // set input fps
   std::string str_fps_in;
   str_fps_in.append(std::to_string(u32InFpsNum))
       .append("/")
       .append(std::to_string(u32InFpsDen));
-  PARAM_STRING_APPEND(enc_param, KEY_FPS_IN, str_fps_in);
   // set output fps
   std::string str_fps_out;
   str_fps_out.append(std::to_string(u32OutFpsNum))
       .append("/")
       .append(std::to_string(u32OutFpsDen));
-  PARAM_STRING_APPEND(enc_param, KEY_FPS, str_fps_out);
-  // jpeg pre encoder work in fixqp mode
-  PARAM_STRING_APPEND(enc_param, KEY_COMPRESS_RC_MODE, KEY_FIXQP);
-  PARAM_STRING_APPEND(enc_param, KEY_COMPRESS_QP_INIT, "15");
-  PARAM_STRING_APPEND_TO(enc_param, KEY_ROTATION, enRotation);
+  if ((stVencChnAttr->stVencAttr.imageType == IMAGE_TYPE_FBC0) ||
+      (stVencChnAttr->stVencAttr.imageType == IMAGE_TYPE_FBC2)) {
+    PARAM_STRING_APPEND(flow_param, KEY_NAME, "rkmpp");
+    PARAM_STRING_APPEND(flow_param, KEY_INPUTDATATYPE, pixel_format);
+    PARAM_STRING_APPEND(flow_param, KEY_OUTPUTDATATYPE, VIDEO_H265);
+    PARAM_STRING_APPEND_TO(enc_param, KEY_BUFFER_WIDTH, video_width);
+    PARAM_STRING_APPEND_TO(enc_param, KEY_BUFFER_HEIGHT, video_height);
+    PARAM_STRING_APPEND_TO(enc_param, KEY_BUFFER_VIR_WIDTH, vir_width);
+    PARAM_STRING_APPEND_TO(enc_param, KEY_BUFFER_VIR_HEIGHT, vir_height);
+    PARAM_STRING_APPEND_TO(enc_param, KEY_RECT_X, 0);
+    PARAM_STRING_APPEND_TO(enc_param, KEY_RECT_Y, 0);
+    PARAM_STRING_APPEND_TO(enc_param, KEY_RECT_W, video_width);
+    PARAM_STRING_APPEND_TO(enc_param, KEY_RECT_H, video_height);
+    PARAM_STRING_APPEND_TO(enc_param, KEY_COMPRESS_BITRATE, pre_enc_bps);
+    PARAM_STRING_APPEND_TO(enc_param, KEY_COMPRESS_BITRATE_MAX, pre_enc_bps);
+    PARAM_STRING_APPEND_TO(enc_param, KEY_COMPRESS_BITRATE_MIN, pre_enc_bps);
+    PARAM_STRING_APPEND(enc_param, KEY_VIDEO_GOP, "1");
+    PARAM_STRING_APPEND(enc_param, KEY_FPS_IN, str_fps_in);
+    PARAM_STRING_APPEND(enc_param, KEY_FPS, str_fps_out);
+    // jpeg pre encoder work in fixqp mode
+    PARAM_STRING_APPEND(enc_param, KEY_COMPRESS_RC_MODE, KEY_FIXQP);
+    PARAM_STRING_APPEND(enc_param, KEY_COMPRESS_QP_INIT, "15");
+    PARAM_STRING_APPEND_TO(enc_param, KEY_ROTATION, enRotation);
 
-  flow_param = easymedia::JoinFlowParam(flow_param, 1, enc_param);
-  RKMEDIA_LOGD("#JPEG: Pre encoder flow param:\n%s\n", flow_param.c_str());
-  video_encoder_flow = easymedia::REFLECTOR(Flow)::Create<easymedia::Flow>(
-      flow_name.c_str(), flow_param.c_str());
-  if (!video_encoder_flow) {
-    RKMEDIA_LOGE("[%s]: Create flow %s failed\n", __func__, flow_name.c_str());
-    return -RK_ERR_VENC_ILLEGAL_PARAM;
-  }
+    flow_param = easymedia::JoinFlowParam(flow_param, 1, enc_param);
+    RKMEDIA_LOGD("#JPEG: Pre encoder flow param:\n%s\n", flow_param.c_str());
+    video_encoder_flow = easymedia::REFLECTOR(Flow)::Create<easymedia::Flow>(
+        flow_name.c_str(), flow_param.c_str());
+    if (!video_encoder_flow) {
+      RKMEDIA_LOGE("[%s]: Create flow %s failed\n", __func__,
+                   flow_name.c_str());
+      return -RK_ERR_VENC_ILLEGAL_PARAM;
+    }
 
-  flow_name = "video_dec";
-  flow_param = "";
-  PARAM_STRING_APPEND(flow_param, KEY_NAME, "rkmpp");
-  PARAM_STRING_APPEND(flow_param, KEY_INPUTDATATYPE, VIDEO_H265);
-  PARAM_STRING_APPEND(flow_param, KEY_OUTPUTDATATYPE, IMAGE_NV12);
-  std::string dec_param = "";
-  PARAM_STRING_APPEND(dec_param, KEY_INPUTDATATYPE, VIDEO_H265);
-  PARAM_STRING_APPEND_TO(dec_param, KEY_MPP_SPLIT_MODE, 0);
-  PARAM_STRING_APPEND_TO(dec_param, KEY_OUTPUT_TIMEOUT, -1);
+    flow_name = "video_dec";
+    flow_param = "";
+    PARAM_STRING_APPEND(flow_param, KEY_NAME, "rkmpp");
+    PARAM_STRING_APPEND(flow_param, KEY_INPUTDATATYPE, VIDEO_H265);
+    PARAM_STRING_APPEND(flow_param, KEY_OUTPUTDATATYPE, IMAGE_NV12);
+    std::string dec_param = "";
+    PARAM_STRING_APPEND(dec_param, KEY_INPUTDATATYPE, VIDEO_H265);
+    PARAM_STRING_APPEND_TO(dec_param, KEY_MPP_SPLIT_MODE, 0);
+    PARAM_STRING_APPEND_TO(dec_param, KEY_OUTPUT_TIMEOUT, -1);
 
-  flow_param = easymedia::JoinFlowParam(flow_param, 1, dec_param);
-  RKMEDIA_LOGD("#JPEG: Pre decoder flow param:\n%s\n", flow_param.c_str());
-  video_decoder_flow = easymedia::REFLECTOR(Flow)::Create<easymedia::Flow>(
-      flow_name.c_str(), flow_param.c_str());
-  if (!video_decoder_flow) {
-    RKMEDIA_LOGE("[%s]: Create flow %s failed\n", __func__, flow_name.c_str());
-    return -RK_ERR_VENC_ILLEGAL_PARAM;
+    flow_param = easymedia::JoinFlowParam(flow_param, 1, dec_param);
+    RKMEDIA_LOGD("#JPEG: Pre decoder flow param:\n%s\n", flow_param.c_str());
+    video_decoder_flow = easymedia::REFLECTOR(Flow)::Create<easymedia::Flow>(
+        flow_name.c_str(), flow_param.c_str());
+    if (!video_decoder_flow) {
+      RKMEDIA_LOGE("[%s]: Create flow %s failed\n", __func__,
+                   flow_name.c_str());
+      return -RK_ERR_VENC_ILLEGAL_PARAM;
+    }
+    bEnableH265 = RK_TRUE;
   }
 
   RK_S32 jpeg_width = video_width;
@@ -2666,7 +2673,10 @@ static RK_S32 RkmediaCreateJpegSnapPipeline(RkmediaChannel *VenChn) {
     flow_name = "filter";
     flow_param = "";
     PARAM_STRING_APPEND(flow_param, KEY_NAME, "rkrga");
-    PARAM_STRING_APPEND(flow_param, KEY_INPUTDATATYPE, IMAGE_NV12);
+    if (!bEnableH265)
+      PARAM_STRING_APPEND(flow_param, KEY_INPUTDATATYPE, pixel_format);
+    else
+      PARAM_STRING_APPEND(flow_param, KEY_INPUTDATATYPE, IMAGE_NV12);
     // Set output buffer type.
     PARAM_STRING_APPEND(flow_param, KEY_OUTPUTDATATYPE, IMAGE_NV12);
     // Set output buffer size.
@@ -2793,9 +2803,10 @@ static RK_S32 RkmediaCreateJpegSnapPipeline(RkmediaChannel *VenChn) {
   }
   video_encoder_flow->AddDownFlow(video_save_flow, 0, 0);
 #endif // DEBUG_JPEG_SAVE_H265
-
-  video_encoder_flow->SetFlowTag("JpegPreEncoder");
-  video_decoder_flow->SetFlowTag("JpegPreDecoder");
+  if (bEnableH265) {
+    video_encoder_flow->SetFlowTag("JpegPreEncoder");
+    video_decoder_flow->SetFlowTag("JpegPreDecoder");
+  }
   video_jpeg_flow->SetFlowTag("JpegEncoder");
   if (bEnableRga)
     video_rga_flow->SetFlowTag("JpegRgaFilter");
@@ -2803,17 +2814,24 @@ static RK_S32 RkmediaCreateJpegSnapPipeline(RkmediaChannel *VenChn) {
   // rkmedia flow bind.
   if (bEnableRga) {
     video_rga_flow->AddDownFlow(video_jpeg_flow, 0, 0);
-    video_decoder_flow->AddDownFlow(video_rga_flow, 0, 0);
+    if (bEnableH265)
+      video_decoder_flow->AddDownFlow(video_rga_flow, 0, 0);
   } else {
     video_decoder_flow->AddDownFlow(video_jpeg_flow, 0, 0);
   }
-  video_encoder_flow->AddDownFlow(video_decoder_flow, 0, 0);
+  if (bEnableH265)
+    video_encoder_flow->AddDownFlow(video_decoder_flow, 0, 0);
+
   // Init buffer list.
   RkmediaChnInitBuffer(VenChn);
   video_jpeg_flow->SetOutputCallBack(VenChn, FlowOutputCallback);
 
-  VenChn->rkmedia_flow = video_encoder_flow;
-  VenChn->rkmedia_flow_list.push_back(video_decoder_flow);
+  if (bEnableH265) {
+    VenChn->rkmedia_flow = video_encoder_flow;
+    VenChn->rkmedia_flow_list.push_back(video_decoder_flow);
+  } else
+    VenChn->rkmedia_flow = video_rga_flow;
+
   if (bEnableRga)
     VenChn->rkmedia_flow_list.push_back(video_rga_flow);
   VenChn->rkmedia_flow_list.push_back(video_jpeg_flow);
