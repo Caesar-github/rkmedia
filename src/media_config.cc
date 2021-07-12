@@ -103,7 +103,7 @@ bool ParseMediaConfigFromMap(std::map<std::string, std::string> &params,
     GET_STRING_TO_INT(img_cfg.rect_info.y, params, KEY_RECT_Y, 0);
     GET_STRING_TO_INT(img_cfg.rect_info.w, params, KEY_RECT_W, 0);
     GET_STRING_TO_INT(img_cfg.rect_info.h, params, KEY_RECT_H, 0);
-    RKMEDIA_LOGE("%s: rect_x = %d, rect_y = %d, rect.w = %d, rect.h = %d \n",
+    RKMEDIA_LOGI("%s: rect_x = %d, rect_y = %d, rect.w = %d, rect.h = %d \n",
                  __func__, img_cfg.rect_info.x, img_cfg.rect_info.y,
                  img_cfg.rect_info.w, img_cfg.rect_info.h);
 
