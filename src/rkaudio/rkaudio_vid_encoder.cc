@@ -33,6 +33,7 @@ RKAudioVideoEncoder::~RKAudioVideoEncoder() {
 }
 
 bool RKAudioVideoEncoder::InitConfig(const MediaConfig &cfg) {
+  const VideoEncoderQp &qp = cfg.vid_cfg.encode_qp;
   GetConfig().vid_cfg = cfg.vid_cfg;
   GetConfig().type = Type::Video;
 
@@ -54,9 +55,9 @@ bool RKAudioVideoEncoder::InitConfig(const MediaConfig &cfg) {
   Context_->gop_size = cfg.vid_cfg.gop_size;
   Context_->max_b_frames = 2;
 
-  Context_->qmax = cfg.vid_cfg.qp_max;
-  Context_->qmin = cfg.vid_cfg.qp_min;
-  Context_->max_qdiff = cfg.vid_cfg.qp_step;
+  Context_->qmax = qp.qp_max;
+  Context_->qmin = qp.qp_min;
+  Context_->max_qdiff = qp.qp_step;
   // Context_->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
   if (rkcodec_open2(Context_, Codec_, NULL) < 0) {

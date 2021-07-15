@@ -315,9 +315,10 @@ bool RKAUDIOMuxer::NewMuxerStream(
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   if (mc.type == Type::Video) {
     const VideoConfig &vc = mc.vid_cfg;
+    const VideoEncoderQp &qp = vc.encode_qp;
     const auto &info = vc.image_cfg.image_info;
-    s->codec->qmin = vc.qp_min;
-    s->codec->qmax = vc.qp_max;
+    s->codec->qmin = qp.qp_min;
+    s->codec->qmax = qp.qp_max;
     s->codec->coded_width = info.vir_width;
     s->codec->coded_height = info.vir_height;
   }
