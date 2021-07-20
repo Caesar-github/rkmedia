@@ -7083,14 +7083,19 @@ RK_S32 RK_MPI_MUXER_EnableChn(MUXER_CHN VmChn, MUXER_CHN_ATTR_S *pstAttr) {
                          pstAttr->bLapseRecord);
 
   RKMEDIA_LOGD("[%s]: pre-record time: %d(s)\n", __func__,
-               pstAttr->u32PreRecTimeSec);
+               pstAttr->stPreRecordParam.u32PreRecTimeSec);
   PARAM_STRING_APPEND_TO(MuxerParamStr, KEY_PRE_RECORD_TIME,
-                         pstAttr->u32PreRecTimeSec);
+                         pstAttr->stPreRecordParam.u32PreRecTimeSec);
 
   RKMEDIA_LOGD("[%s]: pre-record cache time: %d(s)\n", __func__,
-               pstAttr->u32PreRecCacheTime);
+               pstAttr->stPreRecordParam.u32PreRecCacheTime);
   PARAM_STRING_APPEND_TO(MuxerParamStr, KEY_PRE_RECORD_CACHE_TIME,
-                         pstAttr->u32PreRecCacheTime);
+                         pstAttr->stPreRecordParam.u32PreRecCacheTime);
+
+  RKMEDIA_LOGD("[%s]: pre-record mode: %d(s)\n", __func__,
+               pstAttr->stPreRecordParam.enPreRecordMode);
+  PARAM_STRING_APPEND_TO(MuxerParamStr, KEY_PRE_RECORD_MODE,
+                         pstAttr->stPreRecordParam.enPreRecordMode);
 
   switch (pstAttr->enType) {
   case MUXER_TYPE_MP4:

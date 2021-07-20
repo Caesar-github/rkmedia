@@ -58,7 +58,8 @@ MuxerFlow::MuxerFlow(const char *param)
       file_time_en(false), enable_streaming(true), request_stop_stream(false),
       file_name_cb(nullptr), file_name_handle(nullptr), muxer_id(0),
       manual_split(false), manual_split_record(false),
-      manual_split_file_duration(0), pre_record_time(0),
+      manual_split_file_duration(0), is_first_file(true),
+      pre_record_mode(MUXER_PRE_RECORD_NONE), pre_record_time(0),
       pre_record_cache_time(0), vid_buffer_size(0), aud_buffer_size(0),
       is_lapse_record(false), lapse_time_stamp(0) {
   std::list<std::string> separate_list;
@@ -110,6 +111,12 @@ MuxerFlow::MuxerFlow(const char *param)
                  file_duration);
   }
 
+  std::string pre_record_mode_str = params[KEY_PRE_RECORD_MODE];
+  if (!pre_record_mode_str.empty()) {
+    pre_record_mode = (PRE_RECORD_MODE_E)std::stoi(pre_record_mode_str);
+    RKMEDIA_LOGI("Muxer: pre_record_mode %d\n", pre_record_mode);
+  }
+
   std::string &pre_record_time_str = params[KEY_PRE_RECORD_TIME];
   if (!pre_record_time_str.empty()) {
     pre_record_time = std::stoi(pre_record_time_str);
@@ -119,6 +126,8 @@ MuxerFlow::MuxerFlow(const char *param)
   std::string &pre_record_cache_time_str = params[KEY_PRE_RECORD_CACHE_TIME];
   if (!pre_record_cache_time_str.empty()) {
     pre_record_cache_time = std::stoi(pre_record_cache_time_str);
+    if (pre_record_cache_time < pre_record_time)
+      pre_record_cache_time = pre_record_time;
     RKMEDIA_LOGI("Muxer: pre-record cache time %d(s)\n", pre_record_cache_time);
   }
 
@@ -369,6 +378,7 @@ void MuxerFlow::StartStream() {
     memset(&muxer_event, 0, sizeof(MuxerEvent));
     muxer_event.type = MUX_EVENT_STREAM_START;
     event_callback_(event_handler2_, (void *)&muxer_event);
+    is_first_file = true;
   }
   enable_streaming = true;
 }
@@ -414,6 +424,7 @@ void MuxerFlow::CheckRecordEnd(int duration_s,
     video_extra = nullptr;
     manual_split = false;
     manual_split_record = false;
+    is_first_file = false;
   }
 }
 
@@ -427,6 +438,7 @@ void MuxerFlow::ManualSplit(std::shared_ptr<MediaBuffer> vid_buffer) {
   video_recorder.reset();
   video_recorder = nullptr;
   video_extra = nullptr;
+  is_first_file = false;
   manual_split = false;
   manual_split_record = true;
 }
@@ -434,9 +446,7 @@ void MuxerFlow::ManualSplit(std::shared_ptr<MediaBuffer> vid_buffer) {
 void MuxerFlow::DequePushBack(std::deque<std::shared_ptr<MediaBuffer>> *deque,
                               std::shared_ptr<MediaBuffer> buffer,
                               bool is_video) {
-  auto mb = MediaBuffer::Clone(*buffer);
-
-  if (mb == nullptr) {
+  if (buffer == nullptr) {
     RKMEDIA_LOGE("clone mb failed");
     return;
   }
@@ -447,17 +457,17 @@ void MuxerFlow::DequePushBack(std::deque<std::shared_ptr<MediaBuffer>> *deque,
     if (back->GetUSTimeStamp() - front->GetUSTimeStamp() >=
         pre_record_cache_time * 1000000) {
       deque->pop_front();
-      deque->push_back(mb);
+      deque->push_back(buffer);
 
       if (is_video) {
 #if PRE_RECORD_DEBUG
-        vid_buffer_size += mb->GetValidSize() - front->GetValidSize();
+        vid_buffer_size += buffer->GetValidSize() - front->GetValidSize();
         printf("video0: buffer cnt: %d, vid_buffer_size: %d\n", deque->size(),
                aud_buffer_size);
 #endif
       } else {
 #if PRE_RECORD_DEBUG
-        aud_buffer_size += mb->GetValidSize() - front->GetValidSize();
+        aud_buffer_size += buffer->GetValidSize() - front->GetValidSize();
         printf("audio0: buffer cnt: %d, aud_buffer_size: %d\n", deque->size(),
                aud_buffer_size);
 #endif
@@ -467,44 +477,63 @@ void MuxerFlow::DequePushBack(std::deque<std::shared_ptr<MediaBuffer>> *deque,
     }
   }
 
-  deque->push_back(mb);
+  deque->push_back(buffer);
 
   if (is_video) {
 #if PRE_RECORD_DEBUG
-    vid_buffer_size += mb->GetValidSize();
+    vid_buffer_size += buffer->GetValidSize();
     printf("video1: buffer cnt: %d, vid_buffer_size: %d\n", deque->size(),
            vid_buffer_size);
 #endif
   } else {
 #if PRE_RECORD_DEBUG
-    aud_buffer_size += mb->GetValidSize();
+    aud_buffer_size += buffer->GetValidSize();
     printf("audio1: buffer cnt: %d, aud_buffer_size: %d\n", deque->size(),
            aud_buffer_size);
 #endif
   }
 }
 
-void MuxerFlow::PreRecordWrite() {
+int MuxerFlow::PreRecordWrite(std::shared_ptr<MediaBuffer> vid_buffer,
+                              std::shared_ptr<MediaBuffer> aud_buffer) {
   int64_t seek_time = 0;
   int size = 0, seek_frames = 0, pre_record_frames = 0;
-  bool pre_record;
+  bool is_pre_record = false;
 
-  if (video_recorder == nullptr)
-    return;
+  if (video_recorder == nullptr || is_lapse_record)
+    return 0;
 
-  pre_record = manual_split_record && (pre_record_time > 0) &&
-               (pre_record_cache_time >= pre_record_time);
-  if (!pre_record)
-    return;
+  switch (pre_record_mode) {
+  case MUXER_PRE_RECORD_MANUAL_SPLIT:
+    is_pre_record = manual_split_record && (pre_record_time > 0);
+    break;
+  case MUXER_PRE_RECORD_SINGLE:
+    is_pre_record = is_first_file && (pre_record_time > 0);
+    break;
+  case MUXER_PRE_RECORD_NORMAL:
+    is_pre_record = pre_record_time > 0 ? true : false;
+    break;
+  default:
+    return 0;
+  }
+
+  if (!is_pre_record)
+    return 0;
 
   // write pre-record video buffers
-  pre_record_frames = pre_record_time * vid_enc_config.vid_cfg.frame_rate;
   size = vid_cached_buffers.size();
+  if (video_in && vid_buffer)
+    size -= 1;
+
+  if (size <= 0)
+    return 0;
+
+  pre_record_frames = pre_record_time * vid_enc_config.vid_cfg.frame_rate;
   if (size < pre_record_frames) {
     RKMEDIA_LOGI(
         "%s: video cached buffer not enough(%d), pre_record_frames = %d\n",
         __func__, size, pre_record_frames);
-    return;
+    pre_record_frames = size;
   }
 
   int first_frame_index = size - pre_record_frames;
@@ -537,7 +566,7 @@ void MuxerFlow::PreRecordWrite() {
       // not find I frame
       if (i == first_frame_index) {
         RKMEDIA_LOGI("%s: not find I frame\n", __func__);
-        return;
+        return 0;
       }
     }
   }
@@ -547,39 +576,46 @@ void MuxerFlow::PreRecordWrite() {
   RKMEDIA_LOGD("\t video_cached_buffers.size(): %d\n", size);
   RKMEDIA_LOGD("\t first_frame_index = %d\n", first_frame_index);
   RKMEDIA_LOGD("\t I frame index = %d\n", i);
-  RKMEDIA_LOGD("\t seek_time = %lld\n", seek_time);
+  RKMEDIA_LOGD("\t seek_time = %lld us\n", seek_time);
 
   if (!video_extra) {
     if (GetVideoExtradata(vid_cached_buffers.at(i))) {
       RKMEDIA_LOGI("%s: Intra Frame without sps pps\n", __func__);
-      return;
+      return 0;
     }
   }
 
   last_ts = vid_cached_buffers.at(i)->GetUSTimeStamp();
   for (; i < size; i++) {
     if (!video_recorder->Write(this, vid_cached_buffers.at(i))) {
-      RKMEDIA_LOGI("%s: write video pre-record buffers failed\n", __func__);
+      RKMEDIA_LOGW("%s: write video pre-record buffers failed\n", __func__);
       video_extra = nullptr;
-      return;
+      last_ts = 0;
+      return -1;
     }
   }
 
   // write pre-record audio buffers
+  size = aud_cached_buffers.size();
+  if (audio_in && aud_buffer)
+    size -= 1;
+
+  if (size <= 0)
+    return 0;
+
   SampleInfo *sample_info = &(aud_enc_config.aud_cfg.sample_info);
   pre_record_frames =
       (pre_record_time * sample_info->sample_rate) / sample_info->nb_samples;
-  size = aud_cached_buffers.size();
   seek_frames = (seek_time * sample_info->sample_rate) /
                 sample_info->nb_samples / 1000000;
-  i = size - pre_record_frames + seek_frames;
 
   if (size < pre_record_frames) {
     RKMEDIA_LOGI(
         "%s: audio cached buffer not enough(%d), pre_record_frames = %d\n",
         __func__, size, pre_record_frames);
-    return;
+    pre_record_frames = size;
   }
+  i = size - pre_record_frames + seek_frames;
 
   RKMEDIA_LOGD("%s:\n", __func__);
   RKMEDIA_LOGD("\t audio pre_record_frames: %d\n", pre_record_frames);
@@ -590,9 +626,13 @@ void MuxerFlow::PreRecordWrite() {
   for (; i < size; i++) {
     if (!video_recorder->Write(this, aud_cached_buffers.at(i))) {
       RKMEDIA_LOGI("%s: write audio pre-record buffers failed\n", __func__);
-      return;
+      video_extra = nullptr;
+      last_ts = 0;
+      return -1;
     }
   }
+
+  return 0;
 }
 
 bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
@@ -601,6 +641,24 @@ bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
   int duration_s;
   auto &vid_buffer = input_vector[0];
   auto &aud_buffer = input_vector[1];
+
+  if (flow->last_ts != 0 && flow->video_in && vid_buffer &&
+      flow->is_lapse_record) {
+    int lapse_frame_interval =
+        1000000 / flow->vid_enc_config.vid_cfg.frame_rate; // us
+    vid_buffer->SetUSTimeStamp(flow->lapse_time_stamp + lapse_frame_interval);
+    flow->lapse_time_stamp += lapse_frame_interval;
+  }
+
+  if (!flow->is_lapse_record &&
+      (flow->pre_record_mode != MUXER_PRE_RECORD_NONE) &&
+      (flow->pre_record_time > 0)) {
+    if (flow->audio_in && aud_buffer != nullptr)
+      flow->DequePushBack(&(flow->aud_cached_buffers), aud_buffer, false);
+
+    if (flow->video_in && vid_buffer != nullptr)
+      flow->DequePushBack(&(flow->vid_cached_buffers), vid_buffer, true);
+  }
 
   if (flow->request_stop_stream) {
     flow->StopStream();
@@ -617,23 +675,6 @@ bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
   else
     duration_s = flow->file_duration;
 
-  if (flow->last_ts != 0 && flow->video_in && vid_buffer &&
-      flow->is_lapse_record) {
-    int lapse_frame_interval =
-        1000000 / flow->vid_enc_config.vid_cfg.frame_rate; // us
-    vid_buffer->SetUSTimeStamp(flow->lapse_time_stamp + lapse_frame_interval);
-    flow->lapse_time_stamp += lapse_frame_interval;
-  }
-
-  if (flow->pre_record_time > 0 &&
-      flow->pre_record_cache_time >= flow->pre_record_time) {
-    if (flow->audio_in && aud_buffer != nullptr)
-      flow->DequePushBack(&(flow->aud_cached_buffers), aud_buffer, false);
-
-    if (flow->video_in && vid_buffer != nullptr)
-      flow->DequePushBack(&(flow->vid_cached_buffers), vid_buffer, true);
-  }
-
   if (flow->manual_split)
     flow->ManualSplit(vid_buffer);
 
@@ -648,7 +689,12 @@ bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
       flow->manual_split = false;
       flow->manual_split_record = false;
     } else {
-      flow->PreRecordWrite();
+      if (flow->PreRecordWrite(vid_buffer, aud_buffer)) {
+        recorder.reset();
+        flow->enable_streaming = false;
+        flow->manual_split_record = false;
+        return true;
+      }
     }
   }
 

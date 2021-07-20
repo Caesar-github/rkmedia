@@ -130,6 +130,21 @@ typedef struct rkMUXER_AUDIO_STREAM_PARAM_S {
   RK_U32 u32NbSamples;
 } MUXER_AUDIO_STREAM_PARAM_S;
 
+typedef enum rkMUXER_PRE_RECORD_TYPE_E {
+  MUXER_PRE_RECORD_NONE = 0,
+  MUXER_PRE_RECORD_MANUAL_SPLIT,
+  MUXER_PRE_RECORD_SINGLE,
+  MUXER_PRE_RECORD_NORMAL
+} MUXER_PRE_RECORD_MODE_E;
+
+typedef struct rkMUXER_PRE_RECORD_PARAM_S {
+  // pre record time
+  RK_U32 u32PreRecTimeSec;
+  // pre record time(s)
+  RK_U32 u32PreRecCacheTime;
+  MUXER_PRE_RECORD_MODE_E enPreRecordMode;
+} MUXER_PRE_RECORD_PARAM_S;
+
 typedef struct rkMUXER_CHN_ATTR_S {
   MUXER_MODE_E enMode;
   MUXER_TYPE_E enType;
@@ -143,10 +158,9 @@ typedef struct rkMUXER_CHN_ATTR_S {
   // audio stream params
   MUXER_AUDIO_STREAM_PARAM_S stAudioStreamParam;
 
-  // pre record time
-  RK_U32 u32PreRecTimeSec;
-  // pre record time(s)
-  RK_U32 u32PreRecCacheTime;
+  // pre record params
+  MUXER_PRE_RECORD_PARAM_S stPreRecordParam;
+
   RK_U32 u32MuxerId;
   RK_BOOL bLapseRecord;
 } MUXER_CHN_ATTR_S;

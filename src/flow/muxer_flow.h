@@ -24,6 +24,13 @@ namespace easymedia {
 typedef int (*GET_FILE_NAMES_CB)(void *handle, char *file_name,
                                  unsigned int muxer_id);
 
+typedef enum {
+  MUXER_PRE_RECORD_NONE = 0,
+  MUXER_PRE_RECORD_MANUAL_SPLIT,
+  MUXER_PRE_RECORD_SINGLE,
+  MUXER_PRE_RECORD_NORMAL
+} PRE_RECORD_MODE_E;
+
 class VideoRecorder;
 
 static bool save_buffer(Flow *f, MediaBufferVector &input_vector);
@@ -48,7 +55,8 @@ private:
   void CheckRecordEnd(int duration_s, std::shared_ptr<MediaBuffer> vid_buffer);
   void DequePushBack(std::deque<std::shared_ptr<MediaBuffer>> *deque,
                      std::shared_ptr<MediaBuffer> buffer, bool is_video);
-  void PreRecordWrite();
+  int PreRecordWrite(std::shared_ptr<MediaBuffer> vid_buffer,
+                     std::shared_ptr<MediaBuffer> aud_buffer);
   friend bool save_buffer(Flow *f, MediaBufferVector &input_vector);
   friend int muxer_buffer_callback(void *handler, uint8_t *buf, int buf_size);
 
@@ -80,6 +88,8 @@ private:
   bool manual_split;
   bool manual_split_record;
   int64_t manual_split_file_duration;
+  bool is_first_file;
+  PRE_RECORD_MODE_E pre_record_mode;
   unsigned int pre_record_time;
   unsigned int pre_record_cache_time;
   std::deque<std::shared_ptr<MediaBuffer>> vid_cached_buffers;
