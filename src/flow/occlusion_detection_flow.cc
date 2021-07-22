@@ -136,7 +136,7 @@ bool od_process(Flow *f, MediaBufferVector &input_vector) {
 
   if (occlusion_detection(odf->detection_ctx, src->GetPtr(), odf->roi_in,
                           odf->roi_cnt)) {
-    RKMEDIA_LOGE("OD: occlusion detection process failed!\n");
+    RKMEDIA_LOGD("OD: occlusion detection process failed!\n");
     return false;
   }
 
