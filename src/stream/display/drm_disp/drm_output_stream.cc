@@ -24,7 +24,7 @@ struct plane_property_ids {
   uint32_t async_commit;
 };
 
-#define USING_AYNC_COMMIT 1
+#define USING_ASYNC_COMMIT 1
 
 class DRMDisplayBuffer {
 public:
