@@ -9,6 +9,8 @@
 #include "flow.h"
 #include "image.h"
 #include "key_string.h"
+#include <rga/im2d.h>
+#include <rga/rga.h>
 
 namespace easymedia {
 
@@ -169,6 +171,22 @@ FilterFlow::FilterFlow(const char *param)
       MediaBuffer::MemType m_type = StringToMemType(mem_type.c_str());
 
       buffer_pool = std::make_shared<BufferPool>(m_cnt, m_size, m_type);
+      /* fill black color */
+      for (int i = 0; i < m_cnt; i++) {
+        auto mb = buffer_pool->GetBuffer(false);
+        if (!mb) {
+          RKMEDIA_LOGE("%s: buffer_pool get null buffer!\n", GetFlowTag());
+          return;
+        }
+        if (PIX_FMT_NV12 == out_img_info.pix_fmt) {
+          rga_buffer_t src =
+              wrapbuffer_fd(mb->GetFD(), out_img_info.vir_width,
+                            out_img_info.vir_height, RK_FORMAT_YCbCr_420_SP);
+          im_rect rect = {0, 0, out_img_info.vir_width,
+                          out_img_info.vir_height};
+          imfill(src, rect, 0);
+        }
+      }
     }
   } else {
     // support async mode (one input, multi output)
@@ -213,6 +231,14 @@ bool do_filters(Flow *f, MediaBufferVector &input_vector) {
           auto &&mb =
               MediaBuffer::Alloc2(size, MediaBuffer::MemType::MEM_HARD_WARE);
           out_buffer = std::make_shared<ImageBuffer>(mb, info);
+          /* fill black color */
+          if (PIX_FMT_NV12 == info.pix_fmt) {
+            rga_buffer_t src =
+                wrapbuffer_fd(out_buffer->GetFD(), info.vir_width,
+                              info.vir_height, RK_FORMAT_YCbCr_420_SP);
+            im_rect rect = {0, 0, info.vir_width, info.vir_height};
+            imfill(src, rect, 0);
+          }
         }
       } else {
         auto ib = std::make_shared<ImageBuffer>();
