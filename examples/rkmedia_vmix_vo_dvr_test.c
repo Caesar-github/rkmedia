@@ -190,8 +190,6 @@ static int dvr_bind(RK_U16 *in, stDvr *dvr, RK_U16 dvr_num, RECT_S *area,
   stDevInfo.u16Fps = 30;
   stDevInfo.u32ImgWidth = u32DispWidth;
   stDevInfo.u32ImgHeight = u32DispHeight;
-  stDevInfo.bEnBufPool = RK_TRUE;
-  stDevInfo.u16BufPoolCnt = 2;
 
   for (RK_U16 i = 0; i < dvr_num && i < area_num; i++) {
     stDevInfo.stChnInfo[i].stInRect.s32X = 0;
