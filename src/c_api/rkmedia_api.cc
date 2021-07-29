@@ -106,6 +106,8 @@ typedef struct _RkmediaChannel {
   // rkmedia_flow_list : venc flow : file save flow.
   std::list<std::shared_ptr<easymedia::Flow>> rkmedia_flow_list;
   OutCbFunc out_cb;
+  OutCbFuncEx out_ex_cb;
+  RK_VOID *out_handle;
   EventCbFunc event_cb;
   RK_VOID *event_handle;
 
@@ -346,6 +348,8 @@ static void Reset_Channel_Table(RkmediaChannel *tbl, int cnt, MOD_ID_E mid) {
     tbl[i].chn_id = i;
     tbl[i].status = CHN_STATUS_CLOSED;
     tbl[i].out_cb = nullptr;
+    tbl[i].out_ex_cb = nullptr;
+    tbl[i].out_handle = nullptr;
     tbl[i].event_cb = nullptr;
     tbl[i].event_handle = nullptr;
     tbl[i].bind_ref_pre = 0;
@@ -995,6 +999,8 @@ FlowOutputCallback(void *handle,
   // can only choose one.
   if (target_chn->out_cb)
     target_chn->out_cb(mb);
+  else if (target_chn->out_ex_cb)
+    target_chn->out_ex_cb(mb, target_chn->out_handle);
   else
     RkmediaChnPushBuffer(target_chn, mb);
 }
@@ -1048,6 +1054,62 @@ RK_S32 RK_MPI_SYS_RegisterOutCb(const MPP_CHN_S *pstChn, OutCbFunc cb) {
   }
 
   target_chn->out_cb = cb;
+  // flow->SetOutputCallBack(target_chn, FlowOutputCallback);
+
+  return RK_ERR_SYS_OK;
+}
+
+RK_S32 RK_MPI_SYS_RegisterOutCbEx(const MPP_CHN_S *pstChn, OutCbFuncEx cb,
+                                  RK_VOID *pHandle) {
+  std::shared_ptr<easymedia::Flow> flow;
+  RkmediaChannel *target_chn = NULL;
+
+  switch (pstChn->enModId) {
+  case RK_ID_VI:
+    target_chn = &g_vi_chns[pstChn->s32ChnId];
+    break;
+  case RK_ID_VENC:
+    target_chn = &g_venc_chns[pstChn->s32ChnId];
+    break;
+  case RK_ID_AI:
+    target_chn = &g_ai_chns[pstChn->s32ChnId];
+    break;
+  case RK_ID_AENC:
+    target_chn = &g_aenc_chns[pstChn->s32ChnId];
+    break;
+  case RK_ID_RGA:
+    target_chn = &g_rga_chns[pstChn->s32ChnId];
+    break;
+  case RK_ID_ADEC:
+    target_chn = &g_adec_chns[pstChn->s32ChnId];
+    break;
+  case RK_ID_VO:
+    target_chn = &g_vo_chns[pstChn->s32ChnId];
+    break;
+  case RK_ID_VDEC:
+    target_chn = &g_vdec_chns[pstChn->s32ChnId];
+    break;
+  default:
+    return -RK_ERR_SYS_NOT_SUPPORT;
+  }
+
+  if (target_chn->status < CHN_STATUS_OPEN)
+    return -RK_ERR_SYS_NOTREADY;
+
+  if (!target_chn->rkmedia_flow_list.empty())
+    flow = target_chn->rkmedia_flow_list.back();
+  else if (target_chn->rkmedia_flow)
+    flow = target_chn->rkmedia_flow;
+
+  if (!flow) {
+    RKMEDIA_LOGE("<ModeID:%d ChnID:%d> fatal error!"
+                 "Status does not match the resource\n",
+                 pstChn->enModId, pstChn->s32ChnId);
+    return -RK_ERR_SYS_NOT_PERM;
+  }
+
+  target_chn->out_ex_cb = cb;
+  target_chn->out_handle = pHandle;
   // flow->SetOutputCallBack(target_chn, FlowOutputCallback);
 
   return RK_ERR_SYS_OK;

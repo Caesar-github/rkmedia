@@ -13,6 +13,7 @@ extern "C" {
 typedef void *MEDIA_BUFFER_POOL;
 typedef void *MEDIA_BUFFER;
 typedef void (*OutCbFunc)(MEDIA_BUFFER mb);
+typedef void (*OutCbFuncEx)(MEDIA_BUFFER mb, RK_VOID *pHandle);
 
 #define MB_FLAG_NOCACHED 0x01             // no cached attrs
 #define MB_FLAG_PHY_ADDR_CONSECUTIVE 0x02 // physical address consecutive

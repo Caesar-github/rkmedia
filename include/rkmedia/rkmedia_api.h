@@ -85,6 +85,8 @@ _CAPI RK_S32 RK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
 _CAPI RK_S32 RK_MPI_SYS_UnBind(const MPP_CHN_S *pstSrcChn,
                                const MPP_CHN_S *pstDestChn);
 _CAPI RK_S32 RK_MPI_SYS_RegisterOutCb(const MPP_CHN_S *pstChn, OutCbFunc cb);
+_CAPI RK_S32 RK_MPI_SYS_RegisterOutCbEx(const MPP_CHN_S *pstChn, OutCbFuncEx cb,
+                                        RK_VOID *pHandle);
 _CAPI RK_S32 RK_MPI_SYS_RegisterEventCb(const MPP_CHN_S *pstChn,
                                         RK_VOID *pHandle, EventCbFunc cb);
 _CAPI RK_S32 RK_MPI_SYS_SendMediaBuffer(MOD_ID_E enModID, RK_S32 s32ChnID,
