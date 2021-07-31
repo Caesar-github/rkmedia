@@ -7166,6 +7166,9 @@ RK_S32 RK_MPI_MUXER_EnableChn(MUXER_CHN VmChn, MUXER_CHN_ATTR_S *pstAttr) {
   case MUXER_TYPE_MPEGTS:
     PARAM_STRING_APPEND(MuxerParamStr, KEY_OUTPUTDATATYPE, "mpegts");
     break;
+  case MUXER_TYPE_FLV:
+    PARAM_STRING_APPEND(MuxerParamStr, KEY_OUTPUTDATATYPE, "flv");
+    break;
   default:
     RKMEDIA_LOGE("[%s]: not support type:%d\n", __func__, pstAttr->enType);
     return -RK_ERR_MUXER_ILLEGAL_PARAM;
