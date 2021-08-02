@@ -513,7 +513,11 @@ bool MPPMJPEGConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
                  vid_cfg->vir_height);
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:width", vid_cfg->w);
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:height", vid_cfg->h);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:hor_stride", vid_cfg->vir_width);
+    MppFrameFormat pic_type = ConvertToMppPixFmt(iconfig.image_info.pix_fmt);
+    int line_size = vid_cfg->vir_width;
+    if (pic_type == MPP_FMT_YUV422_YUYV || pic_type == MPP_FMT_YUV422_UYVY)
+      line_size = vid_cfg->vir_width * 2;
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:hor_stride", line_size);
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:ver_stride", vid_cfg->vir_height);
     ret = mpp_enc.EncodeControl(MPP_ENC_SET_CFG, enc_cfg);
     if (ret) {
@@ -1618,7 +1622,11 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
         vid_cfg->vir_height);
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:width", vid_cfg->w);
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:height", vid_cfg->h);
-    ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:hor_stride", vid_cfg->vir_width);
+    MppFrameFormat pic_type = ConvertToMppPixFmt(iconfig.image_info.pix_fmt);
+    int line_size = vid_cfg->vir_width;
+    if (pic_type == MPP_FMT_YUV422_YUYV || pic_type == MPP_FMT_YUV422_UYVY)
+      line_size = vid_cfg->vir_width * 2;
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:hor_stride", line_size);
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:ver_stride", vid_cfg->vir_height);
     ret = mpp_enc.EncodeControl(MPP_ENC_SET_CFG, enc_cfg);
     if (ret) {
