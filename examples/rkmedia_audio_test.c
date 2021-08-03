@@ -136,7 +136,7 @@ static RK_VOID AI_AENC_FILE(char *file_path) {
 static RK_VOID FILE_ADEC_AO(char *file_path) {
   CODEC_TYPE_E codec_type = RK_CODEC_TYPE_MP3;
   RK_U32 channels = 2;
-  RK_U32 sample_rate = 44100;
+  RK_U32 sample_rate = g_enWorkSampleRate;
   ADEC_CHN_ATTR_S stAdecAttr;
   AO_CHN_ATTR_S stAoAttr;
 
@@ -188,22 +188,24 @@ static RK_VOID FILE_ADEC_AO(char *file_path) {
 
   RK_MPI_SYS_Bind(&mpp_chn_adec, &mpp_chn_ao);
 
-  RK_S32 buffer_size = 20480;
+  MB_SAMPLE_INFO_S stSampleInfo = {stAoAttr.enSampleFormat,
+                                   stAoAttr.u32Channels, stAoAttr.u32SampleRate,
+                                   stAoAttr.u32NbSamples};
   FILE *read_file = fopen(file_path, "r");
   if (!read_file) {
     printf("ERROR: open %s failed!\n", file_path);
     exit(0);
   }
-  RK_S32 s32ReadSize;
   quit = true;
   while (quit) {
-    MEDIA_BUFFER mb = RK_MPI_MB_CreateAudioBuffer(buffer_size, RK_FALSE);
+    MEDIA_BUFFER mb = RK_MPI_MB_CreateSampleBuffer(&stSampleInfo, RK_FALSE, 0);
     if (!mb) {
       printf("ERROR: no space left!\n");
       break;
     }
 
-    s32ReadSize = fread(RK_MPI_MB_GetPtr(mb), 1, buffer_size, read_file);
+    RK_S32 buffer_size = RK_MPI_MB_GetSize(mb);
+    RK_S32 s32ReadSize = fread(RK_MPI_MB_GetPtr(mb), 1, buffer_size, read_file);
 
     RK_MPI_MB_SetSize(mb, s32ReadSize);
     RK_MPI_SYS_SendMediaBuffer(RK_ID_ADEC, mpp_chn_adec.s32ChnId, mb);
@@ -217,7 +219,7 @@ static RK_VOID FILE_ADEC_AO(char *file_path) {
   {
     // flush decoder
     printf("start flush decoder.\n");
-    MEDIA_BUFFER mb = RK_MPI_MB_CreateAudioBuffer(0, RK_FALSE);
+    MEDIA_BUFFER mb = RK_MPI_MB_CreateSampleBuffer(&stSampleInfo, RK_FALSE, 0);
     RK_MPI_MB_SetSize(mb, 0);
     RK_MPI_SYS_SendMediaBuffer(RK_ID_ADEC, mpp_chn_adec.s32ChnId, mb);
     RK_MPI_MB_ReleaseBuffer(mb);
@@ -233,8 +235,8 @@ static RK_U32 u32AiVqeType = 1;
 static RK_U32 u32AoVqeType = 1;
 
 /******************************************************************************
-* function : Ai ->VqeProcess-> Ao
-******************************************************************************/
+ * function : Ai ->VqeProcess-> Ao
+ ******************************************************************************/
 RK_S32 AI_VqeProcess_AO(RK_VOID) {
   AI_TALKVQE_CONFIG_S stAiVqeTalkAttr;
   AI_RECORDVQE_CONFIG_S stAiVqeRecordAttr;

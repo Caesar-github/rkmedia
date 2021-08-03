@@ -207,6 +207,15 @@ install(TARGETS rkmedia_multi_ai_test RUNTIME DESTINATION "bin")
 
 if(AUDIO_ENCODER)
 #--------------------------
+#  rkmedia_aenc_test
+#--------------------------
+add_executable(rkmedia_aenc_test rkmedia_aenc_test.c)
+add_dependencies(rkmedia_aenc_test easymedia)
+target_link_libraries(rkmedia_aenc_test easymedia)
+target_include_directories(rkmedia_aenc_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+install(TARGETS rkmedia_aenc_test RUNTIME DESTINATION "bin")
+
+#--------------------------
 #  rkmedia_ai_aenc_test
 #--------------------------
 add_executable(rkmedia_ai_aenc_test rkmedia_ai_aenc_test.c)

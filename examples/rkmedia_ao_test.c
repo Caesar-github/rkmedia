@@ -128,7 +128,6 @@ int main(int argc, char *argv[]) {
   }
   printf("#After Volume set, volume=%d\n", s32CurrentVolmue);
 
-
   printf("%s initial finish\n", __func__);
   signal(SIGINT, sigterm_handler);
 
@@ -136,8 +135,10 @@ int main(int argc, char *argv[]) {
   RK_U32 u32Timeval = u32FrameCnt * 1000000 / u32SampleRate; // us
   RK_U32 u32ReadSize = u32FrameCnt * u32ChnCnt * 2; // RK_SAMPLE_FMT_S16:2Bytes
   printf("# TimeVal:%dus, ReadSize:%d\n", u32Timeval, u32ReadSize);
+  MB_AUDIO_INFO_S stSampleInfo = {ao_attr.u32Channels, ao_attr.u32SampleRate,
+                                  ao_attr.u32NbSamples, ao_attr.enSampleFormat};
   while (!quit) {
-    mb = RK_MPI_MB_CreateAudioBuffer(u32ReadSize, RK_FALSE);
+    mb = RK_MPI_MB_CreateAudioBufferExt(&stSampleInfo, RK_FALSE, 0);
     if (!mb) {
       printf("ERROR: malloc failed! size:%d\n", u32ReadSize);
       break;

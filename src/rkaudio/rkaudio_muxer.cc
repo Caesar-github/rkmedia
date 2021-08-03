@@ -435,13 +435,16 @@ RKAUDIOMuxer::Write(std::shared_ptr<MediaBuffer> data, int stream_no) {
       diff = data->GetUSTimeStamp() - first_timestamp[stream_no];
       // (enum AVRounding)(AV_ROUND_UP | AV_ROUND_PASS_MINMAX)
       // Fix pts jitter
-      int64_t frame_index = av_rescale_rnd(diff, frame_rate, 1000000LL, AV_ROUND_NEAR_INF);
+      int64_t frame_index =
+          av_rescale_rnd(diff, frame_rate, 1000000LL, AV_ROUND_NEAR_INF);
       if (frame_index <= pre_frame_index[stream_no])
         frame_index = pre_frame_index[stream_no] + 1;
-      pts = av_rescale_rnd(frame_index, s->time_base.den, frame_rate, AV_ROUND_UP);
+      pts = av_rescale_rnd(frame_index, s->time_base.den, frame_rate,
+                           AV_ROUND_UP);
 
       if (frame_index - pre_frame_index[stream_no] > 3)
-        RKMEDIA_LOGD("Stream %d lost %lld frames!\n", stream_no, pre_frame_index[stream_no] - frame_index);
+        RKMEDIA_LOGD("Stream %d lost %lld frames!\n", stream_no,
+                     pre_frame_index[stream_no] - frame_index);
 
       pre_frame_index[stream_no] = frame_index;
     }

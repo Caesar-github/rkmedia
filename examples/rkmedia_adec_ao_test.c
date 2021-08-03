@@ -109,16 +109,20 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  RK_S32 s32BufferSize = 20480;
+  RK_S32 s32BufferSize;
   RK_S32 s32ReadSize = 0;
   MEDIA_BUFFER mb = NULL;
   RK_U32 u32Cnt = 0;
+  MB_AUDIO_INFO_S stSampleInfo = {stAoAttr.u32Channels, stAoAttr.u32SampleRate,
+                                  stAoAttr.u32NbSamples,
+                                  stAoAttr.enSampleFormat};
   while (!quit) {
-    mb = RK_MPI_MB_CreateAudioBuffer(s32BufferSize, RK_FALSE);
+    mb = RK_MPI_MB_CreateAudioBufferExt(&stSampleInfo, RK_FALSE, 0);
     if (!mb) {
       printf("ERROR: no space left!\n");
       break;
     }
+    s32BufferSize = RK_MPI_MB_GetSize(mb);
     s32ReadSize = fread(RK_MPI_MB_GetPtr(mb), 1, s32BufferSize, file);
     if (s32ReadSize <= 0) {
       printf("# Get end of file!\n");
@@ -140,12 +144,12 @@ int main(int argc, char *argv[]) {
 
   // flush decoder
   printf("# Flush decoder...\n");
-  mb = RK_MPI_MB_CreateAudioBuffer(0, RK_FALSE);
+  mb = RK_MPI_MB_CreateAudioBufferExt(&stSampleInfo, RK_FALSE, 0);
   RK_MPI_MB_SetSize(mb, 0);
   RK_MPI_SYS_SendMediaBuffer(RK_ID_ADEC, mpp_chn_adec.s32ChnId, mb);
   RK_MPI_MB_ReleaseBuffer(mb);
 
-  sleep(1);
+  sleep(10);
   printf("# decoder sucess!!!\n");
   fclose(file);
 
