@@ -220,6 +220,8 @@ public:
                             unsigned int flag = ROCKCHIP_BO_CACHABLE);
   static std::shared_ptr<MediaBuffer>
   Clone(MediaBuffer &src, MemType dst_type = MemType::MEM_COMMON);
+  static std::shared_ptr<MediaBuffer>
+  Clone2(MediaBuffer &src, MemType dst_type = MemType::MEM_COMMON);
 
   void *GetDbgInfo() const { return dbg_info; }
   void SetDbgInfo(void *addr) { dbg_info = addr; }

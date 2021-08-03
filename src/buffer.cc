@@ -427,6 +427,21 @@ std::shared_ptr<MediaBuffer> MediaBuffer::Clone(MediaBuffer &src,
   return new_buffer;
 }
 
+std::shared_ptr<MediaBuffer> MediaBuffer::Clone2(MediaBuffer &src,
+                                                 MemType dst_type) {
+  size_t size = src.GetValidSize();
+  if (!size)
+    return nullptr;
+  auto new_buffer = Alloc(size, dst_type);
+  if (!new_buffer) {
+    LOG_NO_MEMORY();
+    return nullptr;
+  }
+  new_buffer->SetValidSize(size);
+  new_buffer->CopyAttribute(src);
+  return new_buffer;
+}
+
 void MediaBuffer::CopyAttribute(MediaBuffer &src_attr) {
   type = src_attr.GetType();
   user_flag = src_attr.GetUserFlag();
