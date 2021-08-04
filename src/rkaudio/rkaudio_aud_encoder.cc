@@ -255,7 +255,7 @@ std::shared_ptr<MediaBuffer> RKAUDIOAudioEncoder::FetchOutput() {
   if (!pkt)
     return nullptr;
   std::shared_ptr<MediaBuffer> buffer = std::make_shared<MediaBuffer>(
-      pkt->data, 0, -1, pkt, __rkaudio_packet_free);
+      pkt->data, 0, -1, 0, -1, pkt, __rkaudio_packet_free);
 
   int ret = rkcodec_receive_packet(avctx, pkt);
   if (ret < 0) {

@@ -199,8 +199,9 @@ std::shared_ptr<MediaBuffer> RKAUDIOAudioDecoder::FetchOutput() {
   if (!frame)
     return nullptr;
   std::shared_ptr<MediaBuffer> buffer = std::make_shared<MediaBuffer>(
-      frame->data, 0, -1, frame, __rkaudio_frame_free);
+      frame->data, 0, -1, 0, -1, frame, __rkaudio_frame_free);
   ret = rkcodec_receive_frame(avctx, frame);
+
   if (ret < 0) {
     if (ret == AVERROR(EAGAIN)) {
       errno = EAGAIN;

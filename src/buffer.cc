@@ -43,7 +43,9 @@ static MediaBuffer alloc_common_memory(size_t size) {
   void *buffer = malloc(size);
   if (!buffer)
     return MediaBuffer();
-  return MediaBuffer(buffer, size, -1, buffer, free_common_memory);
+  RKMEDIA_LOGD("%s: ptr:%p, fd:%d, handle:%u, dev_fd:%d, size:%u\n", __func__,
+               buffer, -1, 0, -1, size);
+  return MediaBuffer(buffer, size, -1, 0, -1, buffer, free_common_memory);
 }
 
 static MediaGroupBuffer *alloc_common_memory_group(size_t size) {
@@ -51,7 +53,7 @@ static MediaGroupBuffer *alloc_common_memory_group(size_t size) {
   if (!buffer)
     return nullptr;
   MediaGroupBuffer *mgb =
-      new MediaGroupBuffer(buffer, size, -1, buffer, free_common_memory);
+      new MediaGroupBuffer(buffer, size, -1, 0, -1, buffer, free_common_memory);
 
   return mgb;
 }
@@ -138,7 +140,9 @@ static MediaBuffer alloc_ion_memory(size_t size) {
     goto err;
   }
 
-  return MediaBuffer(ptr, size, fd, buffer, free_ion_memory);
+  RKMEDIA_LOGD("%s: ptr:%p, fd:%d, handle:%u, dev_fd:%d, size:%u\n", __func__,
+               ptr, fd, handle, client, size);
+  return MediaBuffer(ptr, size, fd, handle, client, buffer, free_ion_memory);
 err:
   return MediaBuffer();
 }
@@ -284,6 +288,7 @@ public:
       return;
     }
     assert(fd >= 0);
+    dev_fd = dev->fd;
   }
   ~DrmBuffer() {
     if (map_ptr)
@@ -330,6 +335,7 @@ public:
   size_t len;
   int fd;
   void *map_ptr;
+  int dev_fd;
 };
 
 static int free_drm_memory(void *buffer) {
@@ -350,7 +356,10 @@ static MediaBuffer alloc_drm_memory(size_t size, unsigned int flag,
       break;
     if (map && !db->MapToVirtual())
       break;
-    return MediaBuffer(db->map_ptr, db->len, db->fd, db, free_drm_memory);
+    RKMEDIA_LOGD("%s: ptr:%p, fd:%d, handle:%u, dev_fd:%d, size:%u\n", __func__,
+                 db->map_ptr, db->fd, db->handle, db->dev_fd, size);
+    return MediaBuffer(db->map_ptr, db->len, db->fd, db->handle, db->dev_fd, db,
+                       free_drm_memory);
   } while (false);
   if (db)
     delete db;
@@ -371,8 +380,8 @@ static MediaGroupBuffer *alloc_drm_memory_group(size_t size, unsigned int flag,
     if (map && !db->MapToVirtual())
       break;
     MediaGroupBuffer *mgb = nullptr;
-    mgb =
-        new MediaGroupBuffer(db->map_ptr, db->len, db->fd, db, free_drm_memory);
+    mgb = new MediaGroupBuffer(db->map_ptr, db->len, db->fd, db->handle,
+                               db->dev_fd, db, free_drm_memory);
     return mgb;
   } while (false);
   if (db)
@@ -525,8 +534,10 @@ BufferPool::BufferPool(int cnt, int size, MediaBuffer::MemType type) {
       break;
     }
     mgb->SetBufferPool(this);
-    RKMEDIA_LOGD("Create: pool:%p, mgb:%p, ptr:%p, fd:%d, size:%zu\n", this,
-                 mgb, mgb->GetPtr(), mgb->GetFD(), mgb->GetSize());
+    RKMEDIA_LOGD("Create: pool:%p, mgb:%p, ptr:%p, fd:%d, handle:%u, "
+                 "dev_fd:%d, size:%zu\n",
+                 this, mgb, mgb->GetPtr(), mgb->GetFD(), mgb->GetHandle(),
+                 mgb->GetDevFD(), mgb->GetSize());
     ready_buffers.push_back(mgb);
   }
 
@@ -559,8 +570,10 @@ BufferPool::BufferPool(int cnt, int size, MediaBuffer::MemType type,
       break;
     }
     mgb->SetBufferPool(this);
-    RKMEDIA_LOGD("Create: pool:%p, mgb:%p, ptr:%p, fd:%d, size:%zu\n", this,
-                 mgb, mgb->GetPtr(), mgb->GetFD(), mgb->GetSize());
+    RKMEDIA_LOGD("Create: pool:%p, mgb:%p, ptr:%p, fd:%d, handle:%u, "
+                 "dev_fd:%d, size:%zu\n",
+                 this, mgb, mgb->GetPtr(), mgb->GetFD(), mgb->GetHandle(),
+                 mgb->GetDevFD(), mgb->GetSize());
     ready_buffers.push_back(mgb);
   }
 
@@ -646,7 +659,8 @@ std::shared_ptr<MediaBuffer> BufferPool::GetBuffer(bool block) {
   busy_buffers.push_back(mgb);
 
   auto &&mb = std::make_shared<MediaBuffer>(
-      mgb->GetPtr(), mgb->GetSize(), mgb->GetFD(), mgb, __groupe_buffer_free);
+      mgb->GetPtr(), mgb->GetSize(), mgb->GetFD(), mgb->GetHandle(),
+      mgb->GetDevFD(), mgb, __groupe_buffer_free);
   return mb;
 }
 

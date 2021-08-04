@@ -34,6 +34,22 @@ int RK_MPI_MB_GetFD(MEDIA_BUFFER mb) {
   return mb_impl->fd;
 }
 
+int RK_MPI_MB_GetHandle(MEDIA_BUFFER mb) {
+  if (!mb)
+    return 0;
+
+  MEDIA_BUFFER_IMPLE *mb_impl = (MEDIA_BUFFER_IMPLE *)mb;
+  return mb_impl->handle;
+}
+
+int RK_MPI_MB_GetDevFD(MEDIA_BUFFER mb) {
+  if (!mb)
+    return 0;
+
+  MEDIA_BUFFER_IMPLE *mb_impl = (MEDIA_BUFFER_IMPLE *)mb;
+  return mb_impl->dev_fd;
+}
+
 size_t RK_MPI_MB_GetSize(MEDIA_BUFFER mb) {
   if (!mb)
     return 0;
@@ -197,6 +213,8 @@ MEDIA_BUFFER RK_MPI_MB_CreateAudioBuffer(RK_U32 u32BufferSize,
   mb->rkmedia_mb = rkmedia_mb;
   mb->ptr = rkmedia_mb->GetPtr();
   mb->fd = rkmedia_mb->GetFD();
+  mb->handle = rkmedia_mb->GetHandle();
+  mb->dev_fd = rkmedia_mb->GetDevFD();
   mb->size = 0;
   mb->type = MB_TYPE_AUDIO;
   mb->timestamp = 0;
@@ -256,6 +274,8 @@ MEDIA_BUFFER RK_MPI_MB_CreateImageBuffer(MB_IMAGE_INFO_S *pstImageInfo,
                                                             rkmediaImageInfo);
   mb->ptr = mb->rkmedia_mb->GetPtr();
   mb->fd = mb->rkmedia_mb->GetFD();
+  mb->handle = mb->rkmedia_mb->GetHandle();
+  mb->dev_fd = mb->rkmedia_mb->GetDevFD();
   mb->size = 0;
   mb->type = MB_TYPE_IMAGE;
   mb->stImageInfo = *pstImageInfo;
@@ -356,6 +376,8 @@ MEDIA_BUFFER RK_MPI_MB_CreateBuffer(RK_U32 u32Size, RK_BOOL boolHardWare,
 
   mb->ptr = mb->rkmedia_mb->GetPtr();
   mb->fd = mb->rkmedia_mb->GetFD();
+  mb->handle = mb->rkmedia_mb->GetHandle();
+  mb->dev_fd = mb->rkmedia_mb->GetDevFD();
   mb->size = 0;
   mb->type = MB_TYPE_COMMON;
   mb->timestamp = 0;
@@ -657,6 +679,8 @@ MEDIA_BUFFER RK_MPI_MB_POOL_GetBuffer(MEDIA_BUFFER_POOL MBPHandle,
   }
   mb->ptr = mb->rkmedia_mb->GetPtr();
   mb->fd = mb->rkmedia_mb->GetFD();
+  mb->handle = mb->rkmedia_mb->GetHandle();
+  mb->dev_fd = mb->rkmedia_mb->GetDevFD();
   mb->size = 0;
   mb->timestamp = 0;
   mb->mode_id = RK_ID_UNKNOW;

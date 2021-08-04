@@ -958,6 +958,8 @@ FlowOutputCallback(void *handle,
   }
   mb->ptr = rkmedia_mb->GetPtr();
   mb->fd = rkmedia_mb->GetFD();
+  mb->handle = rkmedia_mb->GetHandle();
+  mb->dev_fd = rkmedia_mb->GetDevFD();
   mb->size = rkmedia_mb->GetValidSize();
   mb->rkmedia_mb = rkmedia_mb;
   mb->mode_id = target_chn->mode_id;

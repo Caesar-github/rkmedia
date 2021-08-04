@@ -165,9 +165,9 @@ int VorbisEncoder::SendInput(const std::shared_ptr<MediaBuffer> &input) {
         errno = ENOMEM;
         return -1;
       }
-      std::shared_ptr<MediaBuffer> buffer =
-          std::make_shared<MediaBuffer>(new_packet->packet, new_packet->bytes,
-                                        -1, new_packet, __ogg_packet_free);
+      std::shared_ptr<MediaBuffer> buffer = std::make_shared<MediaBuffer>(
+          new_packet->packet, new_packet->bytes, -1, 0, -1, new_packet,
+          __ogg_packet_free);
       if (!buffer) {
         errno = ENOMEM;
         return -1;

@@ -111,17 +111,19 @@ public:
   static const uint32_t kBuildinLibvorbisenc = (1 << 16);
 
   MediaBuffer()
-      : ptr(nullptr), size(0), fd(-1), valid_size(0), type(Type::None),
-        user_flag(0), ustimestamp(0), eof(false), tsvc_level(-1),
-        dbg_info(nullptr) {
+      : ptr(nullptr), size(0), fd(-1), handle(0), dev_fd(-1), valid_size(0),
+        type(Type::None), user_flag(0), ustimestamp(0), eof(false),
+        tsvc_level(-1), dbg_info(nullptr) {
 #ifdef RKMEDIA_TIMESTAMP_DEBUG
     TsRecorder = std::make_shared<TimeStampRecorder>();
 #endif
   }
   // Set userdata and delete function if you want free resource when destrut.
   MediaBuffer(void *buffer_ptr, size_t buffer_size, int buffer_fd = -1,
+              int buffer_handle = 0, int device_fd = -1,
               void *user_data = nullptr, DeleteFun df = nullptr)
-      : ptr(buffer_ptr), size(buffer_size), fd(buffer_fd), valid_size(0),
+      : ptr(buffer_ptr), size(buffer_size), fd(buffer_fd),
+        handle(buffer_handle), dev_fd(device_fd), valid_size(0),
         type(Type::None), user_flag(0), ustimestamp(0), eof(false),
         tsvc_level(-1), dbg_info(nullptr) {
     SetUserData(user_data, df);
@@ -134,6 +136,10 @@ public:
   virtual SampleFormat GetSampleFormat() const { return SAMPLE_FMT_NONE; }
   void BeginCPUAccess(bool readonly);
   void EndCPUAccess(bool readonly);
+  int GetDevFD() const { return dev_fd; }
+  void SetDevFD(int new_dev_fd) { dev_fd = new_dev_fd; };
+  int GetHandle() const { return handle; }
+  void SetHandle(int new_handle) { handle = new_handle; }
   int GetFD() const { return fd; }
   void SetFD(int new_fd) { fd = new_fd; }
   void *GetPtr() const { return ptr; }
@@ -251,6 +257,8 @@ private:
                                     // AV_NUM_DATA_POINTERS in libavutil/frame.h
   size_t size;
   int fd;            // buffer fd
+  int handle;        // buffer handle
+  int dev_fd;        // device fd
   size_t valid_size; // valid data size, less than above size
   Type type;
   uint32_t user_flag;
@@ -341,11 +349,14 @@ private:
 
 class MediaGroupBuffer {
 public:
-  MediaGroupBuffer() : pool(nullptr), ptr(nullptr), size(0), fd(-1) {}
+  MediaGroupBuffer()
+      : pool(nullptr), ptr(nullptr), size(0), fd(-1), handle(0), dev_fd(-1) {}
   // Set userdata and delete function if you want free resource when destrut.
   MediaGroupBuffer(void *buffer_ptr, size_t buffer_size, int buffer_fd = -1,
+                   int buffer_handle = 0, int device_fd = -1,
                    void *user_data = nullptr, DeleteFun df = nullptr)
-      : pool(nullptr), ptr(buffer_ptr), size(buffer_size), fd(buffer_fd) {
+      : pool(nullptr), ptr(buffer_ptr), size(buffer_size), fd(buffer_fd),
+        handle(buffer_handle), dev_fd(device_fd) {
     SetUserData(user_data, df);
   }
   virtual ~MediaGroupBuffer() = default;
@@ -366,6 +377,8 @@ public:
   int GetFD() const { return fd; }
   void *GetPtr() const { return ptr; }
   size_t GetSize() const { return size; }
+  int GetHandle() const { return handle; }
+  int GetDevFD() const { return dev_fd; }
 
   static MediaGroupBuffer *
   Alloc(size_t size,
@@ -378,7 +391,9 @@ public:
 private:
   void *ptr; // buffer virtual address
   size_t size;
-  int fd; // buffer fd
+  int fd;     // buffer fd
+  int handle; // buffer handle
+  int dev_fd; // device fd
 
   std::shared_ptr<void> userdata;
 };

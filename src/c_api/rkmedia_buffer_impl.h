@@ -14,6 +14,8 @@ typedef struct _rkMEDIA_BUFFER_S {
   MB_TYPE_E type;
   void *ptr;         // Virtual address of buffer
   int fd;            // dma buffer fd
+  int handle;        // dma buffer handle
+  int dev_fd;        // dma device fd
   size_t size;       // The size of the buffer
   MOD_ID_E mode_id;  // The module to which the buffer belongs
   RK_U16 chn_id;     // The channel to which the buffer belongs

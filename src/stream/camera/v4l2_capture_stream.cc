@@ -253,7 +253,7 @@ int V4L2CaptureStream::Open() {
         return -1;
       }
       buffer_vec.push_back(
-          MediaBuffer(nullptr, 0, -1, buffer, __free_v4l2buffer));
+          MediaBuffer(nullptr, 0, -1, 0, -1, buffer, __free_v4l2buffer));
       memset(&buf, 0, sizeof(buf));
       memset(&planes, 0, sizeof(planes));
 
