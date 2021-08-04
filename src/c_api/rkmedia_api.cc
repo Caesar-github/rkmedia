@@ -92,9 +92,6 @@ typedef ALGO_MD_ATTR_S RkmediaMDAttr;
 typedef ALGO_OD_ATTR_S RkmediaODAttr;
 typedef VO_CHN_ATTR_S RkmediaVOAttr;
 
-#define RKMEDIA_CHNNAL_BUFFER_LIMIT 2
-#define RKMEDIA_CHNNAL_BUFFER_GOD_MODE_LIMIT 1
-
 typedef struct _RkmediaChannel {
   MOD_ID_E mode_id;
   RK_U16 chn_id;
@@ -254,17 +251,6 @@ static int RkmediaChnPushBuffer(RkmediaChannel *ptrChn, MEDIA_BUFFER buffer) {
     return -1;
 
   ptrChn->buffer_list_mtx.lock();
-  if (ptrChn->buffer_list.size() >= RKMEDIA_CHNNAL_BUFFER_LIMIT) {
-    if (ptrChn->bind_ref_nxt <= 0) {
-      RKMEDIA_LOGW("Mode[%s]:Chn[%d] drop buffer, Please get buffer in time!\n",
-                   ModIdToString(ptrChn->mode_id), ptrChn->chn_id);
-    }
-    MEDIA_BUFFER mb = ptrChn->buffer_list.front();
-    ptrChn->buffer_list.pop_front();
-    RK_MPI_MB_ReleaseBuffer(mb);
-    if (ptrChn->wake_fd[0] > 0)
-      RkmediaPopPipFd(ptrChn->wake_fd[0]);
-  }
   if (!ptrChn->buffer_list_quit) {
     ptrChn->buffer_list.push_back(buffer);
     if (ptrChn->wake_fd[1] > 0)
@@ -4659,7 +4645,7 @@ RK_S32 RK_MPI_VENC_QueryStatus(VENC_CHN VeChn, VENC_CHN_STATUS_S *pstStatus) {
   pstStatus->u32TotalFrames = u32BufferTotalCnt;
 
   g_venc_chns[VeChn].buffer_list_mtx.lock();
-  pstStatus->u32TotalPackets = RKMEDIA_CHNNAL_BUFFER_LIMIT;
+  pstStatus->u32TotalPackets = g_venc_chns[VeChn].buffer_depth;
   pstStatus->u32LeftPackets = g_venc_chns[VeChn].buffer_list.size();
   g_venc_chns[VeChn].buffer_list_mtx.unlock();
 
