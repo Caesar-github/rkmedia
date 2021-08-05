@@ -1411,8 +1411,9 @@ int MPPEncoder::RgaOsdRegionProcess(ImageBuffer *hw_buffer) {
   ImageInfo imgInfo = hw_buffer->GetImageInfo();
   // ToDo: fmt check and convert
 
-  src = wrapbuffer_fd(hw_buffer->GetFD(), imgInfo.width, imgInfo.height,
-                      get_rga_format(hw_buffer->GetPixelFormat()));
+  src = wrapbuffer_fd_t(hw_buffer->GetFD(), imgInfo.width, imgInfo.height,
+                        imgInfo.vir_width, imgInfo.vir_height,
+                        get_rga_format(hw_buffer->GetPixelFormat()));
   for (int i = 0; i < OSD_REGIONS_CNT; i++) {
     if (!rga_osd_data[i].enable)
       continue;
