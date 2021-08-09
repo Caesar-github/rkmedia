@@ -258,6 +258,14 @@ bool MPPMJPEGConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
     mpp_enc.thumbnail_height[2] = img_cfg.mpfh[1];
     mpp_enc.thumbnail_type[2] = THUMBNAIL_TYPE_APP2;
   }
+
+  ENCODER_CFG_CHECK(rect_info.x, 0, img_cfg.image_info.width, 0, "rect_x");
+  ENCODER_CFG_CHECK(rect_info.y, 0, img_cfg.image_info.height, 0, "rect_y");
+  ENCODER_CFG_CHECK(rect_info.w, 0, (img_cfg.image_info.width - rect_info.x),
+                    (img_cfg.image_info.width - rect_info.x), "rect_w");
+  ENCODER_CFG_CHECK(rect_info.h, 0, (img_cfg.image_info.height - rect_info.y),
+                    (img_cfg.image_info.height - rect_info.y), "rect_h");
+
   MppEncRotationCfg rotation = MPP_ENC_ROT_0;
   switch (vid_cfg.rotation) {
   case 0:
@@ -750,10 +758,10 @@ bool MPPCommonConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
 
   ENCODER_CFG_CHECK(rect_info.x, 0, img_cfg.image_info.width, 0, "rect_x");
   ENCODER_CFG_CHECK(rect_info.y, 0, img_cfg.image_info.height, 0, "rect_y");
-  ENCODER_CFG_CHECK(rect_info.w, 0, img_cfg.image_info.width,
-                    img_cfg.image_info.width, "rect_w");
-  ENCODER_CFG_CHECK(rect_info.h, 0, img_cfg.image_info.height,
-                    img_cfg.image_info.height, "rect_h");
+  ENCODER_CFG_CHECK(rect_info.w, 0, (img_cfg.image_info.width - rect_info.x),
+                    (img_cfg.image_info.width - rect_info.x), "rect_w");
+  ENCODER_CFG_CHECK(rect_info.h, 0, (img_cfg.image_info.height - rect_info.y),
+                    (img_cfg.image_info.height - rect_info.y), "rect_h");
 
   if (pic_type == -1) {
     RKMEDIA_LOGI("error input pixel format\n");
