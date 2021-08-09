@@ -7024,6 +7024,11 @@ RK_S32 RK_MPI_VMIX_EnableChn(VMIX_DEV VmDev, VMIX_CHN VmChn) {
   g_vmix_dev[VmDev].VmChns[VmChn].rkmedia_flow = g_vmix_dev[VmDev].rkmedia_flow;
   g_vmix_dev[VmDev].u16RefCnt++;
   g_vmix_dev[VmDev].VmChns[VmChn].status = CHN_STATUS_OPEN;
+  if (!VmChn) {
+    RkmediaChnInitBuffer(&g_vmix_dev[VmDev].VmChns[VmChn]);
+    g_vmix_dev[VmDev].rkmedia_flow->SetOutputCallBack(
+        &g_vmix_dev[VmDev].VmChns[VmChn], FlowOutputCallback);
+  }
   g_vmix_dev[VmDev].VmMtx.unlock();
 
   return RK_ERR_SYS_OK;
