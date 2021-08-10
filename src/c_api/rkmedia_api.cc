@@ -3043,11 +3043,7 @@ RK_S32 RK_MPI_VENC_CreateChn(VENC_CHN VeChn, VENC_CHN_ATTR_S *stVencChnAttr) {
   }
 
   // save venc_attr to venc chn.
-  memset(&g_venc_chns[VeChn].venc_attr.attr, 0, sizeof(VENC_CHN_ATTR_S));
-  memset(&g_venc_chns[VeChn].venc_attr.stRcPara, 0, sizeof(VENC_RC_PARAM_S));
-  memset(&g_venc_chns[VeChn].venc_attr.astRoiAttr, 0,
-         sizeof(g_venc_chns[VeChn].venc_attr.astRoiAttr[8]));
-  g_venc_chns[VeChn].venc_attr.bFullFunc = RK_FALSE;
+  memset(&g_venc_chns[VeChn].venc_attr, 0, sizeof(RkmediaVencAttr));
   memcpy(&g_venc_chns[VeChn].venc_attr.attr, stVencChnAttr,
          sizeof(VENC_CHN_ATTR_S));
   /***************************************************************

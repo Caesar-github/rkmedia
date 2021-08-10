@@ -215,6 +215,7 @@ VideoEncoderFlow::VideoEncoderFlow(const char *param)
     enc_params[KEY_OUTPUTDATATYPE] = params[KEY_OUTPUTDATATYPE];
 
   MediaConfig mc;
+  memset(&mc, 0, sizeof(MediaConfig));
   if (!ParseMediaConfigFromMap(enc_params, mc)) {
     SetError(-EINVAL);
     return;
