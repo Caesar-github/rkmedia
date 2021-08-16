@@ -176,6 +176,8 @@ int MPPEncoder::PrepareMppFrame(const std::shared_ptr<MediaBuffer> &input,
 
   if (fmt == PIX_FMT_YUYV422 || fmt == PIX_FMT_UYVY422)
     mpp_frame_set_hor_stride(frame, hw_buffer->GetVirWidth() * 2);
+  else if (fmt == PIX_FMT_RGB888 || fmt == PIX_FMT_BGR888)
+    mpp_frame_set_hor_stride(frame, hw_buffer->GetVirWidth() * 3);
   else
     mpp_frame_set_hor_stride(frame, hw_buffer->GetVirWidth());
   mpp_frame_set_ver_stride(frame, hw_buffer->GetVirHeight());

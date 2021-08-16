@@ -313,6 +313,8 @@ bool MPPMJPEGConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
   int line_size = img_info.vir_width;
   if (pic_type == MPP_FMT_YUV422_YUYV || pic_type == MPP_FMT_YUV422_UYVY)
     line_size *= 2;
+  else if (pic_type == MPP_FMT_RGB888 || pic_type == MPP_FMT_BGR888)
+    line_size *= 3;
 
   // precfg set.
   ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:width", rect_info.w);
@@ -525,6 +527,8 @@ bool MPPMJPEGConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
     int line_size = vid_cfg->vir_width;
     if (pic_type == MPP_FMT_YUV422_YUYV || pic_type == MPP_FMT_YUV422_UYVY)
       line_size = vid_cfg->vir_width * 2;
+    else if (pic_type == MPP_FMT_RGB888 || pic_type == MPP_FMT_BGR888)
+      line_size = vid_cfg->vir_width * 3;
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:hor_stride", line_size);
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:ver_stride", vid_cfg->vir_height);
     ret = mpp_enc.EncodeControl(MPP_ENC_SET_CFG, enc_cfg);
@@ -816,6 +820,12 @@ bool MPPCommonConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
                    image_info.height, image_info.vir_height, image_info.width,
                    image_info.vir_width, image_info.width, image_info.vir_width,
                    image_info.height, image_info.vir_height);
+      if ((image_info.width == rect_info.h) &&
+          (image_info.height == rect_info.w)) {
+        tmp_value = rect_info.w;
+        rect_info.w = rect_info.h;
+        rect_info.h = tmp_value;
+      }
     }
     rotation = MPP_ENC_ROT_0;
   }
