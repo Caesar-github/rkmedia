@@ -128,6 +128,7 @@ typedef struct _RkmediaChannel {
   RK_S16 bind_ref_pre;
   RK_S16 bind_ref_nxt;
   std::mutex buffer_list_mtx;
+  std::mutex buffer_list_pop_mtx;
   std::condition_variable buffer_list_cond;
   bool buffer_list_quit;
   int wake_fd[2];
@@ -271,6 +272,7 @@ static MEDIA_BUFFER RkmediaChnPopBuffer(RkmediaChannel *ptrChn,
   if (!ptrChn)
     return NULL;
 
+  std::unique_lock<std::mutex> lck_pop(ptrChn->buffer_list_pop_mtx);
   std::unique_lock<std::mutex> lck(ptrChn->buffer_list_mtx);
   if (ptrChn->buffer_list.empty()) {
     if (s32MilliSec < 0 && !ptrChn->buffer_list_quit) {
