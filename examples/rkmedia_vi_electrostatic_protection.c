@@ -122,7 +122,8 @@ static void print_usage(const RK_CHAR *name) {
 #endif
   printf("\t-w | --width: VI width, Default:1920\n");
   printf("\t-h | --heght: VI height, Default:1080\n");
-  printf("\t-d | --device_name: set device node(v4l2), Default:rkispp_scale0\n");
+  printf(
+      "\t-d | --device_name: set device node(v4l2), Default:rkispp_scale0\n");
   printf("\t-c | --frame_cnt: record frame, Default:-1(unlimit)\n");
   printf("\t-o | --output: output path, Default:NULL\n");
   printf("Notice: fmt always NV12\n");

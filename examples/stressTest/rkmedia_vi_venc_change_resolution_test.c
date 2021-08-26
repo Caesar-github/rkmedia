@@ -4,14 +4,14 @@
 
 #include <assert.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <string.h>
-#include <getopt.h>
 
 #include "common/sample_common.h"
 #include "rkmedia_api.h"
@@ -55,9 +55,11 @@ void video_packet_cb(MEDIA_BUFFER mb) {
       break;
     }
 
-    printf("Get Video Encoded packet(%s):ptr:%p, fd:%d, size:%zu, mode:%d, Chn:%d\n",
-          nalu_type, RK_MPI_MB_GetPtr(mb), RK_MPI_MB_GetFD(mb),
-          RK_MPI_MB_GetSize(mb), RK_MPI_MB_GetModeID(mb), RK_MPI_MB_GetChannelID(mb));
+    printf("Get Video Encoded packet(%s):ptr:%p, fd:%d, size:%zu, mode:%d, "
+           "Chn:%d\n",
+           nalu_type, RK_MPI_MB_GetPtr(mb), RK_MPI_MB_GetFD(mb),
+           RK_MPI_MB_GetSize(mb), RK_MPI_MB_GetModeID(mb),
+           RK_MPI_MB_GetChannelID(mb));
   }
 
   RK_MPI_MB_ReleaseBuffer(mb);
@@ -98,34 +100,34 @@ int StreamOn(RK_U32 u32StreamIdx) {
   }
 
   switch (u32StreamIdx) {
-    case 0:
-      pcStreamName = "MainStream";
-      pcVideoNode = "rkispp_m_bypass";
-      u32Width = 2688;
-      u32Height = 1520;
-      u32ViChn = MAIN_STREAM_VI_CHN;
-      u32VencChn = MAIN_STREAM_VENC_CHN;
-      enImgType = IMAGE_TYPE_FBC0;
-      break;
-    case 1:
-      pcStreamName = "Sub0Stream";
-      pcVideoNode = "rkispp_scale0";
-      u32Width = 1280;
-      u32Height = 720;
-      u32ViChn = SUB0_STREAM_VI_CHN;
-      u32VencChn = SUB0_STREAM_VENC_CHN;
-      break;
-    case 2:
-      pcStreamName = "Sub1Stream";
-      pcVideoNode = "rkispp_scale1";
-      u32Width = 720;
-      u32Height = 480;
-      u32ViChn = SUB1_STREAM_VI_CHN;
-      u32VencChn = SUB1_STREAM_VENC_CHN;
-      break;
-    default:
-      printf("#Error: %s invalid stream idx:%d\n", __func__, u32StreamIdx);
-      return -1;
+  case 0:
+    pcStreamName = "MainStream";
+    pcVideoNode = "rkispp_m_bypass";
+    u32Width = 2688;
+    u32Height = 1520;
+    u32ViChn = MAIN_STREAM_VI_CHN;
+    u32VencChn = MAIN_STREAM_VENC_CHN;
+    enImgType = IMAGE_TYPE_FBC0;
+    break;
+  case 1:
+    pcStreamName = "Sub0Stream";
+    pcVideoNode = "rkispp_scale0";
+    u32Width = 1280;
+    u32Height = 720;
+    u32ViChn = SUB0_STREAM_VI_CHN;
+    u32VencChn = SUB0_STREAM_VENC_CHN;
+    break;
+  case 2:
+    pcStreamName = "Sub1Stream";
+    pcVideoNode = "rkispp_scale1";
+    u32Width = 720;
+    u32Height = 480;
+    u32ViChn = SUB1_STREAM_VI_CHN;
+    u32VencChn = SUB1_STREAM_VENC_CHN;
+    break;
+  default:
+    printf("#Error: %s invalid stream idx:%d\n", __func__, u32StreamIdx);
+    return -1;
   }
 
   printf("#%s, wxh: %dx%d, CodeType: %s, ImgType: %s Start........\n\n",
@@ -242,7 +244,8 @@ int StreamOn(RK_U32 u32StreamIdx) {
     stDestChn.s32ChnId = MAIN_STREAM_JPEG_CHN;
     ret = RK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
     if (ret) {
-      printf("ERROR: JPEG: Bind VO[%d] to VENC[%d] failed! ret=%d\n", u32ViChn, MAIN_STREAM_JPEG_CHN, ret);
+      printf("ERROR: JPEG: Bind VO[%d] to VENC[%d] failed! ret=%d\n", u32ViChn,
+             MAIN_STREAM_JPEG_CHN, ret);
       return -1;
     }
   }
@@ -257,24 +260,24 @@ int StreamOff(RK_U32 u32StreamIdx) {
   const RK_CHAR *pcStreamName = NULL;
 
   switch (u32StreamIdx) {
-    case 0:
-      pcStreamName = "MainStream";
-      u32ViChn = MAIN_STREAM_VI_CHN;
-      u32VencChn = MAIN_STREAM_VENC_CHN;
-      break;
-    case 1:
-      pcStreamName = "Sub0Stream";
-      u32ViChn = SUB0_STREAM_VI_CHN;
-      u32VencChn = SUB0_STREAM_VENC_CHN;
-      break;
-    case 2:
-      pcStreamName = "Sub1Stream";
-      u32ViChn = SUB1_STREAM_VI_CHN;
-      u32VencChn = SUB1_STREAM_VENC_CHN;
-      break;
-    default:
-      printf("#Error: %s invalid stream idx:%d\n", __func__, u32StreamIdx);
-      return -1;
+  case 0:
+    pcStreamName = "MainStream";
+    u32ViChn = MAIN_STREAM_VI_CHN;
+    u32VencChn = MAIN_STREAM_VENC_CHN;
+    break;
+  case 1:
+    pcStreamName = "Sub0Stream";
+    u32ViChn = SUB0_STREAM_VI_CHN;
+    u32VencChn = SUB0_STREAM_VENC_CHN;
+    break;
+  case 2:
+    pcStreamName = "Sub1Stream";
+    u32ViChn = SUB1_STREAM_VI_CHN;
+    u32VencChn = SUB1_STREAM_VENC_CHN;
+    break;
+  default:
+    printf("#Error: %s invalid stream idx:%d\n", __func__, u32StreamIdx);
+    return -1;
   }
 
   printf("#%s end ......................................\n", pcStreamName);
@@ -297,7 +300,8 @@ int StreamOff(RK_U32 u32StreamIdx) {
     stDestChn.s32ChnId = MAIN_STREAM_JPEG_CHN;
     ret = RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
     if (ret) {
-      printf("ERROR: JPEG: unbind vi[%d] -> venc[%d] failed!\n", u32ViChn, MAIN_STREAM_JPEG_CHN);
+      printf("ERROR: JPEG: unbind vi[%d] -> venc[%d] failed!\n", u32ViChn,
+             MAIN_STREAM_JPEG_CHN);
       return -1;
     }
     RK_MPI_VENC_DestroyChn(MAIN_STREAM_JPEG_CHN);
@@ -323,12 +327,17 @@ static const struct option long_options[] = {
 static void print_usage(char *name) {
   printf("#Function description:\n");
   printf("There are three streams in total:MainStream/SubStream0/SubStream.\n");
-  printf("  #MainStream:rkispp_m_bypass(WxH FBC0) --> Venc(random:H264/H265/MJPEG)\n");
-  printf("                                        --> Venc(JPEG: take photos)\n");
-  printf("  #SubStream0: rkispp_scale1(1280x720 NV12) --> Venc(random:H264/H265/MJPEG)\n");
-  printf("  #SubStream1: rkispp_scale2(720x480 NV12) --> Venc(random:H264/H265/MJPEG)\n");
+  printf("  #MainStream:rkispp_m_bypass(WxH FBC0) --> "
+         "Venc(random:H264/H265/MJPEG)\n");
+  printf(
+      "                                        --> Venc(JPEG: take photos)\n");
+  printf("  #SubStream0: rkispp_scale1(1280x720 NV12) --> "
+         "Venc(random:H264/H265/MJPEG)\n");
+  printf("  #SubStream1: rkispp_scale2(720x480 NV12) --> "
+         "Venc(random:H264/H265/MJPEG)\n");
   printf("#Usage Example: \n");
-  printf("  %s [-c 20] [-s 5] [-w 2688] [-h 1520] [-a the path of iqfiles]\n", name);
+  printf("  %s [-c 20] [-s 5] [-w 2688] [-h 1520] [-a the path of iqfiles]\n",
+         name);
   printf("  @[-c] Main stream switching times. defalut:20\n");
   printf("  @[-s] The duration of the main stream. default:5\n");
   printf("  @[-w] img width for rkispp_m_bypass. default: 2688\n");
@@ -384,7 +393,6 @@ int main(int argc, char *argv[]) {
   printf("-->BypassWidth:%d\n", u32Width);
   printf("-->BypassHeight:%d\n", u32Height);
 
-
   RK_MPI_SYS_Init();
 
   signal(SIGINT, sigterm_handler);
@@ -394,7 +402,8 @@ int main(int argc, char *argv[]) {
 
     if (pIqfilesPath) {
 #ifdef RKAIQ
-      SAMPLE_COMM_ISP_Init(0, RK_AIQ_WORKING_MODE_NORMAL, RK_FALSE, pIqfilesPath);
+      SAMPLE_COMM_ISP_Init(0, RK_AIQ_WORKING_MODE_NORMAL, RK_FALSE,
+                           pIqfilesPath);
       SAMPLE_COMM_ISP_Run(0);
       SAMPLE_COMM_ISP_SetFrameRate(0, 30);
 #endif

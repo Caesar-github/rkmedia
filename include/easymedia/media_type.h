@@ -62,6 +62,8 @@ enum class Type { None = -1, Audio = 0, Image, Video, Text };
 #define AUDIO_PCM_S16P "audio:pcm_s16p"
 #define AUDIO_PCM_S32P "audio:pcm_s32p"
 #define AUDIO_PCM_FLTP "audio:pcm_fltp"
+#define AUDIO_PCM_G711A "audio:pcm_g711a"
+#define AUDIO_PCM_G711U "audio:pcm_g711u"
 
 #define AUDIO_PCM                                                              \
   TYPENEAR(AUDIO_PCM_U8)                                                       \
@@ -75,7 +77,6 @@ enum class Type { None = -1, Audio = 0, Image, Video, Text };
 
 #define AUDIO_MP3 "audio:mp3"
 #define AUDIO_MP2 "audio:mp2"
-#define AUDIO_VORBIS "audio:vorbis"
 #define AUDIO_G711A "audio:g711a"
 #define AUDIO_G711U "audio:g711U"
 #define AUDIO_G726 "audio:g726"
@@ -106,7 +107,6 @@ typedef enum {
   // Audio
   CODEC_TYPE_MP3,
   CODEC_TYPE_MP2,
-  CODEC_TYPE_VORBIS,
   CODEC_TYPE_G711A,
   CODEC_TYPE_G711U,
   CODEC_TYPE_G726,

@@ -19,7 +19,6 @@
 
 #include "librtsp/rtsp_demo.h"
 #include "rkmedia_api.h"
-#include "rkmedia_api.h"
 #include "rkmedia_venc.h"
 #include "rknn_api.h"
 

@@ -8,9 +8,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <string.h>
 
 #include "common/sample_common.h"
 #include "rkmedia_api.h"
@@ -54,8 +54,8 @@ void video_packet_cb(MEDIA_BUFFER mb) {
       break;
     }
 
-    printf("Get Video Encoded packet(%s):size:%zu, Chn:%d\n",
-          nalu_type, RK_MPI_MB_GetSize(mb), RK_MPI_MB_GetChannelID(mb));
+    printf("Get Video Encoded packet(%s):size:%zu, Chn:%d\n", nalu_type,
+           RK_MPI_MB_GetSize(mb), RK_MPI_MB_GetChannelID(mb));
   }
 
   RK_MPI_MB_ReleaseBuffer(mb);
@@ -74,34 +74,34 @@ int StreamOn(int stream_idx) {
   static int codec_chg_idx = 0;
 
   switch (stream_idx) {
-    case 0:
-      streamName = "MainStream";
-      videoNode = "rkispp_m_bypass";
-      width = 2688;
-      height = 1520;
-      vi_chn = MAIN_STREAM_VI_CHN;
-      venc_chn = MAIN_STREAM_VENC_CHN;
-      img_type = IMAGE_TYPE_FBC0;
-      break;
-    case 1:
-      streamName = "Sub0Stream";
-      videoNode = "rkispp_scale0";
-      width = 1280;
-      height = 720;
-      vi_chn = SUB0_STREAM_VI_CHN;
-      venc_chn = SUB0_STREAM_VENC_CHN;
-      break;
-    case 2:
-      streamName = "Sub1Stream";
-      videoNode = "rkispp_scale1";
-      width = 720;
-      height = 480;
-      vi_chn = SUB1_STREAM_VI_CHN;
-      venc_chn = SUB1_STREAM_VENC_CHN;
-      break;
-    default:
-      printf("#Error: %s invalid stream idx:%d\n", __func__, stream_idx);
-      return -1;
+  case 0:
+    streamName = "MainStream";
+    videoNode = "rkispp_m_bypass";
+    width = 2688;
+    height = 1520;
+    vi_chn = MAIN_STREAM_VI_CHN;
+    venc_chn = MAIN_STREAM_VENC_CHN;
+    img_type = IMAGE_TYPE_FBC0;
+    break;
+  case 1:
+    streamName = "Sub0Stream";
+    videoNode = "rkispp_scale0";
+    width = 1280;
+    height = 720;
+    vi_chn = SUB0_STREAM_VI_CHN;
+    venc_chn = SUB0_STREAM_VENC_CHN;
+    break;
+  case 2:
+    streamName = "Sub1Stream";
+    videoNode = "rkispp_scale1";
+    width = 720;
+    height = 480;
+    vi_chn = SUB1_STREAM_VI_CHN;
+    venc_chn = SUB1_STREAM_VENC_CHN;
+    break;
+  default:
+    printf("#Error: %s invalid stream idx:%d\n", __func__, stream_idx);
+    return -1;
   }
 
   if (codec_chg_idx++ % 2)
@@ -235,7 +235,8 @@ int StreamOn(int stream_idx) {
     stDestChn.s32ChnId = MAIN_STREAM_JPEG_CHN;
     ret = RK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
     if (ret) {
-      printf("ERROR: JPEG: Bind VO[%d] to VENC[%d] failed! ret=%d\n", vi_chn, MAIN_STREAM_JPEG_CHN, ret);
+      printf("ERROR: JPEG: Bind VO[%d] to VENC[%d] failed! ret=%d\n", vi_chn,
+             MAIN_STREAM_JPEG_CHN, ret);
       return -1;
     }
   }
@@ -274,24 +275,24 @@ int StreamOff(int stream_idx) {
   const char *streamName = NULL;
 
   switch (stream_idx) {
-    case 0:
-      streamName = "MainStream";
-      vi_chn = MAIN_STREAM_VI_CHN;
-      venc_chn = MAIN_STREAM_VENC_CHN;
-      break;
-    case 1:
-      streamName = "Sub0Stream";
-      vi_chn = SUB0_STREAM_VI_CHN;
-      venc_chn = SUB0_STREAM_VENC_CHN;
-      break;
-    case 2:
-      streamName = "Sub1Stream";
-      vi_chn = SUB1_STREAM_VI_CHN;
-      venc_chn = SUB1_STREAM_VENC_CHN;
-      break;
-    default:
-      printf("#Error: %s invalid stream idx:%d\n", __func__, stream_idx);
-      return -1;
+  case 0:
+    streamName = "MainStream";
+    vi_chn = MAIN_STREAM_VI_CHN;
+    venc_chn = MAIN_STREAM_VENC_CHN;
+    break;
+  case 1:
+    streamName = "Sub0Stream";
+    vi_chn = SUB0_STREAM_VI_CHN;
+    venc_chn = SUB0_STREAM_VENC_CHN;
+    break;
+  case 2:
+    streamName = "Sub1Stream";
+    vi_chn = SUB1_STREAM_VI_CHN;
+    venc_chn = SUB1_STREAM_VENC_CHN;
+    break;
+  default:
+    printf("#Error: %s invalid stream idx:%d\n", __func__, stream_idx);
+    return -1;
   }
 
   printf("#%s end ......................................\n", streamName);
@@ -314,7 +315,8 @@ int StreamOff(int stream_idx) {
     stDestChn.s32ChnId = MAIN_STREAM_JPEG_CHN;
     ret = RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
     if (ret) {
-      printf("ERROR: JPEG: unbind vi[%d] -> venc[%d] failed!\n", vi_chn, MAIN_STREAM_JPEG_CHN);
+      printf("ERROR: JPEG: unbind vi[%d] -> venc[%d] failed!\n", vi_chn,
+             MAIN_STREAM_JPEG_CHN);
       return -1;
     }
     RK_MPI_VENC_DestroyChn(MAIN_STREAM_JPEG_CHN);

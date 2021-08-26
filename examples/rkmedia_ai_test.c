@@ -55,7 +55,7 @@ static void *GetMediaBuffer(void *path) {
   return NULL;
 }
 
-static RK_CHAR optstr[] = "?::d:c:r:s:o:v:";
+static RK_CHAR optstr[] = "?::d:c:r:s:o:v:f:";
 static void print_usage(const RK_CHAR *name) {
   printf("usage example:\n");
   printf("\t%s [-d default] [-r 16000] [-c 2] [-s 1024] -o /tmp/ai.pcm\n",
@@ -64,6 +64,8 @@ static void print_usage(const RK_CHAR *name) {
   printf("\t-r: sample rate, Default:16000\n");
   printf("\t-c: channel count, Default:2\n");
   printf("\t-s: frames cnt, Default:1024\n");
+  printf("\t-f: the fmt of AI, 0:u8 1:s16 2:s32 3:flt 4:u8p 5:s16p 6:s32p "
+         "7:fltp 8:g711a 9: g711u Default:s16 \n");
   printf("\t-v: volume, Default:50 (0-100)\n");
   printf("\t-o: output path, Default:\"/tmp/ai.pcm\"\n");
   printf("Notice: fmt always s16_le\n");
@@ -77,6 +79,7 @@ int main(int argc, char *argv[]) {
   // default:CARD=rockchiprk809co
   RK_CHAR *pDeviceName = "default";
   RK_CHAR *pOutPath = "/tmp/ai.pcm";
+  SAMPLE_FORMAT_E enSampleFmt = RK_SAMPLE_FMT_S16;
   int c;
   int ret = 0;
 
@@ -100,6 +103,9 @@ int main(int argc, char *argv[]) {
     case 'o':
       pOutPath = optarg;
       break;
+    case 'f':
+      enSampleFmt = atoi(optarg);
+      break;
     case '?':
     default:
       print_usage(argv[0]);
@@ -113,12 +119,13 @@ int main(int argc, char *argv[]) {
   printf("#Frame Count: %u\n", u32FrameCnt);
   printf("#Volume: %d\n", s32Volume);
   printf("#Output Path: %s\n", pOutPath);
+  printf("#SampleFmt: %d\n", enSampleFmt);
 
   RK_MPI_SYS_Init();
 
   AI_CHN_ATTR_S ai_attr;
   ai_attr.pcAudioNode = pDeviceName;
-  ai_attr.enSampleFormat = RK_SAMPLE_FMT_S16;
+  ai_attr.enSampleFormat = enSampleFmt;
   ai_attr.u32NbSamples = u32FrameCnt;
   ai_attr.u32SampleRate = u32SampleRate;
   ai_attr.u32Channels = u32ChnCnt;

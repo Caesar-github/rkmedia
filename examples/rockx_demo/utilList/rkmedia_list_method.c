@@ -1,6 +1,6 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 #include "rkmedia_list_method.h"
 
@@ -15,7 +15,8 @@ int create_rkmedia_link_list(rkmedia_link_list **s, unsigned int node_size) {
     return -1;
   }
   if (node_size > MAX_NODE_SIZE) {
-    printf("create rkmedia_link_list fail, node_size(%u) over max(%u)", node_size, MAX_NODE_SIZE);
+    printf("create rkmedia_link_list fail, node_size(%u) over max(%u)",
+           node_size, MAX_NODE_SIZE);
     return -1;
   }
   *s = (rkmedia_link_list *)malloc(sizeof(rkmedia_link_list));

@@ -260,7 +260,7 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  unsigned char * UsrPicArrary = malloc(12441600);
+  unsigned char *UsrPicArrary = malloc(12441600);
   memset(UsrPicArrary, 0xff, 12441600);
   VI_USERPIC_ATTR_S stUsrPicAttr;
   stUsrPicAttr.enPixFmt = IMAGE_TYPE_NV12;

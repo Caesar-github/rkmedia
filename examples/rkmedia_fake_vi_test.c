@@ -403,12 +403,13 @@ int main(int argc, char *argv[]) {
           rk_aiq_uapi_sysctl_enqueueRkRawFile(g_aiq_ctx, g_rkraw_file);
           printf(">>>>>>>>> enqueue raw file\n");
         } else if (g_subdev_node) {
-          rk_aiq_uapi_sysctl_enqueueRkRawBuf(g_aiq_ctx,
-                                            (void *)rkraws[(index_raw % MAX_FAKE_FRAMES_NUM)], false);
+          rk_aiq_uapi_sysctl_enqueueRkRawBuf(
+              g_aiq_ctx, (void *)rkraws[(index_raw % MAX_FAKE_FRAMES_NUM)],
+              false);
           printf(">>>>>>>>> enqueue raw fd\n");
         }
-        usleep(1000*1000);
-      } while(g_dump_num--);
+        usleep(1000 * 1000);
+      } while (g_dump_num--);
       break;
     }
 
@@ -424,8 +425,8 @@ int main(int argc, char *argv[]) {
       rk_aiq_uapi_sysctl_enqueueRkRawFile(g_aiq_ctx, g_rkraw_file);
       printf(">>>>>>>>> enqueue raw file\n");
     } else if (g_subdev_node) {
-      rk_aiq_uapi_sysctl_enqueueRkRawBuf(g_aiq_ctx,
-                                         (void *)rkraws[(index_raw % MAX_FAKE_FRAMES_NUM)], false);
+      rk_aiq_uapi_sysctl_enqueueRkRawBuf(
+          g_aiq_ctx, (void *)rkraws[(index_raw % MAX_FAKE_FRAMES_NUM)], false);
       printf(">>>>>>>>> enqueue raw fd\n");
     }
 #endif

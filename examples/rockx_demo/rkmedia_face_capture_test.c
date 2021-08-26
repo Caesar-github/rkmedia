@@ -595,12 +595,12 @@ void face_snap_name_set(struct image_face snap_info) {
   char path_str[SNAP_NAME_LEN] = {0};
   if (g_photo_dirpath) {
     snprintf(path_str, SNAP_NAME_LEN, "%s/out-%d-%d-%.3f-%.3f.jpg",
-           g_photo_dirpath, snap_info.id, snap_info.count,
-           snap_info.quality.face_score, snap_info.quality.det_score);
+             g_photo_dirpath, snap_info.id, snap_info.count,
+             snap_info.quality.face_score, snap_info.quality.det_score);
   } else {
     snprintf(path_str, SNAP_NAME_LEN, "/tmp/out-%d-%d-%.3f-%.3f.jpg",
-           snap_info.id, snap_info.count,
-           snap_info.quality.face_score, snap_info.quality.det_score);
+             snap_info.id, snap_info.count, snap_info.quality.face_score,
+             snap_info.quality.det_score);
   }
   rk_list_push(&g_snap_name_list, (void *)path_str);
 }
@@ -625,7 +625,8 @@ void face_snap(struct image_face snap_info) {
     rga_width = rga_height * SNAP_WIDTH / SNAP_HEIGHT;
   }
   if (rga_width > (int)cfg.session_cfg[RK_NN_INDEX].u32Width) {
-    rga_height = rga_height * (int)cfg.session_cfg[RK_NN_INDEX].u32Width / rga_width;
+    rga_height =
+        rga_height * (int)cfg.session_cfg[RK_NN_INDEX].u32Width / rga_width;
     rga_width = (int)cfg.session_cfg[RK_NN_INDEX].u32Width;
   }
   if (rga_height > (int)cfg.session_cfg[RK_NN_INDEX].u32Height) {
@@ -1233,8 +1234,9 @@ static void print_usage(const RK_CHAR *name) {
          "only when this path set, snapping is enabled.\n");
   printf("\t-f | --fps Default:10\n");
   printf("\t-m | --hdr_mode Default:0, set 1 to open hdr, set 0 to close\n");
-  printf("\t-b | --black_mode ir mode Default:0, set 0 to display rgb, set 1 to "
-         "display ir, set -1 to disabled\n");
+  printf(
+      "\t-b | --black_mode ir mode Default:0, set 0 to display rgb, set 1 to "
+      "display ir, set -1 to disabled\n");
   printf("\t-g | --filter set 1 to enabled landmark filter\n");
   printf("\t-t | --time_log set 0 to enabled time log\n");
   printf(
@@ -1298,7 +1300,8 @@ int main(int argc, char **argv) {
       cfg.session_cfg[RK_NN_INDEX].u32Height = atoi(optarg);
       break;
     case 'd':
-      memset(cfg.session_cfg[RK_NN_INDEX].videopath, 0, sizeof(cfg.session_cfg[RK_NN_INDEX].videopath));
+      memset(cfg.session_cfg[RK_NN_INDEX].videopath, 0,
+             sizeof(cfg.session_cfg[RK_NN_INDEX].videopath));
       sprintf(cfg.session_cfg[RK_NN_INDEX].videopath, "%s", optarg);
       break;
     case 'b':

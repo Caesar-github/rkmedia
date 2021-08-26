@@ -98,17 +98,15 @@ static void print_usage(const RK_CHAR *name) {
 }
 
 static RK_U32 gu32FileIdx;
-int GetRecordFileName(RK_VOID *pHandle,
-                      RK_CHAR *pcFileName, RK_U32 muxerId) {
-  if(!pcFileName) {
+int GetRecordFileName(RK_VOID *pHandle, RK_CHAR *pcFileName, RK_U32 muxerId) {
+  if (!pcFileName) {
     printf("Error: pcFileName is null\n");
     return -1;
   }
 
   printf("#%s: Handle:%p idx:%u, fileIndex:%d, ...\n", __func__, pHandle,
          *((RK_U32 *)pHandle), muxerId);
-  sprintf(pcFileName, "/userdata/MuxerCbTest_%u.mp4",
-          *((RK_U32 *)pHandle));
+  sprintf(pcFileName, "/userdata/MuxerCbTest_%u.mp4", *((RK_U32 *)pHandle));
 
   printf("#%s: NewRecordFileName:[%s]\n", __func__, pcFileName);
 
@@ -130,8 +128,8 @@ int main(int argc, char *argv[]) {
   RK_U32 u32SampleRate = 16000;
   RK_U32 u32BitRate = 64000; // 64kbps
   RK_U32 u32ChnCnt = 2;
-  RK_U32 u32FrameCnt = 1024; // always 1024 for mp3
-  SAMPLE_FORMAT_E enSampleFmt = RK_SAMPLE_FMT_FLTP;
+  RK_U32 u32FrameCnt = 1152;
+  SAMPLE_FORMAT_E enSampleFmt = RK_SAMPLE_FMT_S16;
   // default:CARD=rockchiprk809co
   RK_CHAR *pAudioDevice = "default";
   RK_S32 s32EnableCallback = -1;
@@ -306,7 +304,7 @@ int main(int argc, char *argv[]) {
 
   // Create AENC
   AENC_CHN_ATTR_S aenc_attr;
-  aenc_attr.enCodecType = RK_CODEC_TYPE_MP3;
+  aenc_attr.enCodecType = RK_CODEC_TYPE_MP2;
   aenc_attr.u32Bitrate = u32BitRate;
   aenc_attr.u32Quality = 1;
   aenc_attr.stAencMP3.u32Channels = u32ChnCnt;
@@ -357,7 +355,7 @@ int main(int argc, char *argv[]) {
   stMuxerAttr.stVideoStreamParam.u32Width = u32Width;
   stMuxerAttr.stVideoStreamParam.u32Height = u32Height;
 
-  stMuxerAttr.stAudioStreamParam.enCodecType = RK_CODEC_TYPE_MP3;
+  stMuxerAttr.stAudioStreamParam.enCodecType = RK_CODEC_TYPE_MP2;
   stMuxerAttr.stAudioStreamParam.enSampFmt = enSampleFmt;
   stMuxerAttr.stAudioStreamParam.u32Channels = u32ChnCnt;
   stMuxerAttr.stAudioStreamParam.u32NbSamples = u32FrameCnt;

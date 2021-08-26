@@ -175,9 +175,10 @@ MEDIA_BUFFER RK_MPI_MB_CreateAudioBufferExt(MB_AUDIO_INFO_S *pstAudioInfo,
 
   mb->rkmedia_mb = std::make_shared<easymedia::SampleBuffer>(
       *(rkmedia_mb.get()), rkmediaSampleInfo);
+  mb->rkmedia_mb->SetValidSize(buf_size);
   mb->ptr = mb->rkmedia_mb->GetPtr();
   mb->fd = mb->rkmedia_mb->GetFD();
-  mb->size = 0;
+  mb->size = buf_size;
   mb->type = MB_TYPE_AUDIO;
   mb->stAudioInfo = *pstAudioInfo;
   mb->timestamp = 0;
@@ -211,11 +212,12 @@ MEDIA_BUFFER RK_MPI_MB_CreateAudioBuffer(RK_U32 u32BufferSize,
     return NULL;
   }
   mb->rkmedia_mb = rkmedia_mb;
+  mb->rkmedia_mb->SetValidSize(u32BufferSize);
   mb->ptr = rkmedia_mb->GetPtr();
   mb->fd = rkmedia_mb->GetFD();
   mb->handle = rkmedia_mb->GetHandle();
   mb->dev_fd = rkmedia_mb->GetDevFD();
-  mb->size = 0;
+  mb->size = u32BufferSize;
   mb->type = MB_TYPE_AUDIO;
   mb->timestamp = 0;
   mb->mode_id = RK_ID_UNKNOW;
@@ -272,11 +274,12 @@ MEDIA_BUFFER RK_MPI_MB_CreateImageBuffer(MB_IMAGE_INFO_S *pstImageInfo,
                                 (int)pstImageInfo->u32VerStride};
   mb->rkmedia_mb = std::make_shared<easymedia::ImageBuffer>(*(rkmedia_mb.get()),
                                                             rkmediaImageInfo);
+  mb->rkmedia_mb->SetValidSize(buf_size);
   mb->ptr = mb->rkmedia_mb->GetPtr();
   mb->fd = mb->rkmedia_mb->GetFD();
   mb->handle = mb->rkmedia_mb->GetHandle();
   mb->dev_fd = mb->rkmedia_mb->GetDevFD();
-  mb->size = 0;
+  mb->size = buf_size;
   mb->type = MB_TYPE_IMAGE;
   mb->stImageInfo = *pstImageInfo;
   mb->timestamp = 0;
@@ -373,12 +376,12 @@ MEDIA_BUFFER RK_MPI_MB_CreateBuffer(RK_U32 u32Size, RK_BOOL boolHardWare,
     RKMEDIA_LOGE("%s: no space left!\n", __func__);
     return NULL;
   }
-
+  mb->rkmedia_mb->SetValidSize(u32Size);
   mb->ptr = mb->rkmedia_mb->GetPtr();
   mb->fd = mb->rkmedia_mb->GetFD();
   mb->handle = mb->rkmedia_mb->GetHandle();
   mb->dev_fd = mb->rkmedia_mb->GetDevFD();
-  mb->size = 0;
+  mb->size = u32Size;
   mb->type = MB_TYPE_COMMON;
   mb->timestamp = 0;
   mb->mode_id = RK_ID_UNKNOW;
@@ -681,7 +684,7 @@ MEDIA_BUFFER RK_MPI_MB_POOL_GetBuffer(MEDIA_BUFFER_POOL MBPHandle,
   mb->fd = mb->rkmedia_mb->GetFD();
   mb->handle = mb->rkmedia_mb->GetHandle();
   mb->dev_fd = mb->rkmedia_mb->GetDevFD();
-  mb->size = 0;
+  mb->size = mb->rkmedia_mb->GetSize();
   mb->timestamp = 0;
   mb->mode_id = RK_ID_UNKNOW;
   mb->chn_id = 0;

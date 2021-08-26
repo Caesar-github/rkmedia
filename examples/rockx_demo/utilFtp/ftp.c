@@ -3,8 +3,8 @@
 #include <string.h>
 #include <sys/types.h>
 
-#include "ftp_func.h"
 #include "ftp.h"
+#include "ftp_func.h"
 
 static char *g_name = NULL;
 static char *g_passwd = NULL;

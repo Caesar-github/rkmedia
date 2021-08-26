@@ -35,7 +35,7 @@ int socket_connect(char *host, int port) {
       setsockopt(sk, IPPROTO_IP, IP_TOS, &opvalue, slen) < 0)
     return -1;
 
-  //set timeout
+  // set timeout
   struct timeval timeo = {15, 0};
   setsockopt(sk, SOL_SOCKET, SO_SNDTIMEO, &timeo, sizeof(timeo));
   setsockopt(sk, SOL_SOCKET, SO_RCVTIMEO, &timeo, sizeof(timeo));

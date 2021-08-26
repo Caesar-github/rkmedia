@@ -5,4 +5,4 @@
 ## found in the LICENSE file.
 ##
 
-find . -name "*.cc" -o -name "*.h" -o -name "*.hh" | xargs clang-format-8 -style=llvm -i
+find . -name "*.cc" -o -name "*.c" -o -name "*.h" -o -name "*.hh" | xargs clang-format-8 -style=llvm -i

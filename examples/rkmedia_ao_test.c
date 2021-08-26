@@ -21,7 +21,7 @@ static void sigterm_handler(int sig) {
   quit = true;
 }
 
-static RK_CHAR optstr[] = "?::d:c:r:s:i:v:";
+static RK_CHAR optstr[] = "?::d:c:r:s:i:v:f:";
 static void print_usage(const RK_CHAR *name) {
   printf("usage example:\n");
   printf("\t%s [-d default] [-r 16000] [-c 2] [-s 1024] -i /tmp/ao.pcm\n",
@@ -32,6 +32,8 @@ static void print_usage(const RK_CHAR *name) {
   printf("\t-s: frames cnt, Default:1024\n");
   printf("\t-v: volume, Default:50 (0-100)\n");
   printf("\t-i: input path.\n");
+  printf("\t-f: the fmt of AI, 0:u8 1:s16 2:s32 3:flt 4:u8p 5:s16p 6:s32p "
+         "7:fltp 8:g711a 9: g711u Default:s16 \n");
   printf("Notice: fmt always s16_le\n");
 }
 
@@ -39,10 +41,11 @@ int main(int argc, char *argv[]) {
   RK_U32 u32SampleRate = 16000;
   RK_U32 u32ChnCnt = 2;
   RK_U32 u32FrameCnt = 1024;
-  RK_S32 s32Volume = 50;
+  RK_S32 s32Volume = 100;
   // default:CARD=rockchiprk809co
   RK_CHAR *pDeviceName = "default";
   RK_CHAR *pInputPath = NULL;
+  SAMPLE_FORMAT_E enSampleFmt = RK_SAMPLE_FMT_S16;
   int ret = 0;
   int c;
 
@@ -66,6 +69,9 @@ int main(int argc, char *argv[]) {
     case 'i':
       pInputPath = optarg;
       break;
+    case 'f':
+      enSampleFmt = atoi(optarg);
+      break;
     case '?':
     default:
       print_usage(argv[0]);
@@ -84,6 +90,7 @@ int main(int argc, char *argv[]) {
   printf("#Frame Count: %u\n", u32FrameCnt);
   printf("#Volume: %d\n", s32Volume);
   printf("#Output Path: %s\n", pInputPath);
+  printf("#SampleFmt: %d\n", enSampleFmt);
 
   FILE *file = fopen(pInputPath, "r");
   if (!file) {
@@ -95,7 +102,7 @@ int main(int argc, char *argv[]) {
 
   AO_CHN_ATTR_S ao_attr;
   ao_attr.pcAudioNode = pDeviceName;
-  ao_attr.enSampleFormat = RK_SAMPLE_FMT_S16;
+  ao_attr.enSampleFormat = enSampleFmt;
   ao_attr.u32NbSamples = u32FrameCnt;
   ao_attr.u32SampleRate = u32SampleRate;
   ao_attr.u32Channels = u32ChnCnt;
@@ -133,22 +140,23 @@ int main(int argc, char *argv[]) {
 
   MEDIA_BUFFER mb = NULL;
   RK_U32 u32Timeval = u32FrameCnt * 1000000 / u32SampleRate; // us
-  RK_U32 u32ReadSize = u32FrameCnt * u32ChnCnt * 2; // RK_SAMPLE_FMT_S16:2Bytes
-  printf("# TimeVal:%dus, ReadSize:%d\n", u32Timeval, u32ReadSize);
+  RK_U32 u32ReadSize;
   MB_AUDIO_INFO_S stSampleInfo = {ao_attr.u32Channels, ao_attr.u32SampleRate,
                                   ao_attr.u32NbSamples, ao_attr.enSampleFormat};
   while (!quit) {
     mb = RK_MPI_MB_CreateAudioBufferExt(&stSampleInfo, RK_FALSE, 0);
     if (!mb) {
-      printf("ERROR: malloc failed! size:%d\n", u32ReadSize);
+      printf("ERROR: create audio buffer\n");
       break;
     }
+    u32ReadSize = RK_MPI_MB_GetSize(mb);
+    printf("# TimeVal:%dus, ReadSize:%d\n", u32Timeval, u32ReadSize);
     ret = fread(RK_MPI_MB_GetPtr(mb), 1, u32ReadSize, file);
     if (!ret) {
       printf("# Get end of file!\n");
       break;
     }
-    RK_MPI_MB_SetSize(mb, u32ReadSize);
+
     ret = RK_MPI_SYS_SendMediaBuffer(RK_ID_AO, 0, mb);
     if (ret) {
       printf("ERROR: RK_MPI_SYS_SendMediaBuffer failed! ret = %d\n", ret);

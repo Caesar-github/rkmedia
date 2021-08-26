@@ -46,10 +46,6 @@ if(OGG)
   add_subdirectory(ogg)
 endif()
 
-if(RKAUDIO)
-add_subdirectory(rkaudio)
-endif()
-
 option(LIVE555 "compile: live555" OFF)
 if(LIVE555)
   if(LIVE555_SERVER)
@@ -151,6 +147,10 @@ endif()
 
 if(MINI_MEDIA_DEPENDENT_LIBS)
   target_link_libraries(${MINI_LIBRARY_NAME} ${MINI_MEDIA_DEPENDENT_LIBS})
+endif()
+
+if(RKAUDIO)
+add_subdirectory(rkaudio)
 endif()
 
 # cmake-format: off

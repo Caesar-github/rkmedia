@@ -339,8 +339,8 @@ static RK_S32 ROCKX_DETECT(sub_arg_t *init_cfg, rockx_image_t *img,
   rockx_object_array_t detect_array;
   memset(&detect_array, 0, sizeof(detect_array));
   // different method for person_detect
-  rockx_ret = rockx_person_detect2(g_object_det_handle, img,
-                                  init_cfg->ir_en, &detect_array, NULL);
+  rockx_ret = rockx_person_detect2(g_object_det_handle, img, init_cfg->ir_en,
+                                   &detect_array, NULL);
 
   if (rockx_ret != ROCKX_RET_SUCCESS) {
     printf("rockx_detect error %d\n", rockx_ret);
@@ -545,7 +545,8 @@ static void *MainStream(void *arg) {
       memset(&person_info, 0, sizeof(person_info));
       rkmedia_link_list_pop(g_rkmedia_link_list, (void *)(&person_info));
       if (in_arg->time_log_en)
-        printf("time interval is %ld\n", getCurrentTimeMsec() - person_info.timeval);
+        printf("time interval is %ld\n",
+               getCurrentTimeMsec() - person_info.timeval);
 
       set_detect_rcd_unactivate();
       for (int j = 0; j < person_info.person_array.count; j++) {
@@ -553,17 +554,21 @@ static void *MainStream(void *arg) {
         int update_rcd_ret = 0;
         if (score <= 0.0f) {
           update_rcd_ret = update_board_rcd(
-              person_info.person_array.object[j].id, person_info.person_array.object[j].box.top,
+              person_info.person_array.object[j].id,
+              person_info.person_array.object[j].box.top,
               person_info.person_array.object[j].box.bottom,
-              person_info.person_array.object[j].box.left, person_info.person_array.object[j].box.right,
-              x_rate, y_rate, (int)cfg.session_cfg[DRAW_INDEX].u32Width,
+              person_info.person_array.object[j].box.left,
+              person_info.person_array.object[j].box.right, x_rate, y_rate,
+              (int)cfg.session_cfg[DRAW_INDEX].u32Width,
               (int)cfg.session_cfg[DRAW_INDEX].u32Height, RK_FALSE);
         } else {
           update_rcd_ret = update_board_rcd(
-              person_info.person_array.object[j].id, person_info.person_array.object[j].box.top,
+              person_info.person_array.object[j].id,
+              person_info.person_array.object[j].box.top,
               person_info.person_array.object[j].box.bottom,
-              person_info.person_array.object[j].box.left, person_info.person_array.object[j].box.right,
-              x_rate, y_rate, (int)cfg.session_cfg[DRAW_INDEX].u32Width,
+              person_info.person_array.object[j].box.left,
+              person_info.person_array.object[j].box.right, x_rate, y_rate,
+              (int)cfg.session_cfg[DRAW_INDEX].u32Width,
               (int)cfg.session_cfg[DRAW_INDEX].u32Height, RK_TRUE);
         }
         if (0)
@@ -653,7 +658,7 @@ static void print_usage(const RK_CHAR *name) {
 #else
   printf("\t%s "
          "[-I 0] "
-        //  "[-v 0] "
+         //  "[-v 0] "
          "[-c rtsp-nn.cfg] "
          "[-r librknn_runtime.so] "
          "[-t 0] "
@@ -664,10 +669,10 @@ static void print_usage(const RK_CHAR *name) {
          "\n",
          name);
 #endif
-//   printf("\t-v | --data_version [0~1]; Default: 0\n"
-//          "\t\t-->0: ROCKX_MODULE_PERSON_DETECTION_V2\n"
-//          "\t\t-->1: ROCKX_MODULE_PERSON_DETECTION_V3\n"
-//          "\n");
+  //   printf("\t-v | --data_version [0~1]; Default: 0\n"
+  //          "\t\t-->0: ROCKX_MODULE_PERSON_DETECTION_V2\n"
+  //          "\t\t-->1: ROCKX_MODULE_PERSON_DETECTION_V3\n"
+  //          "\n");
   printf("\t-I | --camid: camera ctx id, Default 0\n");
   printf("\t-c | --cfg_path: rtsp cfg path, Default: "
          "\"/oem/usr/share/rtsp-nn.cfg\"\n");

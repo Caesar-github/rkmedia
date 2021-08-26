@@ -127,8 +127,6 @@ std::string CodecToString(CODEC_TYPE_E type) {
     return AUDIO_MP3;
   case RK_CODEC_TYPE_MP2:
     return AUDIO_MP2;
-  case RK_CODEC_TYPE_VORBIS:
-    return AUDIO_VORBIS;
   case RK_CODEC_TYPE_G711A:
     return AUDIO_G711A;
   case RK_CODEC_TYPE_G711U:
@@ -165,6 +163,10 @@ std::string SampleFormatToString(SAMPLE_FORMAT_E type) {
     return AUDIO_PCM_S32P;
   case RK_SAMPLE_FMT_FLTP:
     return AUDIO_PCM_FLTP;
+  case RK_SAMPLE_FMT_G711A:
+    return AUDIO_PCM_G711A;
+  case RK_SAMPLE_FMT_G711U:
+    return AUDIO_PCM_G711U;
   default:
     return "";
   }

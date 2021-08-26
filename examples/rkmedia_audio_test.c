@@ -188,8 +188,9 @@ static RK_VOID FILE_ADEC_AO(char *file_path) {
 
   RK_MPI_SYS_Bind(&mpp_chn_adec, &mpp_chn_ao);
 
-  MB_AUDIO_INFO_S stSampleInfo = { stAoAttr.u32Channels, stAoAttr.u32SampleRate,
-                                   stAoAttr.u32NbSamples,stAoAttr.enSampleFormat};
+  MB_AUDIO_INFO_S stSampleInfo = {stAoAttr.u32Channels, stAoAttr.u32SampleRate,
+                                  stAoAttr.u32NbSamples,
+                                  stAoAttr.enSampleFormat};
   FILE *read_file = fopen(file_path, "r");
   if (!read_file) {
     printf("ERROR: open %s failed!\n", file_path);
@@ -197,7 +198,8 @@ static RK_VOID FILE_ADEC_AO(char *file_path) {
   }
   quit = true;
   while (quit) {
-    MEDIA_BUFFER mb = RK_MPI_MB_CreateAudioBufferExt(&stSampleInfo, RK_FALSE, 0);
+    MEDIA_BUFFER mb =
+        RK_MPI_MB_CreateAudioBufferExt(&stSampleInfo, RK_FALSE, 0);
     if (!mb) {
       printf("ERROR: no space left!\n");
       break;
@@ -218,7 +220,8 @@ static RK_VOID FILE_ADEC_AO(char *file_path) {
   {
     // flush decoder
     printf("start flush decoder.\n");
-    MEDIA_BUFFER mb = RK_MPI_MB_CreateAudioBufferExt(&stSampleInfo, RK_FALSE, 0);
+    MEDIA_BUFFER mb =
+        RK_MPI_MB_CreateAudioBufferExt(&stSampleInfo, RK_FALSE, 0);
     RK_MPI_MB_SetSize(mb, 0);
     RK_MPI_SYS_SendMediaBuffer(RK_ID_ADEC, mpp_chn_adec.s32ChnId, mb);
     RK_MPI_MB_ReleaseBuffer(mb);

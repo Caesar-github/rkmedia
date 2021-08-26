@@ -22,6 +22,7 @@ typedef struct AudioParams_ {
   const RK_CHAR *pOutPath;
 } AudioParams;
 
+static CODEC_TYPE_E code_type = RK_CODEC_TYPE_MP2;
 static bool quit = false;
 static void sigterm_handler(int sig) {
   fprintf(stderr, "signal %d\n", sig);
@@ -30,39 +31,39 @@ static void sigterm_handler(int sig) {
 
 #define MP3_PROFILE_LOW 1
 
-typedef struct Mp3FreqIdx_ {
+typedef struct FreqIdx_ {
   RK_S32 u32SmpRate;
   RK_U8 u8FreqIdx;
-} Mp3FreqIdx;
+} FreqIdx;
 
-Mp3FreqIdx Mp3FreqIdxTbl[13] = {{96000, 0}, {88200, 1}, {64000, 2},  {48000, 3},
-                                {44100, 4}, {32000, 5}, {24000, 6},  {22050, 7},
-                                {16000, 8}, {12000, 9}, {11025, 10}, {8000, 11},
-                                {7350, 12}};
+FreqIdx FreqIdxTbl[13] = {{96000, 0}, {88200, 1}, {64000, 2},  {48000, 3},
+                          {44100, 4}, {32000, 5}, {24000, 6},  {22050, 7},
+                          {16000, 8}, {12000, 9}, {11025, 10}, {8000, 11},
+                          {7350, 12}};
 
-static void GetMp3Header(RK_U8 *pu8Mp3Hdr, RK_S32 u32SmpRate, RK_U8 u8Channel,
-                         RK_U32 u32DataLen) {
+static void GetHeader(RK_U8 *pu8Hdr, RK_S32 u32SmpRate, RK_U8 u8Channel,
+                      RK_U32 u32DataLen) {
   RK_U8 u8FreqIdx = 0;
   for (int i = 0; i < 13; i++) {
-    if (u32SmpRate == Mp3FreqIdxTbl[i].u32SmpRate) {
-      u8FreqIdx = Mp3FreqIdxTbl[i].u8FreqIdx;
+    if (u32SmpRate == FreqIdxTbl[i].u32SmpRate) {
+      u8FreqIdx = FreqIdxTbl[i].u8FreqIdx;
       break;
     }
   }
 
   RK_U32 u32PacketLen = u32DataLen + 7;
-  pu8Mp3Hdr[0] = 0xFF;
-  pu8Mp3Hdr[1] = 0xF1;
-  pu8Mp3Hdr[2] = ((MP3_PROFILE_LOW) << 6) + (u8FreqIdx << 2) + (u8Channel >> 2);
-  pu8Mp3Hdr[3] = (((u8Channel & 3) << 6) + (u32PacketLen >> 11));
-  pu8Mp3Hdr[4] = ((u32PacketLen & 0x7FF) >> 3);
-  pu8Mp3Hdr[5] = (((u32PacketLen & 7) << 5) + 0x1F);
-  pu8Mp3Hdr[6] = 0xFC;
+  pu8Hdr[0] = 0xFF;
+  pu8Hdr[1] = 0xF1;
+  pu8Hdr[2] = ((MP3_PROFILE_LOW) << 6) + (u8FreqIdx << 2) + (u8Channel >> 2);
+  pu8Hdr[3] = (((u8Channel & 3) << 6) + (u32PacketLen >> 11));
+  pu8Hdr[4] = ((u32PacketLen & 0x7FF) >> 3);
+  pu8Hdr[5] = (((u32PacketLen & 7) << 5) + 0x1F);
+  pu8Hdr[6] = 0xFC;
 }
 
 static void *GetMediaBuffer(void *params) {
   AudioParams *pstAudioParams = (AudioParams *)params;
-  RK_U8 mp3_header[7];
+  RK_U8 header[7];
   MEDIA_BUFFER mb = NULL;
   int cnt = 0;
   FILE *save_file = NULL;
@@ -91,9 +92,11 @@ static void *GetMediaBuffer(void *params) {
            RK_MPI_MB_GetTimestamp(mb));
 
     if (save_file) {
-      GetMp3Header(mp3_header, pstAudioParams->u32SampleRate,
-                   pstAudioParams->u32ChnCnt, RK_MPI_MB_GetSize(mb));
-      fwrite(mp3_header, 1, 7, save_file);
+      if (code_type == RK_CODEC_TYPE_MP3) {
+        GetHeader(header, pstAudioParams->u32SampleRate,
+                  pstAudioParams->u32ChnCnt, RK_MPI_MB_GetSize(mb));
+        fwrite(header, 1, 7, save_file);
+      }
       fwrite(RK_MPI_MB_GetPtr(mb), 1, RK_MPI_MB_GetSize(mb), save_file);
     }
     RK_MPI_MB_ReleaseBuffer(mb);
@@ -105,7 +108,7 @@ static void *GetMediaBuffer(void *params) {
   return NULL;
 }
 
-static RK_CHAR optstr[] = "?::d:c:r:s:i:";
+static RK_CHAR optstr[] = "?::d:c:r:s:i:t:l:";
 static void print_usage(const RK_CHAR *name) {
   printf("usage example:\n");
   printf("\t%s [-d default] [-r 16000] [-c 2] [-s 1024] -i /tmp/ai.pcm\n",
@@ -115,6 +118,9 @@ static void print_usage(const RK_CHAR *name) {
   printf("\t-c: channel count, Default:2\n");
   printf("\t-s: frames cnt, Default:1024\n");
   printf("\t-i: input path.\n");
+  printf("\t-l: frame cnt, Default:1024\"\n");
+  printf("\t-t: codec type,0:mp3 1:mp2 2:g711a 3:g711u 4:g726"
+         "Default:mp3\"\n");
   printf("Notice: fmt always s16_le\n");
 }
 
@@ -148,6 +154,12 @@ int main(int argc, char *argv[]) {
     case 'i':
       pInputPath = optarg;
       break;
+    case 't':
+      code_type = atoi(optarg);
+      break;
+    case 'l':
+      u32FrameCnt = atoi(optarg);
+      break;
     case '?':
     default:
       print_usage(argv[0]);
@@ -166,7 +178,7 @@ int main(int argc, char *argv[]) {
   printf("#Frame Count: %u\n", u32FrameCnt);
   printf("#Input Path: %s\n", pInputPath);
   printf("#Output Path: %s\n", pOutPath);
-
+  printf("#code_type: %d\n", code_type);
   FILE *file = fopen(pInputPath, "r");
   if (!file) {
     printf("ERROR: open %s failed!\n", pInputPath);
@@ -182,7 +194,7 @@ int main(int argc, char *argv[]) {
   RK_MPI_SYS_Init();
 
   AENC_CHN_ATTR_S aenc_attr;
-  aenc_attr.enCodecType = RK_CODEC_TYPE_MP3;
+  aenc_attr.enCodecType = code_type;
   aenc_attr.u32Bitrate = u32BitRate;
   aenc_attr.u32Quality = 1;
   aenc_attr.stAencMP3.u32Channels = u32ChnCnt;

@@ -6507,10 +6507,10 @@ RK_S32 RK_MPI_ADEC_CreateChn(ADEC_CHN AdecChn, const ADEC_CHN_ATTR_S *pstAttr) {
 
   RK_U32 channels = 0;
   RK_U32 sample_rate = 0;
+  SAMPLE_FORMAT_E fmt = RK_SAMPLE_FMT_S16;
   CODEC_TYPE_E codec_type = g_adec_chns[AdecChn].adec_attr.attr.enCodecType;
   switch (codec_type) {
   case CODEC_TYPE_MP3:
-    break;
   case CODEC_TYPE_MP2:
     break;
   case CODEC_TYPE_G711A:
@@ -6522,6 +6522,8 @@ RK_S32 RK_MPI_ADEC_CreateChn(ADEC_CHN AdecChn, const ADEC_CHN_ATTR_S *pstAttr) {
     sample_rate = g_adec_chns[AdecChn].adec_attr.attr.stAdecG711U.u32SampleRate;
     break;
   case CODEC_TYPE_G726:
+    channels = 1;
+    sample_rate = 8000;
     break;
   default:
     g_adec_mtx.unlock();
@@ -6537,7 +6539,8 @@ RK_S32 RK_MPI_ADEC_CreateChn(ADEC_CHN AdecChn, const ADEC_CHN_ATTR_S *pstAttr) {
   PARAM_STRING_APPEND(flow_param, KEY_NAME, "rkaudio_aud");
 
   dec_param = "";
-  PARAM_STRING_APPEND(dec_param, KEY_INPUTDATATYPE, CodecToString(codec_type));
+  PARAM_STRING_APPEND(dec_param, KEY_CODECTYPE, CodecToString(codec_type));
+  PARAM_STRING_APPEND(dec_param, KEY_INPUTDATATYPE, SampleFormatToString(fmt));
   PARAM_STRING_APPEND_TO(dec_param, KEY_CHANNELS, channels);
   PARAM_STRING_APPEND_TO(dec_param, KEY_SAMPLE_RATE, sample_rate);
 

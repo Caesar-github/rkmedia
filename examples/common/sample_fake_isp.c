@@ -57,7 +57,7 @@ rk_aiq_sys_ctx_t *aiq_fake_init(rk_aiq_working_mode_t mode, const char *iq_dir,
   ahdr_attrib_t hdr_attr;
   rk_aiq_user_api_ahdr_GetAttrib(ctx, &hdr_attr);
   hdr_attr.opMode = HDR_OpMode_Tool;
-  for (int i = 0; i < CALIBDB_MAX_MODE_NUM; i++ )
+  for (int i = 0; i < CALIBDB_MAX_MODE_NUM; i++)
     hdr_attr.stTool.tmo.en[i].en = 0;
   rk_aiq_user_api_ahdr_SetAttrib(ctx, hdr_attr);
 
@@ -132,7 +132,7 @@ bool parse_mcu_rkraws(const char *subdev, struct mcu_rkaiq_rkraw *mcu_rkraws) {
         return false;
       }
       printf(">>get buf fd=%d\n", _shmem.shm_fd);
-#if DUMP_RAW //just for sc210iot
+#if DUMP_RAW // just for sc210iot
       {
         uint8_t buffer[128] = {0};
         char raw_path[64];
@@ -141,22 +141,23 @@ bool parse_mcu_rkraws(const char *subdev, struct mcu_rkaiq_rkraw *mcu_rkraws) {
         sprintf(raw_path, "/tmp/test_mcu_raw_%d.raw", icnt);
         file = fopen(raw_path, "w");
         if (file) {
-          *((uint16_t* )buffer) = 0x8080;
-          *((uint16_t* )(buffer + 2)) = 128U;
-          *((uint32_t* )(buffer + 4)) = 0x0171;
-          *((uint16_t* )(buffer + 8)) = 1920;
-          *((uint16_t* )(buffer + 10)) = 1080;
+          *((uint16_t *)buffer) = 0x8080;
+          *((uint16_t *)(buffer + 2)) = 128U;
+          *((uint32_t *)(buffer + 4)) = 0x0171;
+          *((uint16_t *)(buffer + 8)) = 1920;
+          *((uint16_t *)(buffer + 10)) = 1080;
           *(buffer + 12) = 10;
           *(buffer + 13) = 0;
           *(buffer + 14) = 1;
           *(buffer + 15) = 0;
           *(buffer + 16) = 1;
-          *((uint16_t* )(buffer + 17)) = 2560;
-          *((uint16_t* )(buffer + 19)) = 2400;
+          *((uint16_t *)(buffer + 17)) = 2560;
+          *((uint16_t *)(buffer + 19)) = 2400;
           fwrite(buffer, sizeof(buffer), 1, file);
           printf(">>>shm offset=%x\n", (_shmem.shm_start - resmem.resmem_padr));
-          raw_ptr = (uint8_t *)(raw_ptr + (_shmem.shm_start - resmem.resmem_padr));
-          fwrite((uint8_t *)raw_ptr, 1, 2560*1080, file);
+          raw_ptr =
+              (uint8_t *)(raw_ptr + (_shmem.shm_start - resmem.resmem_padr));
+          fwrite((uint8_t *)raw_ptr, 1, 2560 * 1080, file);
           fclose(file);
         }
       }

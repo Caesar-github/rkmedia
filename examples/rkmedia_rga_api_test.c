@@ -5,7 +5,6 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <getopt.h>
-#include <getopt.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>

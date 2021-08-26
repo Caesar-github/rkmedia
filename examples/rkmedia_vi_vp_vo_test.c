@@ -108,8 +108,9 @@ static void *GetMediaBuffer(void *arg) {
  *    check rkispp_scale2 for VI5: as is my case: /dev/video49
  * 4. config:
  *    media-ctl -d /dev/media5 -l '"rkispp_input_image":0->"rkispp-subdev":0[1]'
- *    media-ctl -d /dev/media5 --set-v4l2 '"rkispp-subdev":0[fmt:YUYV8_2X8/1920x1080]'
- *    media-ctl -d /dev/media5 --set-v4l2 '"rkispp-subdev":2[fmt:YUYV8_2X8/1920x1080]'
+ *    media-ctl -d /dev/media5 --set-v4l2
+ * '"rkispp-subdev":0[fmt:YUYV8_2X8/1920x1080]' media-ctl -d /dev/media5
+ * --set-v4l2 '"rkispp-subdev":2[fmt:YUYV8_2X8/1920x1080]'
  * 5. enable VI2, VI3, VI4, VI5(one or more) before VP0
  */
 

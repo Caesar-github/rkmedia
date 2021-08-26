@@ -16,7 +16,7 @@
 #include "rkmedia_api.h"
 
 static bool quit = false;
-static RK_CHAR optstr[] = "?::d:c:r:i:";
+static RK_CHAR optstr[] = "?::d:c:r:i:t:l:f:";
 
 static void print_usage(const RK_CHAR *name) {
   printf("usage example:\n");
@@ -25,6 +25,11 @@ static void print_usage(const RK_CHAR *name) {
   printf("\t-r: sample rate, Default:16000\n");
   printf("\t-c: channel count, Default:2\n");
   printf("\t-i: input path, Default:\"/tmp/aenc.mp3\"\n");
+  printf("\t-t: codec type, 0:mp3 1:mp2 2:g711a 3:g711u 4:g726"
+         "Default:mp3\"\n");
+  printf("\t-f: the fmt of AI, 0:u8 1:s16 2:s32 3:flt 4:u8p 5:s16p 6:s32p "
+         "7:fltp 8:g711a 9: g711u Default:s16 \n");
+  printf("\t-l: frame cnt, Default:1024\"\n");
   printf("Notice: fmt always s16_le\n");
 }
 
@@ -35,6 +40,8 @@ int main(int argc, char *argv[]) {
   // default:CARD=rockchiprk809co
   RK_CHAR *pDeviceName = "default";
   RK_CHAR *pInPath = "/tmp/aenc.mp3";
+  CODEC_TYPE_E code_type = RK_CODEC_TYPE_MP3;
+  SAMPLE_FORMAT_E enSampleFmt = RK_SAMPLE_FMT_S16;
   int ret = 0;
   int c;
 
@@ -52,6 +59,15 @@ int main(int argc, char *argv[]) {
     case 'i':
       pInPath = optarg;
       break;
+    case 'l':
+      u32FrameCnt = atoi(optarg);
+      break;
+    case 't':
+      code_type = atoi(optarg);
+      break;
+    case 'f':
+      enSampleFmt = atoi(optarg);
+      break;
     case '?':
     default:
       print_usage(argv[0]);
@@ -64,6 +80,8 @@ int main(int argc, char *argv[]) {
   printf("#Channel Count: %d\n", u32ChnCnt);
   printf("#Frame Count: %d\n", u32FrameCnt);
   printf("#Input Path: %s\n", pInPath);
+  printf("#code_type: %d\n", code_type);
+  printf("#SampleFmt: %d\n", enSampleFmt);
 
   FILE *file = fopen(pInPath, "r");
   if (!file) {
@@ -76,7 +94,15 @@ int main(int argc, char *argv[]) {
 
   // create ADEC
   ADEC_CHN_ATTR_S stAdecAttr = {0};
-  stAdecAttr.enCodecType = RK_CODEC_TYPE_MP3;
+  stAdecAttr.enCodecType = code_type;
+  if (code_type == RK_CODEC_TYPE_G711A) {
+    stAdecAttr.stAdecG711A.u32Channels = u32ChnCnt;
+    stAdecAttr.stAdecG711A.u32SampleRate = u32SampleRate;
+  } else if (code_type == RK_CODEC_TYPE_G711U) {
+    stAdecAttr.stAdecG711U.u32Channels = u32ChnCnt;
+    stAdecAttr.stAdecG711U.u32SampleRate = u32SampleRate;
+  }
+
   ret = RK_MPI_ADEC_CreateChn(0, &stAdecAttr);
   if (ret) {
     printf("ERROR: Create ADEC[0] failed! ret=%d\n", ret);
@@ -89,7 +115,7 @@ int main(int argc, char *argv[]) {
   stAoAttr.u32SampleRate = u32SampleRate;
   stAoAttr.u32NbSamples = u32FrameCnt;
   stAoAttr.pcAudioNode = pDeviceName;
-  stAoAttr.enSampleFormat = RK_SAMPLE_FMT_S16;
+  stAoAttr.enSampleFormat = enSampleFmt;
   ret = RK_MPI_AO_SetChnAttr(0, &stAoAttr);
   ret |= RK_MPI_AO_EnableChn(0);
   if (ret) {
