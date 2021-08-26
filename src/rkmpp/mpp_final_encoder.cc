@@ -324,7 +324,8 @@ bool MPPMJPEGConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
   ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:format", pic_type);
   ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:rotation", rotation);
   ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:mode", rc_mode); // default fixqp.
-  ret |= mpp_enc_cfg_set_s32(enc_cfg, "jpeg:q_factor", img_cfg.qfactor);
+  if (rc_mode == MPP_ENC_RC_MODE_FIXQP)
+    ret |= mpp_enc_cfg_set_s32(enc_cfg, "jpeg:q_factor", img_cfg.qfactor);
   if (cfg.type == Type::Video) {
     RKMEDIA_LOGI("MPP Encoder[JPEG]: set rc cfg for MJPEG...\n");
     // mjpeg rc confg set.
