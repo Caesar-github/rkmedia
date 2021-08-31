@@ -10,11 +10,6 @@
 #include "utils.h"
 
 namespace easymedia {
-
-Codec::Codec() { memset(&config, 0, sizeof(config)); }
-
-Codec::~Codec() {}
-
 std::shared_ptr<MediaBuffer> Codec::GetExtraData(void **data, size_t *size) {
   if (data && size && extra_data) {
     *data = extra_data->GetPtr();

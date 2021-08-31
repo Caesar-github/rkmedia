@@ -15,8 +15,8 @@ namespace easymedia {
 class MediaBuffer;
 class Codec {
 public:
-  Codec();
-  virtual ~Codec() = 0;
+  Codec() { memset(&config, 0, sizeof(config)); }
+  ~Codec() {}
   static const char *GetCodecName() { return nullptr; }
   MediaConfig &GetConfig() { return config; }
   void SetConfig(const MediaConfig &cfg) { config = cfg; }

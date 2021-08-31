@@ -88,9 +88,10 @@
   void PRODUCT##Reflector::RegisterFactory(std::string identifier,             \
                                            const PRODUCT##Factory *factory) {  \
     auto it = factories.find(identifier);                                      \
-    if (it == factories.end())                                                 \
+    if (it == factories.end()) {                                               \
       factories[identifier] = factory;                                         \
-    else                                                                       \
+      printf("register factory : %s\n", identifier.c_str());                   \
+    } else                                                                     \
       printf("repeated identifier : %s\n", identifier.c_str());                \
   }                                                                            \
   void PRODUCT##Reflector::DumpFactories() {                                   \

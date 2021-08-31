@@ -13,11 +13,6 @@ DEFINE_REFLECTOR(Encoder)
 // request should equal codec_name
 DEFINE_FACTORY_COMMON_PARSE(Encoder)
 
-bool Encoder::InitConfig(const MediaConfig &cfg) {
-  Codec::SetConfig(cfg);
-  return true;
-}
-
 void VideoEncoder::RequestChange(uint32_t change,
                                  std::shared_ptr<ParameterBuffer> value) {
   change_mtx.lock();

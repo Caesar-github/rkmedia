@@ -230,8 +230,9 @@ bool parse_media_param_map(const char *param,
   return true;
 }
 
-bool parse_media_param_list(const char *param, std::list<std::string> &list,
-                            const char delim) {
+_API bool parse_media_param_list(const char *param,
+                                 std::list<std::string> &list,
+                                 const char delim) {
   if (!param)
     return false;
 
@@ -243,7 +244,7 @@ bool parse_media_param_list(const char *param, std::list<std::string> &list,
   return true;
 }
 
-int parse_media_param_match(
+_API int parse_media_param_match(
     const char *param, std::map<std::string, std::string> &map,
     std::list<std::pair<const std::string, std::string &>> &list) {
   if (!easymedia::parse_media_param_map(param, map))

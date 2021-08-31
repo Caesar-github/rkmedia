@@ -60,7 +60,10 @@ private:
 class Encoder : public Codec {
 public:
   virtual ~Encoder() = default;
-  virtual bool InitConfig(const MediaConfig &cfg);
+  virtual bool InitConfig(const MediaConfig &cfg) {
+    Codec::SetConfig(cfg);
+    return true;
+  }
   virtual bool
   CheckConfigChange(std::pair<uint32_t, std::shared_ptr<ParameterBuffer>>) {
     return true;

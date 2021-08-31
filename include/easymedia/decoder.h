@@ -28,7 +28,10 @@ DECLARE_REFLECTOR(Decoder)
 class Decoder : public Codec {
 public:
   virtual ~Decoder() = default;
-  virtual bool InitConfig(const MediaConfig &cfg);
+  virtual bool InitConfig(const MediaConfig &cfg) {
+    UNUSED(cfg);
+    return true;
+  }
 };
 
 class _API AudioDecoder : public Decoder {
