@@ -456,6 +456,7 @@ void MediaBuffer::CopyAttribute(MediaBuffer &src_attr) {
   user_flag = src_attr.GetUserFlag();
   ustimestamp = src_attr.GetUSTimeStamp();
   eof = src_attr.IsEOF();
+  tsvc_level = src_attr.GetTsvcLevel();
 }
 
 struct dma_buf_sync {
