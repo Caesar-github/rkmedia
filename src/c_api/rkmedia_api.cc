@@ -1258,7 +1258,7 @@ RK_S32 RK_MPI_SYS_SetMediaBufferDepth(MOD_ID_E enModID, RK_S32 s32ChnID,
     target_mutex = &g_ai_mtx;
     break;
   case RK_ID_AENC:
-    if (s32ChnID < 0 || s32ChnID > AENC_MAX_CHN_NUM) {
+    if (s32ChnID < 0 || s32ChnID >= AENC_MAX_CHN_NUM) {
       RKMEDIA_LOGE("%s invalid AENC ChnID[%d]\n", __func__, s32ChnID);
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     }
@@ -1266,7 +1266,7 @@ RK_S32 RK_MPI_SYS_SetMediaBufferDepth(MOD_ID_E enModID, RK_S32 s32ChnID,
     target_mutex = &g_aenc_mtx;
     break;
   case RK_ID_RGA:
-    if (s32ChnID < 0 || s32ChnID > RGA_MAX_CHN_NUM) {
+    if (s32ChnID < 0 || s32ChnID >= RGA_MAX_CHN_NUM) {
       RKMEDIA_LOGE("%s invalid RGA ChnID[%d]\n", __func__, s32ChnID);
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     }
@@ -1274,7 +1274,7 @@ RK_S32 RK_MPI_SYS_SetMediaBufferDepth(MOD_ID_E enModID, RK_S32 s32ChnID,
     target_mutex = &g_rga_mtx;
     break;
   case RK_ID_ADEC:
-    if (s32ChnID < 0 || s32ChnID > ADEC_MAX_CHN_NUM) {
+    if (s32ChnID < 0 || s32ChnID >= ADEC_MAX_CHN_NUM) {
       RKMEDIA_LOGE("%s invalid RGA ChnID[%d]\n", __func__, s32ChnID);
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     }
@@ -1282,7 +1282,7 @@ RK_S32 RK_MPI_SYS_SetMediaBufferDepth(MOD_ID_E enModID, RK_S32 s32ChnID,
     target_mutex = &g_adec_mtx;
     break;
   case RK_ID_VDEC:
-    if (s32ChnID < 0 || s32ChnID > VDEC_MAX_CHN_NUM) {
+    if (s32ChnID < 0 || s32ChnID >= VDEC_MAX_CHN_NUM) {
       RKMEDIA_LOGE("%s invalid RGA ChnID[%d]\n", __func__, s32ChnID);
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     }
@@ -1292,7 +1292,7 @@ RK_S32 RK_MPI_SYS_SetMediaBufferDepth(MOD_ID_E enModID, RK_S32 s32ChnID,
   case RK_ID_VMIX: {
     /* VMIX ChnId used for DevId */
     RK_S32 s32DevId = s32ChnID;
-    if (s32DevId < 0 || s32DevId > VMIX_MAX_DEV_NUM)
+    if (s32DevId < 0 || s32DevId >= VMIX_MAX_DEV_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_vmix_dev[s32DevId].VmChns[0];
     target_mutex = &g_vmix_dev[s32DevId].VmMtx;
@@ -1343,7 +1343,7 @@ RK_S32 RK_MPI_SYS_StartGetMediaBuffer(MOD_ID_E enModID, RK_S32 s32ChnID) {
     target_mutex = &g_ai_mtx;
     break;
   case RK_ID_AENC:
-    if (s32ChnID < 0 || s32ChnID > AENC_MAX_CHN_NUM) {
+    if (s32ChnID < 0 || s32ChnID >= AENC_MAX_CHN_NUM) {
       RKMEDIA_LOGE("%s invalid AENC ChnID[%d]\n", __func__, s32ChnID);
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     }
@@ -1351,7 +1351,7 @@ RK_S32 RK_MPI_SYS_StartGetMediaBuffer(MOD_ID_E enModID, RK_S32 s32ChnID) {
     target_mutex = &g_aenc_mtx;
     break;
   case RK_ID_RGA:
-    if (s32ChnID < 0 || s32ChnID > RGA_MAX_CHN_NUM) {
+    if (s32ChnID < 0 || s32ChnID >= RGA_MAX_CHN_NUM) {
       RKMEDIA_LOGE("%s invalid RGA ChnID[%d]\n", __func__, s32ChnID);
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     }
@@ -1359,7 +1359,7 @@ RK_S32 RK_MPI_SYS_StartGetMediaBuffer(MOD_ID_E enModID, RK_S32 s32ChnID) {
     target_mutex = &g_rga_mtx;
     break;
   case RK_ID_ADEC:
-    if (s32ChnID < 0 || s32ChnID > ADEC_MAX_CHN_NUM) {
+    if (s32ChnID < 0 || s32ChnID >= ADEC_MAX_CHN_NUM) {
       RKMEDIA_LOGE("%s invalid RGA ChnID[%d]\n", __func__, s32ChnID);
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     }
@@ -1367,7 +1367,7 @@ RK_S32 RK_MPI_SYS_StartGetMediaBuffer(MOD_ID_E enModID, RK_S32 s32ChnID) {
     target_mutex = &g_adec_mtx;
     break;
   case RK_ID_VDEC:
-    if (s32ChnID < 0 || s32ChnID > VDEC_MAX_CHN_NUM) {
+    if (s32ChnID < 0 || s32ChnID >= VDEC_MAX_CHN_NUM) {
       RKMEDIA_LOGE("%s invalid RGA ChnID[%d]\n", __func__, s32ChnID);
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     }
@@ -1377,7 +1377,7 @@ RK_S32 RK_MPI_SYS_StartGetMediaBuffer(MOD_ID_E enModID, RK_S32 s32ChnID) {
   case RK_ID_VMIX: {
     /* VMIX ChnId used for DevId */
     RK_S32 s32DevId = s32ChnID;
-    if (s32DevId < 0 || s32DevId > VMIX_MAX_DEV_NUM)
+    if (s32DevId < 0 || s32DevId >= VMIX_MAX_DEV_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_vmix_dev[s32DevId].VmChns[0];
     target_mutex = &g_vmix_dev[s32DevId].VmMtx;
@@ -1436,7 +1436,7 @@ RK_S32 RK_MPI_SYS_StopGetMediaBuffer(MOD_ID_E enModID, RK_S32 s32ChnID) {
     target_mutex = &g_ai_mtx;
     break;
   case RK_ID_AENC:
-    if (s32ChnID < 0 || s32ChnID > AENC_MAX_CHN_NUM) {
+    if (s32ChnID < 0 || s32ChnID >= AENC_MAX_CHN_NUM) {
       RKMEDIA_LOGE("%s invalid AENC ChnID[%d]\n", __func__, s32ChnID);
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     }
@@ -1444,7 +1444,7 @@ RK_S32 RK_MPI_SYS_StopGetMediaBuffer(MOD_ID_E enModID, RK_S32 s32ChnID) {
     target_mutex = &g_aenc_mtx;
     break;
   case RK_ID_RGA:
-    if (s32ChnID < 0 || s32ChnID > RGA_MAX_CHN_NUM) {
+    if (s32ChnID < 0 || s32ChnID >= RGA_MAX_CHN_NUM) {
       RKMEDIA_LOGE("%s invalid RGA ChnID[%d]\n", __func__, s32ChnID);
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     }
@@ -1452,7 +1452,7 @@ RK_S32 RK_MPI_SYS_StopGetMediaBuffer(MOD_ID_E enModID, RK_S32 s32ChnID) {
     target_mutex = &g_rga_mtx;
     break;
   case RK_ID_ADEC:
-    if (s32ChnID < 0 || s32ChnID > ADEC_MAX_CHN_NUM) {
+    if (s32ChnID < 0 || s32ChnID >= ADEC_MAX_CHN_NUM) {
       RKMEDIA_LOGE("%s invalid RGA ChnID[%d]\n", __func__, s32ChnID);
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     }
@@ -1460,7 +1460,7 @@ RK_S32 RK_MPI_SYS_StopGetMediaBuffer(MOD_ID_E enModID, RK_S32 s32ChnID) {
     target_mutex = &g_adec_mtx;
     break;
   case RK_ID_VDEC:
-    if (s32ChnID < 0 || s32ChnID > VDEC_MAX_CHN_NUM) {
+    if (s32ChnID < 0 || s32ChnID >= VDEC_MAX_CHN_NUM) {
       RKMEDIA_LOGE("%s invalid RGA ChnID[%d]\n", __func__, s32ChnID);
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     }
@@ -1512,28 +1512,28 @@ MEDIA_BUFFER RK_MPI_SYS_GetMediaBuffer(MOD_ID_E enModID, RK_S32 s32ChnID,
     target_chn = &g_ai_chns[s32ChnID];
     break;
   case RK_ID_AENC:
-    if (s32ChnID < 0 || s32ChnID > AENC_MAX_CHN_NUM) {
+    if (s32ChnID < 0 || s32ChnID >= AENC_MAX_CHN_NUM) {
       RKMEDIA_LOGE("%s invalid AENC ChnID[%d]\n", __func__, s32ChnID);
       return NULL;
     }
     target_chn = &g_aenc_chns[s32ChnID];
     break;
   case RK_ID_RGA:
-    if (s32ChnID < 0 || s32ChnID > RGA_MAX_CHN_NUM) {
+    if (s32ChnID < 0 || s32ChnID >= RGA_MAX_CHN_NUM) {
       RKMEDIA_LOGE("%s invalid RGA ChnID[%d]\n", __func__, s32ChnID);
       return NULL;
     }
     target_chn = &g_rga_chns[s32ChnID];
     break;
   case RK_ID_ADEC:
-    if (s32ChnID < 0 || s32ChnID > ADEC_MAX_CHN_NUM) {
+    if (s32ChnID < 0 || s32ChnID >= ADEC_MAX_CHN_NUM) {
       RKMEDIA_LOGE("%s invalid RGA ChnID[%d]\n", __func__, s32ChnID);
       return NULL;
     }
     target_chn = &g_adec_chns[s32ChnID];
     break;
   case RK_ID_VDEC:
-    if (s32ChnID < 0 || s32ChnID > VDEC_MAX_CHN_NUM) {
+    if (s32ChnID < 0 || s32ChnID >= VDEC_MAX_CHN_NUM) {
       RKMEDIA_LOGE("%s invalid RGA ChnID[%d]\n", __func__, s32ChnID);
       return NULL;
     }
@@ -1542,7 +1542,7 @@ MEDIA_BUFFER RK_MPI_SYS_GetMediaBuffer(MOD_ID_E enModID, RK_S32 s32ChnID,
   case RK_ID_VMIX: {
     /* VMIX ChnId used for DevId */
     RK_S32 s32DevId = s32ChnID;
-    if (s32DevId < 0 || s32DevId > VMIX_MAX_DEV_NUM) {
+    if (s32DevId < 0 || s32DevId >= VMIX_MAX_DEV_NUM) {
       RKMEDIA_LOGE("%s invalid VMIX DevID[%d]\n", __func__, s32DevId);
       return NULL;
     }
@@ -1584,55 +1584,55 @@ RK_S32 RK_MPI_SYS_SendMediaBuffer(MOD_ID_E enModID, RK_S32 s32ChnID,
     target_mutex = &g_venc_mtx;
     break;
   case RK_ID_AENC:
-    if (s32ChnID < 0 || s32ChnID > AENC_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= AENC_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_aenc_chns[s32ChnID];
     target_mutex = &g_aenc_mtx;
     break;
   case RK_ID_ALGO_MD:
-    if (s32ChnID < 0 || s32ChnID > ALGO_MD_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= ALGO_MD_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_algo_md_chns[s32ChnID];
     target_mutex = &g_algo_md_mtx;
     break;
   case RK_ID_ALGO_OD:
-    if (s32ChnID < 0 || s32ChnID > ALGO_OD_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= ALGO_OD_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_algo_od_chns[s32ChnID];
     target_mutex = &g_algo_od_mtx;
     break;
   case RK_ID_ADEC:
-    if (s32ChnID < 0 || s32ChnID > ADEC_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= ADEC_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_adec_chns[s32ChnID];
     target_mutex = &g_adec_mtx;
     break;
   case RK_ID_AO:
-    if (s32ChnID < 0 || s32ChnID > AO_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= AO_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_ao_chns[s32ChnID];
     target_mutex = &g_ao_mtx;
     break;
   case RK_ID_RGA:
-    if (s32ChnID < 0 || s32ChnID > RGA_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= RGA_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_rga_chns[s32ChnID];
     target_mutex = &g_rga_mtx;
     break;
   case RK_ID_VO:
-    if (s32ChnID < 0 || s32ChnID > VO_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= VO_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_vo_chns[s32ChnID];
     target_mutex = &g_vo_mtx;
     break;
   case RK_ID_VP:
-    if (s32ChnID < 0 || s32ChnID > VP_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= VP_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_vp_chns[s32ChnID];
     target_mutex = &g_vp_mtx;
     break;
   case RK_ID_VDEC:
-    if (s32ChnID < 0 || s32ChnID > VDEC_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= VDEC_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_vdec_chns[s32ChnID];
     target_mutex = &g_vdec_mtx;
@@ -1662,8 +1662,8 @@ RK_S32 RK_MPI_SYS_DevSendMediaBuffer(MOD_ID_E enModID, RK_S32 s32DevId,
 
   switch (enModID) {
   case RK_ID_VMIX:
-    if (s32ChnID < 0 || s32ChnID > VMIX_MAX_CHN_NUM || s32DevId < 0 ||
-        s32DevId > VMIX_MAX_DEV_NUM)
+    if (s32ChnID < 0 || s32ChnID >= VMIX_MAX_CHN_NUM || s32DevId < 0 ||
+        s32DevId >= VMIX_MAX_DEV_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_vmix_dev[s32DevId].VmChns[s32ChnID];
     target_mutex = &g_vmix_dev[s32DevId].VmMtx;
@@ -1714,49 +1714,49 @@ RK_S32 RK_MPI_SYS_SetFrameRate(MOD_ID_E enModID, RK_S32 s32ChnID,
     target_mutex = &g_venc_mtx;
     break;
   case RK_ID_AENC:
-    if (s32ChnID < 0 || s32ChnID > AENC_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= AENC_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_aenc_chns[s32ChnID];
     target_mutex = &g_aenc_mtx;
     break;
   case RK_ID_ALGO_MD:
-    if (s32ChnID < 0 || s32ChnID > ALGO_MD_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= ALGO_MD_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_algo_md_chns[s32ChnID];
     target_mutex = &g_algo_md_mtx;
     break;
   case RK_ID_ALGO_OD:
-    if (s32ChnID < 0 || s32ChnID > ALGO_OD_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= ALGO_OD_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_algo_od_chns[s32ChnID];
     target_mutex = &g_algo_od_mtx;
     break;
   case RK_ID_ADEC:
-    if (s32ChnID < 0 || s32ChnID > ADEC_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= ADEC_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_adec_chns[s32ChnID];
     target_mutex = &g_adec_mtx;
     break;
   case RK_ID_AO:
-    if (s32ChnID < 0 || s32ChnID > AO_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= AO_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_ao_chns[s32ChnID];
     target_mutex = &g_ao_mtx;
     break;
   case RK_ID_RGA:
-    if (s32ChnID < 0 || s32ChnID > RGA_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= RGA_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_rga_chns[s32ChnID];
     target_mutex = &g_rga_mtx;
     break;
   case RK_ID_VO:
-    if (s32ChnID < 0 || s32ChnID > VO_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= VO_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_vo_chns[s32ChnID];
     target_mutex = &g_vo_mtx;
     break;
   case RK_ID_VDEC:
-    if (s32ChnID < 0 || s32ChnID > VDEC_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= VDEC_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_vdec_chns[s32ChnID];
     target_mutex = &g_vdec_mtx;
@@ -1801,49 +1801,49 @@ RK_S32 RK_MPI_SYS_StartRecvFrame(MOD_ID_E enModID, RK_S32 s32ChnID,
     target_mutex = &g_venc_mtx;
     break;
   case RK_ID_AENC:
-    if (s32ChnID < 0 || s32ChnID > AENC_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= AENC_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_aenc_chns[s32ChnID];
     target_mutex = &g_aenc_mtx;
     break;
   case RK_ID_ALGO_MD:
-    if (s32ChnID < 0 || s32ChnID > ALGO_MD_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= ALGO_MD_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_algo_md_chns[s32ChnID];
     target_mutex = &g_algo_md_mtx;
     break;
   case RK_ID_ALGO_OD:
-    if (s32ChnID < 0 || s32ChnID > ALGO_OD_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= ALGO_OD_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_algo_od_chns[s32ChnID];
     target_mutex = &g_algo_od_mtx;
     break;
   case RK_ID_ADEC:
-    if (s32ChnID < 0 || s32ChnID > ADEC_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= ADEC_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_adec_chns[s32ChnID];
     target_mutex = &g_adec_mtx;
     break;
   case RK_ID_AO:
-    if (s32ChnID < 0 || s32ChnID > AO_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= AO_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_ao_chns[s32ChnID];
     target_mutex = &g_ao_mtx;
     break;
   case RK_ID_RGA:
-    if (s32ChnID < 0 || s32ChnID > RGA_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= RGA_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_rga_chns[s32ChnID];
     target_mutex = &g_rga_mtx;
     break;
   case RK_ID_VO:
-    if (s32ChnID < 0 || s32ChnID > VO_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= VO_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_vo_chns[s32ChnID];
     target_mutex = &g_vo_mtx;
     break;
   case RK_ID_VDEC:
-    if (s32ChnID < 0 || s32ChnID > VDEC_MAX_CHN_NUM)
+    if (s32ChnID < 0 || s32ChnID >= VDEC_MAX_CHN_NUM)
       return -RK_ERR_SYS_ILLEGAL_PARAM;
     target_chn = &g_vdec_chns[s32ChnID];
     target_mutex = &g_vdec_mtx;
