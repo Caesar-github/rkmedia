@@ -2264,7 +2264,7 @@ void *init_aiq_isp_thread(void *arg) {
   // RGA_ATTR_S stRgaAttr;
   memset(&stRgaAttr, 0, sizeof(stRgaAttr));
   stRgaAttr.bEnBufPool = RK_TRUE;
-  stRgaAttr.u16BufPoolCnt = 2;
+  stRgaAttr.u16BufPoolCnt = 3;
   stRgaAttr.u16Rotaion = 270;
   stRgaAttr.stImgIn.u32X = 0;
   stRgaAttr.stImgIn.u32Y = 0;
@@ -2444,17 +2444,6 @@ int main(int argc, char *argv[]) {
     printf("Bind vi[1] to rga[1] failed! ret=%d\n", ret);
     return -1;
   }
-  // printf("Bind RGA[1] to VO[1]....\n");
-  // stSrcChn.enModId = RK_ID_RGA;
-  // stSrcChn.s32ChnId = 1;
-  // stDestChn.enModId = RK_ID_VO;
-  // stDestChn.s32ChnId = 1;
-  // ret = RK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
-  // if (ret) {
-  //   printf("Bind rga[1] to vo[1] failed! ret=%d\n", ret);
-  //   return -1;
-  // }
-  ret = 0;
   printf("%s initial finish\n", __func__);
   signal(SIGINT, sigterm_handler);
 
@@ -2525,15 +2514,6 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  stSrcChn.enModId = RK_ID_RGA;
-  stSrcChn.s32ChnId = 1;
-  stDestChn.enModId = RK_ID_VO;
-  stDestChn.s32ChnId = 1;
-  ret = RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
-  if (ret) {
-    printf("UnBind rga[1] to vo[1] failed! ret=%d\n", ret);
-    return -1;
-  }
   err_flag = 0;
   RK_MPI_VO_DestroyChn(0);
   RK_MPI_VO_DestroyChn(1);
