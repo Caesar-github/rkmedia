@@ -236,7 +236,7 @@ int V4L2Stream::IoCtrl(unsigned long int request, ...) {
     param_mtx.lock();
     osds[osd->id] = info;
     param_mtx.unlock();
-    break;
+    return 0;
   }
   }
   return -1;
