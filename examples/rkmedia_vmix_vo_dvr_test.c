@@ -15,6 +15,7 @@
 
 #include "common/sample_common.h"
 #include "rkmedia_api.h"
+#include <pthread.h>
 
 #define ARRAY_ELEMS(a) (sizeof(a) / sizeof((a)[0]))
 #define WIDTH 720
