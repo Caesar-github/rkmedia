@@ -855,6 +855,8 @@ bool MPPCommonConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
   int line_size = image_info.vir_width;
   if (pic_type == MPP_FMT_YUV422_YUYV || pic_type == MPP_FMT_YUV422_UYVY)
     line_size *= 2;
+  else if (pic_type == MPP_FMT_RGB888 || pic_type == MPP_FMT_BGR888)
+    line_size *= 3;
 
   RKMEDIA_LOGI("MPP Encoder: Set output block mode.\n");
   ret = mpp_enc.EncodeControl(MPP_SET_OUTPUT_TIMEOUT, &timeout);
@@ -1645,6 +1647,8 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
     int line_size = vid_cfg->vir_width;
     if (pic_type == MPP_FMT_YUV422_YUYV || pic_type == MPP_FMT_YUV422_UYVY)
       line_size = vid_cfg->vir_width * 2;
+    else if (pic_type == MPP_FMT_RGB888 || pic_type == MPP_FMT_BGR888)
+      line_size = vid_cfg->vir_width * 3;
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:hor_stride", line_size);
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:ver_stride", vid_cfg->vir_height);
     ret = mpp_enc.EncodeControl(MPP_ENC_SET_CFG, enc_cfg);
