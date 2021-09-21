@@ -149,6 +149,7 @@ snd_pcm_t *AlsaCommonOpenSetHwParams(const char *device,
                                      SampleInfo &sample_info,
                                      snd_pcm_hw_params_t *hwparams) {
   snd_pcm_t *pcm_handle = NULL;
+  snd_pcm_uframes_t period_size = sample_info.nb_samples;
   unsigned int rate = sample_info.sample_rate;
   unsigned int channels;
   snd_pcm_format_t pcm_fmt = SampleFormatToAlsaFormat(sample_info.fmt);
@@ -214,6 +215,13 @@ snd_pcm_t *AlsaCommonOpenSetHwParams(const char *device,
   if (status < 0) {
     RKMEDIA_LOGI("Couldn't set audio frequency<%d>: %s\n",
                  sample_info.sample_rate, snd_strerror(status));
+    goto err;
+  }
+  status = snd_pcm_hw_params_set_period_size_near(pcm_handle, hwparams,
+                                                  &period_size, NULL);
+  if (status < 0) {
+    RKMEDIA_LOGI("Couldn't set audio period_size<%ld>: %s\n", period_size,
+                 snd_strerror(status));
     goto err;
   }
   if (rate != (unsigned int)sample_info.sample_rate) {
