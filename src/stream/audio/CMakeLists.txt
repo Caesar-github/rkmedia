@@ -31,7 +31,11 @@ if(ALSA_PLAYBACK OR ALSA_CAPTURE)
   endif()
 
   if(AUDIO_ALGORITHM)
-    set(EASY_MEDIA_STREAM_AUDIO_ALGO_LIBS RKAP_3A RKAP_ANR RKAP_Common)
+    if (RKAPPLUS_ENABLE)
+      set(EASY_MEDIA_STREAM_AUDIO_ALGO_LIBS aec_bf_process)
+    else()
+      set(EASY_MEDIA_STREAM_AUDIO_ALGO_LIBS RKAP_3A RKAP_ANR RKAP_Common)
+    endif()
   endif()
 endif()
 

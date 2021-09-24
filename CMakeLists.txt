@@ -99,6 +99,11 @@ endif()
 
 if(AUDIO_ALGORITHM)
   add_definitions(-DAUDIO_ALGORITHM_ENABLE)
+  if (RKAPPLUS_ENABLE)
+    add_definitions(-DUSE_RKAPPLUS)
+  else()
+    remove_definitions(-DUSE_RKAPPLUS)
+  endif()
 endif()
 
 # ----------------------------------------------------------------------------
