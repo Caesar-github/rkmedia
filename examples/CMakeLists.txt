@@ -368,6 +368,15 @@ target_link_libraries(rkmedia_vi_rockx_venc_rtsp_test rtsp rockx easymedia ${THI
 target_include_directories(rkmedia_vi_rockx_venc_rtsp_test PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SYSROOT}/usr/include/rockx)
 install(TARGETS rkmedia_vi_rockx_venc_rtsp_test RUNTIME DESTINATION "bin")
 install(FILES rtsp-nn.cfg DESTINATION share)
+
+#--------------------------
+#  rkmedia_vi_rockx_vo
+#--------------------------
+add_executable(rkmedia_vi_rockx_vo_test rkmedia_vi_rockx_vo_test.c ${COMMON_SRC})
+add_dependencies(rkmedia_vi_rockx_vo_test easymedia)
+target_link_libraries(rkmedia_vi_rockx_vo_test rockx easymedia ${THIRD_MEDIA} rga)
+target_include_directories(rkmedia_vi_rockx_vo_test PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SYSROOT}/usr/include/rockx)
+install(TARGETS rkmedia_vi_rockx_vo_test RUNTIME DESTINATION "bin")
 endif() #if(V4L2_CAPTURE)
 endif() #if(ROCKX)
 
