@@ -448,7 +448,7 @@ if(COMPILES_UVC_EXAMPLE)
 #--------------------------
 add_executable(rkmedia_vi_uvc_test rkmedia_vi_uvc_test.c ${COMMON_SRC})
 add_dependencies(rkmedia_vi_uvc_test easymedia)
-target_link_libraries(rkmedia_vi_uvc_test easymedia ${THIRD_MEDIA} rkuvc)
+target_link_libraries(rkmedia_vi_uvc_test easymedia rkuvc)
 target_include_directories(rkmedia_vi_uvc_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 install(TARGETS rkmedia_vi_uvc_test RUNTIME DESTINATION "bin")
 endif() #if(COMPILES_UVC_EXAMPLE)
