@@ -2093,7 +2093,8 @@ rkmediaCalculateRegionLuma(std::shared_ptr<easymedia::ImageBuffer> &rkmedia_mb,
   if ((imgInfo.pix_fmt != PIX_FMT_YUV420P) &&
       (imgInfo.pix_fmt != PIX_FMT_NV12) && (imgInfo.pix_fmt != PIX_FMT_NV21) &&
       (imgInfo.pix_fmt != PIX_FMT_YUV422P) &&
-      (imgInfo.pix_fmt != PIX_FMT_NV16) && (imgInfo.pix_fmt != PIX_FMT_NV61)) {
+      (imgInfo.pix_fmt != PIX_FMT_NV16) && (imgInfo.pix_fmt != PIX_FMT_NV61) &&
+      (imgInfo.pix_fmt != PIX_FMT_YUYV422)) {
     RKMEDIA_LOGE("%s not support image type!\n", __func__);
     return 0;
   }
@@ -2106,13 +2107,25 @@ rkmediaCalculateRegionLuma(std::shared_ptr<easymedia::ImageBuffer> &rkmedia_mb,
     return 0;
   }
 
-  RK_U32 line_size = imgInfo.vir_width;
-  RK_U8 *rect_start =
-      (RK_U8 *)rkmedia_mb->GetPtr() + ptrRect->s32Y * line_size + ptrRect->s32X;
-  for (RK_U32 i = 0; i < ptrRect->u32Height; i++) {
-    RK_U8 *line_start = rect_start + i * line_size;
-    for (RK_U32 j = 0; j < ptrRect->u32Width; j++) {
-      sum += *(line_start + j);
+  if (imgInfo.pix_fmt == PIX_FMT_YUYV422) {
+    RK_U32 line_size = imgInfo.vir_width * 2;
+    RK_U8 *rect_start = (RK_U8 *)rkmedia_mb->GetPtr() +
+                        ptrRect->s32Y * line_size + ptrRect->s32X * 2;
+    for (RK_U32 i = 0; i < ptrRect->u32Height; i++) {
+      RK_U8 *line_start = rect_start + i * line_size;
+      for (RK_U32 j = 0; j < ptrRect->u32Width; j++) {
+        sum += *(line_start + j * 2);
+      }
+    }
+  } else {
+    RK_U32 line_size = imgInfo.vir_width;
+    RK_U8 *rect_start = (RK_U8 *)rkmedia_mb->GetPtr() +
+                        ptrRect->s32Y * line_size + ptrRect->s32X;
+    for (RK_U32 i = 0; i < ptrRect->u32Height; i++) {
+      RK_U8 *line_start = rect_start + i * line_size;
+      for (RK_U32 j = 0; j < ptrRect->u32Width; j++) {
+        sum += *(line_start + j);
+      }
     }
   }
 
