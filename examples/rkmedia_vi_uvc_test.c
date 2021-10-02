@@ -152,6 +152,7 @@ int camera_start(int id, int width, int height, int fps, int format, int eptz) {
   vi_chn_attr.u32Height = height;
   vi_chn_attr.enPixFmt = IMAGE_TYPE_NV12;
   vi_chn_attr.enWorkMode = VI_WORK_MODE_NORMAL;
+  vi_chn_attr.enBufType = VI_CHN_BUF_TYPE_MMAP;
   ret = RK_MPI_VI_SetChnAttr(s32CamId, 0, &vi_chn_attr);
   ret |= RK_MPI_VI_EnableChn(s32CamId, 0);
   if (ret) {
@@ -190,7 +191,7 @@ void camera_stop(void) {
 }
 
 int main(int argc, char *argv[]) {
-  char *config = "uvc_config.sh";
+  char *config = "./uvc_config.sh";
   int c;
   while ((c = getopt_long(argc, argv, optstr, long_options, NULL)) != -1) {
     const char *tmp_optarg = optarg;
