@@ -67,6 +67,15 @@ target_include_directories(rkmedia_venc_jpeg_test PRIVATE ${CMAKE_SOURCE_DIR}/in
 install(TARGETS rkmedia_venc_jpeg_test RUNTIME DESTINATION "bin")
 
 #--------------------------
+#  rkmedia_venc_large_jpeg_test
+#--------------------------
+add_executable(rkmedia_venc_large_jpeg_test rkmedia_venc_large_jpeg_test.c ${COMMON_SRC})
+add_dependencies(rkmedia_venc_large_jpeg_test easymedia)
+target_link_libraries(rkmedia_venc_large_jpeg_test easymedia)
+target_include_directories(rkmedia_venc_large_jpeg_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+install(TARGETS rkmedia_venc_large_jpeg_test RUNTIME DESTINATION "bin")
+
+#--------------------------
 #  rkmedia_venc_mjpeg_test
 #--------------------------
 add_executable(rkmedia_venc_mjpeg_test rkmedia_venc_mjpeg_test.c ${COMMON_SRC})
