@@ -64,7 +64,8 @@ static int CalcMppBpsWithMax(MppEncRcMode rc_mode, int &bps_max, int &bps_min,
     RKMEDIA_LOGE("MPP Encoder: bps max <%d> is not valid!\n", bps_max);
     return -1;
   }
-  RKMEDIA_LOGI("MPP Encoder: automatically calculate bsp with bps_max\n");
+  RKMEDIA_LOGI("MPP Encoder: automatically calculate bsp with bps_max:%d\n",
+               bps_max);
   switch (rc_mode) {
   case MPP_ENC_RC_MODE_CBR:
     // constant bitrate has very small bps range of 1/10 bps
@@ -104,7 +105,8 @@ static int CalcMppBpsWithTarget(MppEncRcMode rc_mode, int &bps_max,
     RKMEDIA_LOGE("MPP Encoder: bps <%d> is not valid!\n", bps_target);
     return -1;
   }
-  RKMEDIA_LOGI("MPP Encoder: automatically calculate bsp with bps_target\n");
+  RKMEDIA_LOGI("MPP Encoder: automatically calculate bsp with bps_target:%d\n",
+               bps_target);
   switch (rc_mode) {
   case MPP_ENC_RC_MODE_CBR:
     // constant bitrate has very small bps range of 1/10 bps
@@ -135,6 +137,17 @@ static int CalcMppBpsWithTarget(MppEncRcMode rc_mode, int &bps_max,
     bps_max = MPP_MAX_BPS_VALUE;
 
   return 0;
+}
+
+static int CalcMppBpsWithRcMode(MppEncRcMode rc_mode, int &bps_max,
+                                int &bps_min, int &bps_target) {
+  int ret = 0;
+  if (rc_mode == MPP_ENC_RC_MODE_CBR) {
+    ret = CalcMppBpsWithTarget(rc_mode, bps_max, bps_min, bps_target);
+  } else {
+    ret = CalcMppBpsWithMax(rc_mode, bps_max, bps_min, bps_target);
+  }
+  return ret;
 }
 
 class MPPConfig {
@@ -232,7 +245,7 @@ bool MPPMJPEGConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
     fps_out_num = vid_cfg.frame_rate;
     fps_out_den = vid_cfg.frame_rate_den;
 
-    if (CalcMppBpsWithMax(rc_mode, bps_max, bps_min, bps_target)) {
+    if (CalcMppBpsWithRcMode(rc_mode, bps_max, bps_min, bps_target)) {
       RKMEDIA_LOGE("MPP Encoder[JPEG]: Invalid bps:[%d, %d, %d]\n",
                    vid_cfg.bit_rate_min, vid_cfg.bit_rate,
                    vid_cfg.bit_rate_max);
@@ -439,7 +452,7 @@ bool MPPMJPEGConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
       return true;
     }
 
-    if (CalcMppBpsWithMax(rc_mode, bps_max, bps_min, bps_target)) {
+    if (CalcMppBpsWithRcMode(rc_mode, bps_max, bps_min, bps_target)) {
       RKMEDIA_LOGE("MPP Encoder[JPEG]: Invalid bps:[%d, %d, %d]\n", bps_min,
                    bps_target, bps_max);
       return false;
@@ -475,9 +488,9 @@ bool MPPMJPEGConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
 
     // Recalculate bps
     int bps_max = vconfig.bit_rate_max;
-    int bps_min = bps_max;
-    int bps_target = bps_max;
-    if (CalcMppBpsWithMax(rc_mode, bps_max, bps_min, bps_target) < 0)
+    int bps_min = vconfig.bit_rate_min;
+    int bps_target = vconfig.bit_rate;
+    if (CalcMppBpsWithRcMode(rc_mode, bps_max, bps_min, bps_target) < 0)
       return false;
 
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "rc:mode", rc_mode);
@@ -840,12 +853,9 @@ bool MPPCommonConfig::InitConfig(MPPEncoder &mpp_enc, MediaConfig &cfg) {
         (bps_min < MPP_MIN_BPS_VALUE) || (bps_min > MPP_MAX_BPS_VALUE) ||
         (bps_target < bps_min) || (bps_target > bps_max))
       ret = -1;
-  } else if (bps_max && !bps_target && !bps_min)
-    ret = CalcMppBpsWithMax(rc_mode, bps_max, bps_min, bps_target);
-  else if (bps_target && !bps_max && !bps_min)
-    ret = CalcMppBpsWithTarget(rc_mode, bps_max, bps_min, bps_target);
-  else
-    ret = -1;
+  } else {
+    ret = CalcMppBpsWithRcMode(rc_mode, bps_max, bps_min, bps_target);
+  }
   if (ret < 0) {
     RKMEDIA_LOGE("MPP Encoder: Invalid bps:[%d, %d, %d]\n",
                  vconfig.bit_rate_min, vconfig.bit_rate, vconfig.bit_rate_max);
@@ -1097,12 +1107,9 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
           (bps_min > MPP_MAX_BPS_VALUE) || (bps_min < MPP_MIN_BPS_VALUE) ||
           (bps_target > bps_max) || (bps_target < bps_min))
         ret = -1;
-    } else if (bps_max && !bps_target && !bps_min)
-      ret = CalcMppBpsWithMax(rc_mode, bps_max, bps_min, bps_target);
-    else if (bps_target && !bps_max && !bps_min)
-      ret = CalcMppBpsWithTarget(rc_mode, bps_max, bps_min, bps_target);
-    else
-      ret = -1;
+    } else {
+      ret = CalcMppBpsWithRcMode(rc_mode, bps_max, bps_min, bps_target);
+    }
     if (ret < 0) {
       RKMEDIA_LOGE("MPP Encoder: Invalid bps:[%d, %d, %d]\n", bps_min,
                    bps_target, bps_max);
@@ -1140,10 +1147,12 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
 
     // Recalculate bps
     int bps_max = vconfig.bit_rate_max;
-    int bps_min = bps_max;
-    int bps_target = bps_max;
-    if (CalcMppBpsWithMax(rc_mode, bps_max, bps_min, bps_target) < 0)
+    int bps_min = vconfig.bit_rate_min;
+    int bps_target = vconfig.bit_rate;
+
+    if (CalcMppBpsWithRcMode(rc_mode, bps_max, bps_min, bps_target) < 0)
       return false;
+
     // Reset qp values
     int qp_max = 48;
     int qp_min = 8;

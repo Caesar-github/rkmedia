@@ -2751,7 +2751,11 @@ static RK_S32 RkmediaCreateJpegSnapPipeline(RkmediaChannel *VenChn) {
 
   if (stVencChnAttr->stVencAttr.enType == RK_CODEC_TYPE_MJPEG) {
     // MJPEG
-    PARAM_STRING_APPEND_TO(enc_param, KEY_COMPRESS_BITRATE_MAX, mjpeg_bps);
+    if (stVencChnAttr->stRcAttr.enRcMode == VENC_RC_MODE_MJPEGCBR) {
+      PARAM_STRING_APPEND_TO(enc_param, KEY_COMPRESS_BITRATE, mjpeg_bps);
+    } else {
+      PARAM_STRING_APPEND_TO(enc_param, KEY_COMPRESS_BITRATE_MAX, mjpeg_bps);
+    }
     PARAM_STRING_APPEND(enc_param, KEY_FPS, str_fps_out);
     PARAM_STRING_APPEND(enc_param, KEY_FPS_IN, str_fps_out);
     PARAM_STRING_APPEND(enc_param, KEY_COMPRESS_RC_MODE, pcRkmediaRcMode);
@@ -2997,7 +3001,11 @@ static RK_S32 RkmediaCreateJpegLight(RkmediaChannel *VenChn) {
         .append("/")
         .append(std::to_string(u32OutFpsDen));
     PARAM_STRING_APPEND(enc_param, KEY_FPS, str_fps_out);
-    PARAM_STRING_APPEND_TO(enc_param, KEY_COMPRESS_BITRATE_MAX, mjpeg_bps);
+    if (stVencChnAttr->stRcAttr.enRcMode == VENC_RC_MODE_MJPEGCBR) {
+      PARAM_STRING_APPEND_TO(enc_param, KEY_COMPRESS_BITRATE, mjpeg_bps);
+    } else {
+      PARAM_STRING_APPEND_TO(enc_param, KEY_COMPRESS_BITRATE_MAX, mjpeg_bps);
+    }
     PARAM_STRING_APPEND(enc_param, KEY_COMPRESS_RC_MODE, pcRkmediaRcMode);
   } else {
     // JPEG
@@ -3451,7 +3459,11 @@ RK_S32 RK_MPI_VENC_CreateJpegLightChn(VENC_CHN VeChn,
         .append("/")
         .append(std::to_string(u32OutFpsDen));
     PARAM_STRING_APPEND(enc_param, KEY_FPS, str_fps_out);
-    PARAM_STRING_APPEND_TO(enc_param, KEY_COMPRESS_BITRATE_MAX, mjpeg_bps);
+    if (stVencChnAttr->stRcAttr.enRcMode == VENC_RC_MODE_MJPEGCBR) {
+      PARAM_STRING_APPEND_TO(enc_param, KEY_COMPRESS_BITRATE, mjpeg_bps);
+    } else {
+      PARAM_STRING_APPEND_TO(enc_param, KEY_COMPRESS_BITRATE_MAX, mjpeg_bps);
+    }
     PARAM_STRING_APPEND(enc_param, KEY_COMPRESS_RC_MODE, pcRkmediaRcMode);
   } else {
     // JPEG
@@ -3581,65 +3593,43 @@ static RK_S32 RK_MPI_VENC_SetBitrate_If_Change(VENC_CHN VeChn,
     return ret;
   switch (g_venc_chns[VeChn].venc_attr.attr.stRcAttr.enRcMode) {
   case VENC_RC_MODE_H264CBR:
-    if (g_venc_chns[VeChn].venc_attr.attr.stRcAttr.stH264Cbr.u32BitRate !=
-        stRcAttr->stH264Cbr.u32BitRate) {
-      u32BitRate = stRcAttr->stH264Cbr.u32BitRate;
-      bRateChange = RK_TRUE;
-    }
+    u32BitRate = stRcAttr->stH264Cbr.u32BitRate;
+    bRateChange = RK_TRUE;
     break;
   case VENC_RC_MODE_H264VBR:
-    if (g_venc_chns[VeChn].venc_attr.attr.stRcAttr.stH264Vbr.u32MaxBitRate !=
-        stRcAttr->stH264Vbr.u32MaxBitRate) {
-      u32MaxBitRate = stRcAttr->stH264Vbr.u32MaxBitRate;
-      bRateChange = RK_TRUE;
-    }
+    u32MaxBitRate = stRcAttr->stH264Vbr.u32MaxBitRate;
+    bRateChange = RK_TRUE;
     break;
   case VENC_RC_MODE_H264AVBR:
-    if (g_venc_chns[VeChn].venc_attr.attr.stRcAttr.stH264Avbr.u32MaxBitRate !=
-        stRcAttr->stH264Avbr.u32MaxBitRate) {
-      u32MaxBitRate = stRcAttr->stH264Avbr.u32MaxBitRate;
-      bRateChange = RK_TRUE;
-    }
+    u32MaxBitRate = stRcAttr->stH264Avbr.u32MaxBitRate;
+    bRateChange = RK_TRUE;
     break;
   case VENC_RC_MODE_MJPEGCBR:
-    if (g_venc_chns[VeChn].venc_attr.attr.stRcAttr.stMjpegCbr.u32BitRate !=
-        stRcAttr->stMjpegCbr.u32BitRate) {
-      u32BitRate = stRcAttr->stMjpegCbr.u32BitRate;
-      bRateChange = RK_TRUE;
-    }
+    u32BitRate = stRcAttr->stMjpegCbr.u32BitRate;
+    bRateChange = RK_TRUE;
     break;
   case VENC_RC_MODE_MJPEGVBR:
-    if (g_venc_chns[VeChn].venc_attr.attr.stRcAttr.stMjpegVbr.u32BitRate !=
-        stRcAttr->stMjpegVbr.u32BitRate) {
-      u32BitRate = stRcAttr->stMjpegVbr.u32BitRate;
-      bRateChange = RK_TRUE;
-    }
+    u32MaxBitRate = stRcAttr->stMjpegVbr.u32BitRate;
+    bRateChange = RK_TRUE;
     break;
   case VENC_RC_MODE_H265CBR:
-    if (g_venc_chns[VeChn].venc_attr.attr.stRcAttr.stH265Cbr.u32BitRate !=
-        stRcAttr->stH265Cbr.u32BitRate) {
-      u32BitRate = stRcAttr->stH265Cbr.u32BitRate;
-      bRateChange = RK_TRUE;
-    }
+    u32BitRate = stRcAttr->stH265Cbr.u32BitRate;
+    bRateChange = RK_TRUE;
     break;
   case VENC_RC_MODE_H265VBR:
-    if (g_venc_chns[VeChn].venc_attr.attr.stRcAttr.stH265Vbr.u32MaxBitRate !=
-        stRcAttr->stH265Vbr.u32MaxBitRate) {
-      u32MaxBitRate = stRcAttr->stH265Vbr.u32MaxBitRate;
-      bRateChange = RK_TRUE;
-    }
+    u32MaxBitRate = stRcAttr->stH265Vbr.u32MaxBitRate;
+    bRateChange = RK_TRUE;
     break;
   case VENC_RC_MODE_H265AVBR:
-    if (g_venc_chns[VeChn].venc_attr.attr.stRcAttr.stH265Avbr.u32MaxBitRate !=
-        stRcAttr->stH265Avbr.u32MaxBitRate) {
-      u32MaxBitRate = stRcAttr->stH265Avbr.u32MaxBitRate;
-      bRateChange = RK_TRUE;
-    }
+    u32MaxBitRate = stRcAttr->stH265Avbr.u32MaxBitRate;
+    bRateChange = RK_TRUE;
     break;
   case VENC_RC_MODE_BUTT:
     break;
   }
+
   if (u32BitRate != 0 || u32MinBitRate != 0 || u32MaxBitRate != 0) {
+
     ret =
         RK_MPI_VENC_SetBitrate(VeChn, u32BitRate, u32MinBitRate, u32MaxBitRate);
   } else if (bRateChange) {
@@ -4209,7 +4199,7 @@ RK_S32 RK_MPI_VENC_SetBitrate(VENC_CHN VeChn, RK_U32 u32BitRate,
       break;
     case VENC_RC_MODE_MJPEGVBR:
       g_venc_chns[VeChn].venc_attr.attr.stRcAttr.stMjpegVbr.u32BitRate =
-          u32BitRate;
+          u32MaxBitRate;
       break;
     case VENC_RC_MODE_H265CBR:
       g_venc_chns[VeChn].venc_attr.attr.stRcAttr.stH265Cbr.u32BitRate =
