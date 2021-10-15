@@ -1646,10 +1646,35 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
       return false;
     }
     VideoResolutionCfg *vid_cfg = (VideoResolutionCfg *)val->GetPtr();
+    iconfig.image_info.width = vid_cfg->width;
+    iconfig.image_info.height = vid_cfg->height;
+    iconfig.image_info.vir_width = vid_cfg->vir_width;
+    iconfig.image_info.vir_height = vid_cfg->vir_height;
+    iconfig.rect_info.x = vid_cfg->x;
+    iconfig.rect_info.y = vid_cfg->y;
+    iconfig.rect_info.w = vid_cfg->w;
+    iconfig.rect_info.h = vid_cfg->h;
     RKMEDIA_LOGI(
         "MPP Encoder: width = %d, height = %d, vwidth = %d, vheight = %d.\n",
         vid_cfg->width, vid_cfg->height, vid_cfg->vir_width,
         vid_cfg->vir_height);
+    if (iconfig.image_info.pix_fmt == PIX_FMT_FBC0 ||
+        iconfig.image_info.pix_fmt == PIX_FMT_FBC2) {
+      if (vconfig.rotation == 90 || vconfig.rotation == 270) {
+        int tmp_value = vid_cfg->w;
+        vid_cfg->w = vid_cfg->h;
+        vid_cfg->h = tmp_value;
+        tmp_value = vid_cfg->vir_width;
+        vid_cfg->vir_width = vid_cfg->vir_height;
+        vid_cfg->vir_height = tmp_value;
+        RKMEDIA_LOGI("MPP Encoder: rotation in fbc mode, Resolution from "
+                     "%d(%d)x%d(%d) to %d(%d)x%d(%d)\n",
+                     vid_cfg->h, vid_cfg->vir_height, vid_cfg->w,
+                     vid_cfg->vir_width, vid_cfg->w, vid_cfg->vir_width,
+                     vid_cfg->h, vid_cfg->vir_height);
+      }
+    }
+
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:width", vid_cfg->w);
     ret |= mpp_enc_cfg_set_s32(enc_cfg, "prep:height", vid_cfg->h);
     MppFrameFormat pic_type = ConvertToMppPixFmt(iconfig.image_info.pix_fmt);
@@ -1665,14 +1690,6 @@ bool MPPCommonConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
       RKMEDIA_LOGE("MPP Encoder: set resolution cfg failed ret %d\n", ret);
       return false;
     }
-    iconfig.image_info.width = vid_cfg->width;
-    iconfig.image_info.height = vid_cfg->height;
-    iconfig.image_info.vir_width = vid_cfg->vir_width;
-    iconfig.image_info.vir_height = vid_cfg->vir_height;
-    iconfig.rect_info.x = vid_cfg->x;
-    iconfig.rect_info.y = vid_cfg->y;
-    iconfig.rect_info.w = vid_cfg->w;
-    iconfig.rect_info.h = vid_cfg->h;
   } else if (change & VideoEncoder::kRotationChange) {
     if (val->GetSize() < sizeof(int)) {
       RKMEDIA_LOGE("MPP Encoder: Incomplete Rotation params\n");
