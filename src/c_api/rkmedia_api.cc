@@ -4545,12 +4545,6 @@ RK_S32 RK_MPI_VENC_SetRotation(VENC_CHN VeChn, VENC_ROTATION_E rotation_rate) {
   if (g_venc_chns[VeChn].venc_attr.bFullFunc) {
     return -RK_ERR_VENC_NOT_SUPPORT;
   }
-  if ((g_venc_chns[VeChn].venc_attr.attr.stVencAttr.enType ==
-       RK_CODEC_TYPE_JPEG) ||
-      (g_venc_chns[VeChn].venc_attr.attr.stVencAttr.enType ==
-       RK_CODEC_TYPE_MJPEG)) {
-    return -RK_ERR_VENC_NOT_SUPPORT;
-  }
   g_venc_mtx.lock();
   int ret = video_encoder_set_rotation(g_venc_chns[VeChn].rkmedia_flow,
                                        rotation_rate);

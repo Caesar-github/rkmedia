@@ -560,9 +560,6 @@ bool MPPMJPEGConfig::CheckConfigChange(MPPEncoder &mpp_enc, uint32_t change,
     iconfig.rect_info.w = vid_cfg->w;
     iconfig.rect_info.h = vid_cfg->h;
   } else if (change & VideoEncoder::kRotationChange) {
-    // unsupport return
-    RKMEDIA_LOGE("MPP Encoder[JPEG]: Unsupport set rotation dynamically\n");
-    return false;
     if (val->GetSize() < sizeof(int)) {
       RKMEDIA_LOGE("MPP Encoder[JPEG]: Incomplete Rotation params\n");
       return false;
