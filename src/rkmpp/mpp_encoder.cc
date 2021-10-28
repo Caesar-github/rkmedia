@@ -334,29 +334,24 @@ int MPPEncoder::PrepareThumbnail(const std::shared_ptr<MediaBuffer> &input,
   rga_buffer_t src_info, dst_info;
   memset(&src_info, 0, sizeof(rga_buffer_t));
   memset(&dst_info, 0, sizeof(rga_buffer_t));
+
   src_info = wrapbuffer_virtualaddr(
       input->GetPtr(), hw_buffer->GetWidth(), hw_buffer->GetHeight(),
       get_rga_format(src_pixfmt), hw_buffer->GetVirWidth(),
       hw_buffer->GetVirHeight());
-  im_rect rect_info;
-  rect_info.x = this->GetConfig().img_cfg.rect_info.x;
-  rect_info.y = this->GetConfig().img_cfg.rect_info.y;
-  rect_info.width = this->GetConfig().img_cfg.rect_info.w;
-  rect_info.height = this->GetConfig().img_cfg.rect_info.h;
 
   dst_info = wrapbuffer_virtualaddr(
       pvPicPtr, thumbnail_width[thumbnail_num], thumbnail_height[thumbnail_num],
       get_rga_format(trg_pixfmt), UPALIGNTO(thumbnail_width[thumbnail_num], 8),
       UPALIGNTO(thumbnail_height[thumbnail_num], 8));
-  ret = imcrop(src_info, dst_info, rect_info);
+
+  ret = imresize(src_info, dst_info);
   if (ret <= 0) {
     RKMEDIA_LOGE("imcrop failed, ret = %d\n", ret);
-    RKMEDIA_LOGE("%s: rect_info(%d, %d, %d, %d)", __func__, rect_info.x,
-                 rect_info.y, rect_info.width, rect_info.height);
-    RKMEDIA_LOGE("%s: src_info(%d, %d)\n", __func__, src_info.width,
-                 src_info.height);
-    RKMEDIA_LOGE("%s: dst_info(%d, %d)\n", __func__, dst_info.width,
-                 dst_info.height);
+    RKMEDIA_LOGE("%s: src_info(%d, %d, %d, %d)\n", __func__, src_info.width,
+                 src_info.height, src_info.wstride, src_info.hstride);
+    RKMEDIA_LOGE("%s: dst_info(%d, %d, %d, %d)\n", __func__, dst_info.width,
+                 dst_info.height, dst_info.wstride, dst_info.hstride);
     ret = -1;
     goto THUMB_END;
   }
