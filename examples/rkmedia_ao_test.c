@@ -162,7 +162,6 @@ int main(int argc, char *argv[]) {
       printf("ERROR: RK_MPI_SYS_SendMediaBuffer failed! ret = %d\n", ret);
       break;
     }
-    usleep(u32Timeval);
     RK_MPI_MB_ReleaseBuffer(mb);
     mb = NULL;
   }
