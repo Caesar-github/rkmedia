@@ -4548,7 +4548,7 @@ RK_S32 RK_MPI_VENC_SetRotation(VENC_CHN VeChn, VENC_ROTATION_E rotation_rate) {
   g_venc_mtx.lock();
   int ret = video_encoder_set_rotation(g_venc_chns[VeChn].rkmedia_flow,
                                        rotation_rate);
-  if (ret) {
+  if (!ret) {
     g_venc_chns[VeChn].venc_attr.attr.stVencAttr.enRotation = rotation_rate;
   }
   g_venc_mtx.unlock();
