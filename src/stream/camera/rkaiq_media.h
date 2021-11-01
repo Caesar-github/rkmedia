@@ -1,4 +1,4 @@
-// Copyright 2020 Fuzhou Rockchip Electronics Co., Ltd. All rights reserved.
+// Copyright 2021 Fuzhou Rockchip Electronics Co., Ltd. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -69,16 +69,36 @@ typedef struct {
   std::string mipi_id1;
   std::string mipi_id2;
   std::string mipi_id3;
+  std::string dvp_id0;
+  std::string dvp_id1;
+  std::string dvp_id2;
+  std::string dvp_id3;
   std::string mipi_dphy_rx_path;
   std::string mipi_csi2_sd_path;
   std::string lvds_sd_path;
   std::string mipi_luma_path;
+  std::string dvp_sof_path;
 } cif_info_t;
+
+typedef struct {
+  int model_idx;
+  int linked_sensor;
+  std::string sensor_name;
+  std::string media_dev_path;
+  std::string dvp_id0;
+  std::string dvp_id1;
+  std::string dvp_id2;
+  std::string dvp_id3;
+  std::string dvp_sd_path;
+  std::string mipi_luma_path;
+  std::string dvp_sof_path;
+}cif_dvp_info_t;
 
 typedef struct {
   isp_info_t isp;
   ispp_info_t ispp;
   cif_info_t cif;
+  cif_dvp_info_t cif_dvp;
 } media_info_t;
 
 class RKAiqMedia {
@@ -90,6 +110,7 @@ public:
   void GetIsppSubDevs(int id, struct media_device *device, const char *devpath);
   void GetIspSubDevs(int id, struct media_device *device, const char *devpath);
   void GetCifSubDevs(int id, struct media_device *device, const char *devpath);
+  void GetCifDvpSubDevs(int id, struct media_device *device, const char *devpath);
   int GetMediaInfo();
   int DumpMediaInfo();
   int LinkToIsp(bool enable = false);
@@ -102,6 +123,9 @@ public:
 
     if (media_info[id].cif.linked_sensor)
       return media_info[id].cif.sensor_name;
+
+    if (media_info[id].cif_dvp.linked_sensor)
+      return media_info[id].cif_dvp.sensor_name;
 
     int idx = cam_id2ispp_id[id];
     if (idx >= MAX_CAM_NUM || idx < 0)
