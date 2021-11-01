@@ -460,6 +460,15 @@ target_include_directories(rkmedia_vi_double_cameras_switch_test PRIVATE ${CMAKE
 install(TARGETS rkmedia_vi_double_cameras_switch_test RUNTIME DESTINATION "bin")
 endif() #if(DRM_DISPLAY)
 
+#--------------------------
+#  rkmedia_vi_three_cameras_test
+#--------------------------
+add_executable(rkmedia_vi_three_cameras_test rkmedia_vi_three_cameras_test.c ${COMMON_SRC})
+add_dependencies(rkmedia_vi_three_cameras_test easymedia)
+target_link_libraries(rkmedia_vi_three_cameras_test easymedia ${THIRD_MEDIA})
+target_include_directories(rkmedia_vi_three_cameras_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+install(TARGETS rkmedia_vi_three_cameras_test RUNTIME DESTINATION "bin")
+
 if(COMPILES_UVC_EXAMPLE)
 #--------------------------
 #  rkmedia_vi_uvc_test
