@@ -9,9 +9,12 @@ extern "C" {
 #include "rkmedia_common.h"
 
 typedef enum rk_AI_LAYOUT_E {
-  AI_LAYOUT_NORMAL = 0, /* Normal      */
-  AI_LAYOUT_MIC_REF,    /* chanel layout: [mic:ref];*/
-  AI_LAYOUT_REF_MIC,    /* chanel layout: [ref:mic];*/
+  AI_LAYOUT_NORMAL = 0,    /* Normal      */
+  AI_LAYOUT_MIC_REF,       /* chanel layout: [mic:ref];*/
+  AI_LAYOUT_REF_MIC,       /* chanel layout: [ref:mic];*/
+  AI_LAYOUT_2MIC_REF_NONE, /* chanel layout: [mic0:mic1:ref0:none];*/
+  AI_LAYOUT_2MIC_NONE_REF, /* chanel layout: [mic0:mic1:none:ref0];*/
+  AI_LAYOUT_2MIC_2REF,     /* chanel layout: [mic0:mic1:ref0:ref1];*/
   AI_LAYOUT_BUTT
 } AI_LAYOUT_E;
 

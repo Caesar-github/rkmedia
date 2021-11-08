@@ -80,9 +80,25 @@ AlsaCaptureStream::AlsaCaptureStream(const char *param)
   interleaved = SampleFormatToInterleaved(output_sample_info.fmt);
 
   alsa_sample_info = output_sample_info;
-  if (layout == AI_LAYOUT_MIC_REF || layout == AI_LAYOUT_REF_MIC) {
+
+  switch (layout) {
+  case AI_LAYOUT_MIC_REF:
+  case AI_LAYOUT_REF_MIC:
     alsa_sample_info.channels = 2;
+    break;
+  case AI_LAYOUT_2MIC_REF_NONE:
+  case AI_LAYOUT_2MIC_NONE_REF:
+  case AI_LAYOUT_2MIC_2REF:
+    alsa_sample_info.channels = 4;
+    break;
+  default:
+    break;
   }
+
+  RKMEDIA_LOGD("alsa_sample_info: layout:%d fmt:%d channels:%d sample_rate:%d "
+               "nb_samples:%d\n",
+               layout, alsa_sample_info.fmt, alsa_sample_info.channels,
+               alsa_sample_info.sample_rate, alsa_sample_info.nb_samples);
 
 #ifdef AUDIO_ALGORITHM_ENABLE
   memset(&stVqeConfig, 0, sizeof(stVqeConfig));
@@ -262,6 +278,19 @@ read_one_frame:
     sample_buffer->SetChannels(1);
     output_frame_size = frame_size / 2;
     sample_buffer->SetSize(buffer_size / 2); // fix for MP3
+  } else if (read_cnt > 0 && ((layout == AI_LAYOUT_2MIC_REF_NONE ||
+                               layout == AI_LAYOUT_2MIC_NONE_REF ||
+                               layout == AI_LAYOUT_2MIC_2REF) &&
+                              output_sample_info.channels == 1)) {
+    int16_t *in = (int16_t *)sample_buffer->GetPtr();
+    int16_t *out = in;
+    for (int j = 0; j < read_cnt; j++) {
+      *out++ = *in++;
+      in += 3;
+    }
+    sample_buffer->SetChannels(1);
+    output_frame_size = frame_size / 4;
+    sample_buffer->SetSize(buffer_size / 4); // fix for MP3
   }
 
   sample_buffer->SetValidSize(read_cnt * output_frame_size);

@@ -21,9 +21,12 @@ extern "C" {
 #include "sound.h"
 
 typedef enum rk_AI_LAYOUT_E {
-  AI_LAYOUT_NORMAL = 0, /* Normal      */
-  AI_LAYOUT_MIC_REF,    /* MIC + REF, do clear ref*/
-  AI_LAYOUT_REF_MIC,    /* REF + MIC, do clear ref*/
+  AI_LAYOUT_NORMAL = 0,    /* Normal      */
+  AI_LAYOUT_MIC_REF,       /* MIC + REF, do clear ref*/
+  AI_LAYOUT_REF_MIC,       /* REF + MIC, do clear ref*/
+  AI_LAYOUT_2MIC_REF_NONE, /* MIC0 + MIC1 + REF0 + NONE, do clear ref*/
+  AI_LAYOUT_2MIC_NONE_REF, /* MIC0 + MIC1 + NONE + REF1, do clear ref*/
+  AI_LAYOUT_2MIC_2REF,     /* MIC0 + MIC1 + REF0 + REF1, do clear ref*/
   AI_LAYOUT_BUTT
 } AI_LAYOUT_E;
 

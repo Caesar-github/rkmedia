@@ -25,9 +25,9 @@ extern "C" {
 
 #if USE_RKAPPLUS
 #undef ALGO_FRAME_TIMS_MS
-#define ALGO_FRAME_TIMS_MS 16 // 16ms
+#define ALGO_FRAME_TIMS_MS 10 // 10ms
 
-#define rt_malloc(x) calloc(x, 1)
+#define rt_malloc(x) calloc(1, x)
 #define rt_safe_free free
 #define RT_NULL NULL
 
@@ -141,7 +141,8 @@ static int queue_size(AUDIO_QUEUE_S *queue) { return queue->buffer_size; }
 static int queue_write(AUDIO_QUEUE_S *queue, const unsigned char *buffer,
                        int bytes) {
   if ((buffer == NULL) || (bytes <= 0)) {
-    RKMEDIA_LOGI("queue_capture_buffer buffer error!");
+    RKMEDIA_LOGI("queue_capture_buffer buffer error! (buffer:%p, bytes:%d)",
+                 buffer, bytes);
     return -1;
   }
   if (queue->buffer_size + bytes > RK_AUDIO_BUFFER_MAX_SIZE) {
@@ -204,8 +205,8 @@ static SkvAgcParam *createSkvAgcConfig() {
   param->fRth1 = -30;
   param->fRth0 = -55;
 
-  param->fs = 8000;
-  param->frmlen = 128;
+  param->fs = 16000;
+  param->frmlen = 160;
   param->attenuate_time = 1000;
 
   param->fRk1 = 0.8;
@@ -251,6 +252,7 @@ static SkvAecParam *createSkvAecConfig() {
   param->aec_mode = 0;
   param->delay_len = 0;
   param->look_ahead = 0;
+  param->mic_chns_map = RT_NULL;
 
   return param;
 }
@@ -521,7 +523,7 @@ static RTSkvParam *createSkvConfigs() {
   if (param == RT_NULL)
     return RT_NULL;
 
-  param->model = RT_SKV_BF;
+  param->model = RT_SKV_BF | RT_SKV_AEC;
   param->aec = createSkvAecConfig();
   RT_ASSERT(param->aec != RT_NULL);
 
@@ -558,14 +560,17 @@ static bool RK_AUDIO_VQE_Dumping(void) {
 
 int AI_TALKVQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {
   SampleInfo sample_info = handle->sample_info;
-  // 1. check params
-  if (sample_info.channels != 2) {
-    RKMEDIA_LOGE("check failed: aec channels(%d) must equal 2",
+
+#if USE_RKAPPLUS
+  int mic_num = 1, ref_num = 1;
+
+  // check params
+  if (sample_info.channels != 2 && sample_info.channels != 4) {
+    RKMEDIA_LOGE("check failed: aec channels(%d) should be equal 2 or 4",
                  sample_info.channels);
     return -1;
   }
 
-#if USE_RKAPPLUS
   if (!(sample_info.fmt == SAMPLE_FMT_S16 &&
         (sample_info.sample_rate == 8000 || sample_info.sample_rate == 16000 ||
          sample_info.sample_rate == 48000))) {
@@ -577,9 +582,25 @@ int AI_TALKVQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {
   handle->mParam = createSkvConfigs();
   RT_ASSERT(handle->mParam != RT_NULL);
 
+  switch (handle->layout) {
+  case AI_LAYOUT_2MIC_REF_NONE:
+  case AI_LAYOUT_2MIC_NONE_REF:
+    mic_num = 2;
+    ref_num = 1;
+    break;
+  case AI_LAYOUT_2MIC_2REF:
+    mic_num = 2;
+    ref_num = 2;
+    break;
+  default:
+    break;
+  }
+
+  RKMEDIA_LOGI("%s - %d, layout=%d, mic_num=%d, ref_num=%d\n", __func__,
+               __LINE__, handle->layout, mic_num, ref_num);
+
   handle->mSkvHandle = rkaudio_preprocess_init(
-      sample_info.sample_rate, get_bit_width(sample_info.fmt), 1, /* FIXME */
-      1,                                                          /* FIXME */
+      sample_info.sample_rate, get_bit_width(sample_info.fmt), mic_num, ref_num,
       handle->mParam);
 
   if (handle->mParam->model & RT_SKV_AEC) {
@@ -590,11 +611,18 @@ int AI_TALKVQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {
     dumpSkvBeamFormConfig(handle->mParam->bf);
   }
 
-  rkaudio_param_printf(1, 1, handle->mParam);
+  // rkaudio_param_printf(mic_num, ref_num, handle->mParam);
 
   UNUSED(config);
 
 #else
+
+  // check params
+  if (sample_info.channels != 2) {
+    RKMEDIA_LOGE("check failed: aec channels(%d) must equal 2",
+                 sample_info.channels);
+    return -1;
+  }
 
   if (!(sample_info.fmt == SAMPLE_FMT_S16 &&
         (sample_info.sample_rate == 8000 ||
@@ -626,9 +654,9 @@ int AI_TALKVQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {
 
 #endif
 
-  RKMEDIA_LOGI("sample_info: %d|%d|%d|%d\n", sample_info.fmt,
+  RKMEDIA_LOGI("sample_info: %d|%d|%d|%d, ALGO: %dms\n", sample_info.fmt,
                sample_info.channels, sample_info.sample_rate,
-               sample_info.nb_samples);
+               sample_info.nb_samples, ALGO_FRAME_TIMS_MS);
 
   return 0;
 }
@@ -651,45 +679,104 @@ static int AI_TALKVQE_Process(AUDIO_VQE_S *handle, unsigned char *in,
 #if USE_RKAPPLUS
   int nb_samples = ALGO_FRAME_TIMS_MS * handle->sample_info.sample_rate / 1000;
   int channels = handle->sample_info.channels;
+  int sorted_channels = channels;
   int16_t *sigin_skv;
   int16_t *sigout_skv;
   unsigned char skvbuf_in[nb_samples * channels * sizeof(int16_t)] = {
       0}; // FIXME: 1mic or 2mic
-  unsigned char skvbuf_out[nb_samples * 1 * sizeof(int16_t)] = {0};
-  bool only_anr = true;
+  unsigned char skvbuf_out[nb_samples * 2 * sizeof(int16_t)] = {0};
+  bool only_anr = false;
   int is_wakeup = 0;
-  int in_short = nb_samples * sizeof(int16_t); /* Based 1mic channel bytes */
+  int in_short = nb_samples * channels; /* Based 1mic channel bytes */
 
   sigout_skv = (int16_t *)skvbuf_out;
   sigin_skv = (int16_t *)skvbuf_in;
 
   /* FIXME: needs refence layout */
   if (handle->layout == AI_LAYOUT_MIC_REF) {
+    RT_ASSERT(channels == 2);
+
     for (int i = 0; i < nb_samples; i++) {
-      sigin_skv[i * 2] = *((int16_t *)in + i * 2);
+      sigin_skv[i * channels] = *((int16_t *)in + i * channels);
+
       if (only_anr)
-        sigin_skv[i * 2 + 1] = 0;
+        sigin_skv[i * channels + 1] = 0;
       else
-        sigin_skv[i * 2 + 1] = *((int16_t *)in + i * 2 + 1);
+        sigin_skv[i * channels + 1] = *((int16_t *)in + i * channels + 1);
     }
   } else if (handle->layout == AI_LAYOUT_REF_MIC) {
+    RT_ASSERT(channels == 2);
+
     for (int i = 0; i < nb_samples; i++) {
       if (only_anr)
-        sigin_skv[i * 2] = 0;
+        sigin_skv[i * channels] = 0;
       else
-        sigin_skv[i * 2] = *((int16_t *)in + i * 2 + 1);
+        sigin_skv[i * channels] = *((int16_t *)in + i * channels + 1);
 
-      sigin_skv[i * 2 + 1] = *((int16_t *)in + i * 2);
+      sigin_skv[i * channels + 1] = *((int16_t *)in + i * channels);
+    }
+  } else if (handle->layout == AI_LAYOUT_2MIC_REF_NONE) {
+    RT_ASSERT(channels == 4);
+
+    sorted_channels = channels - 1;
+    in_short = nb_samples * (channels - 1);
+
+    for (int i = 0; i < nb_samples; i++) {
+      sigin_skv[i * sorted_channels] = *((int16_t *)in + i * channels);
+      sigin_skv[i * sorted_channels + 1] = *((int16_t *)in + i * channels + 1);
+
+      if (only_anr)
+        sigin_skv[i * sorted_channels + 2] = 0;
+      else
+        sigin_skv[i * sorted_channels + 2] =
+            *((int16_t *)in + i * channels + 2);
+    }
+  } else if (handle->layout == AI_LAYOUT_2MIC_NONE_REF) {
+    RT_ASSERT(channels == 4);
+
+    sorted_channels = channels - 1;
+    in_short = nb_samples * (channels - 1);
+
+    for (int i = 0; i < nb_samples; i++) {
+      sigin_skv[i * sorted_channels] = *((int16_t *)in + i * channels);
+      sigin_skv[i * sorted_channels + 1] = *((int16_t *)in + i * channels + 1);
+
+      if (only_anr)
+        sigin_skv[i * sorted_channels + 2] = 0;
+      else
+        sigin_skv[i * sorted_channels + 2] =
+            *((int16_t *)in + i * channels + 3);
+    }
+  } else if (handle->layout == AI_LAYOUT_2MIC_2REF) {
+    RT_ASSERT(channels == 4);
+
+    for (int i = 0; i < nb_samples; i++) {
+      sigin_skv[i * channels] = *((int16_t *)in + i * channels);
+      sigin_skv[i * channels + 1] = *((int16_t *)in + i * channels + 1);
+
+      if (only_anr) {
+        sigin_skv[i * channels + 2] = 0;
+        sigin_skv[i * channels + 3] = 0;
+      } else {
+        sigin_skv[i * channels + 2] = *((int16_t *)in + i * channels + 2);
+        sigin_skv[i * channels + 3] = *((int16_t *)in + i * channels + 3);
+      }
     }
   }
 
   if (RK_AUDIO_VQE_Dumping() == true) {
     memset(filename, 0, sizeof(filename));
-    sprintf(filename, "/tmp/vqe-rkap-plus-in-%d.pcm",
+    sprintf(filename, "/tmp/vqe-rkap-plus-in-%dch-%d.pcm", sorted_channels,
             handle->sample_info.sample_rate);
     fp = fopen(filename, "ab+");
-    fwrite(sigin_skv, 1, nb_samples * sizeof(int16_t) * 2,
-           fp); // 1mic + 1loopback
+    fwrite(sigin_skv, 1, nb_samples * sizeof(int16_t) * sorted_channels, fp);
+    fclose(fp);
+
+    memset(filename, 0, sizeof(filename));
+    sprintf(filename, "/tmp/vqe-rkap-plus-in-%dch-%d-raw.pcm", channels,
+            handle->sample_info.sample_rate);
+    fp = fopen(filename, "ab+");
+    fwrite(in, 1, nb_samples * sizeof(int16_t) * channels, fp);
     fclose(fp);
   }
 
@@ -698,7 +785,7 @@ static int AI_TALKVQE_Process(AUDIO_VQE_S *handle, unsigned char *in,
 
   if (RK_AUDIO_VQE_Dumping() == true) {
     memset(filename, 0, sizeof(filename));
-    sprintf(filename, "/tmp/vqe-rkap-plus-out-%d.pcm",
+    sprintf(filename, "/tmp/vqe-rkap-plus-out-1ch-%d.pcm",
             handle->sample_info.sample_rate);
     fp = fopen(filename, "ab+");
     fwrite(sigout_skv, 1, nb_samples * sizeof(int16_t) * 1, fp);
@@ -708,7 +795,6 @@ static int AI_TALKVQE_Process(AUDIO_VQE_S *handle, unsigned char *in,
   int16_t *tmp2 = (int16_t *)sigout_skv;
   int16_t *tmp1 = (int16_t *)out;
   for (int j = 0; j < nb_samples; j++) {
-    *tmp1++ = *tmp2;
     *tmp1++ = *tmp2++; // need 2ch for output
   }
 
@@ -1025,32 +1111,54 @@ AUDIO_VQE_S *RK_AUDIO_VQE_Init(const SampleInfo &sample_info,
 }
 
 int RK_AUDIO_VQE_Handle(AUDIO_VQE_S *handle, void *buffer, int bytes) {
-  int16_t nm_samples = ALGO_FRAME_TIMS_MS * handle->sample_info.sample_rate /
-                       1000; // hard code 20ms
-  int16_t frame_bytes = nm_samples * 2 * handle->sample_info.channels;
+  // int16_t nm_samples = ALGO_FRAME_TIMS_MS * handle->sample_info.sample_rate /
+  //                      1000; // hard code 20ms
+  // int16_t frame_bytes = nm_samples * 2 * handle->sample_info.channels;
+
+  int16_t algo_samples = ALGO_FRAME_TIMS_MS * handle->sample_info.sample_rate /
+                         1000; // hard code 20ms
+  int16_t algo_in_bytes =
+      algo_samples * sizeof(short) * handle->sample_info.channels;
+  int16_t algo_out_bytes =
+      algo_samples * sizeof(short) * 2; // fixed 2ch for algo output
+  int16_t frame_samples = handle->stVqeConfig.stAiTalkConfig.s32FrameSample;
+  int16_t in_frame_bytes =
+      frame_samples * sizeof(short) * handle->sample_info.channels;
+  int16_t out_frame_bytes =
+      frame_samples * sizeof(short) * 2; // fixed 2ch for algo output
 
   // 1. data in queue
   queue_write(handle->in_queue, (unsigned char *)buffer, bytes);
 
   // 2. peek data from in queue, do audio process, data out queue
-  for (int i = 0; i < queue_size(handle->in_queue) / frame_bytes; i++) {
-    unsigned char in[frame_bytes] = {0};
-    unsigned char out[frame_bytes] = {0};
-    queue_read(handle->in_queue, in, frame_bytes);
+  for (int i = 0; i < queue_size(handle->in_queue) / algo_in_bytes; i++) {
+    unsigned char in[in_frame_bytes] = {0};
+    unsigned char out[out_frame_bytes] = {0};
+    queue_read(handle->in_queue, in, algo_in_bytes);
     VQE_Process(handle, in, out);
-    queue_write(handle->out_queue, out, frame_bytes);
+    queue_write(handle->out_queue, out, algo_out_bytes);
   }
   /* Copy the rest of the sample to the beginning of the Buffer */
   queue_tune(handle->in_queue);
+  queue_tune(handle->out_queue);
 
   // 2. peek data from out queue
-  if (queue_size(handle->out_queue) >= bytes) {
-    queue_read(handle->out_queue, (unsigned char *)buffer, bytes);
-    queue_tune(handle->out_queue);
+  if (queue_size(handle->out_queue) >= out_frame_bytes) {
+    unsigned char out[out_frame_bytes] = {0}, *outp;
+    int channels = handle->sample_info.channels;
+
+    outp = out;
+    queue_read(handle->out_queue, (unsigned char *)out, out_frame_bytes);
+    /* Just fill back the front 2 channels of buffer */
+    for (int i = 0; i < frame_samples; i++) {
+      *((int16_t *)buffer + i * channels + 0) = *((int16_t *)outp + i);
+      *((int16_t *)buffer + i * channels + 1) = *((int16_t *)outp + i);
+    }
+
     return 0;
   } else {
     RKMEDIA_LOGI("%s: queue size %d less than %d\n", __func__,
-                 queue_size(handle->out_queue), bytes);
+                 queue_size(handle->out_queue), out_frame_bytes);
     return -1;
   }
 }
