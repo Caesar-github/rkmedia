@@ -46,6 +46,9 @@ void GetPixFmtNumDen(const PixelFormat &fmt, int &num, int &den) {
   case PIX_FMT_BGRA8888:
     num = 4;
     break;
+  case PIX_FMT_MJPEG:
+    num = 2;
+    break;
   default:
     RKMEDIA_LOGI("unsupport get num/den for pixel fmt: %d\n", fmt);
   }
@@ -88,7 +91,8 @@ static const struct PixFmtStringEntry {
     {PIX_FMT_BGR888, IMAGE_BGR888},     {PIX_FMT_ARGB8888, IMAGE_ARGB8888},
     {PIX_FMT_ABGR8888, IMAGE_ABGR8888}, {PIX_FMT_RGBA8888, IMAGE_RGBA8888},
     {PIX_FMT_BGRA8888, IMAGE_BGRA8888}, {PIX_FMT_FBC0, IMAGE_FBC0},
-    {PIX_FMT_FBC0, IMAGE_FBC2},         {PIX_FMT_YUV444SP, IMAGE_YUV444SP}};
+    {PIX_FMT_FBC0, IMAGE_FBC2},         {PIX_FMT_YUV444SP, IMAGE_YUV444SP},
+    {PIX_FMT_MJPEG, IMAGE_JPEG}};
 
 PixelFormat StringToPixFmt(const char *type) {
   if (!type)

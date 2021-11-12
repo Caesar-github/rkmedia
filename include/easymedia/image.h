@@ -32,6 +32,7 @@ typedef enum {
   // Compound type
   PIX_FMT_FBC0,
   PIX_FMT_FBC2,
+  PIX_FMT_MJPEG,
   PIX_FMT_NB
 } PixelFormat;
 
