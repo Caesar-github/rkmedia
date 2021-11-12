@@ -3992,7 +3992,7 @@ RK_S32 RK_MPI_VENC_GetRcParam(VENC_CHN VeChn, VENC_RC_PARAM_S *pstRcParam) {
       break;
     }
   } else {
-    memcpy(&pstRcParam, &g_venc_chns[VeChn].venc_attr.stRcPara,
+    memcpy(pstRcParam, &g_venc_chns[VeChn].venc_attr.stRcPara,
            sizeof(VENC_RC_PARAM_S));
   }
   g_venc_mtx.unlock();
@@ -5450,6 +5450,7 @@ RK_S32 RK_MPI_AI_SetTalkVqeAttr(AI_CHN AiChn,
   config.stAiTalkConfig.s32WorkSampleRate = pstVqeConfig->s32WorkSampleRate;
   strncpy(config.stAiTalkConfig.aParamFilePath, pstVqeConfig->aParamFilePath,
           MAX_FILE_PATH_LEN - 1);
+  config.stAiTalkConfig.aParamFilePath[MAX_FILE_PATH_LEN - 1] = '\0';
   g_ai_chns[AiChn].rkmedia_flow->Control(easymedia::S_VQE_ATTR, &config);
   g_ai_mtx.unlock();
   return RK_ERR_SYS_OK;
@@ -5471,6 +5472,7 @@ RK_S32 RK_MPI_AI_GetTalkVqeAttr(AI_CHN AiChn,
   pstVqeConfig->s32WorkSampleRate = config.stAiTalkConfig.s32WorkSampleRate;
   strncpy(pstVqeConfig->aParamFilePath, config.stAiTalkConfig.aParamFilePath,
           MAX_FILE_PATH_LEN - 1);
+  pstVqeConfig->aParamFilePath[MAX_FILE_PATH_LEN - 1] = '\0';
   g_ai_mtx.unlock();
   return RK_ERR_SYS_OK;
 }
@@ -5715,6 +5717,7 @@ RK_S32 RK_MPI_AO_SetVqeAttr(AO_CHN AoChn, AO_VQE_CONFIG_S *pstVqeConfig) {
   config.stAoConfig.s32WorkSampleRate = pstVqeConfig->s32WorkSampleRate;
   strncpy(config.stAoConfig.aParamFilePath, pstVqeConfig->aParamFilePath,
           MAX_FILE_PATH_LEN - 1);
+  config.stAoConfig.aParamFilePath[MAX_FILE_PATH_LEN - 1] = '\0';
   g_ao_chns[AoChn].rkmedia_flow->Control(easymedia::S_VQE_ATTR, &config);
   g_ao_mtx.unlock();
   return RK_ERR_SYS_OK;
@@ -5736,6 +5739,7 @@ RK_S32 RK_MPI_AO_GetVqeAttr(AO_CHN AoChn, AO_VQE_CONFIG_S *pstVqeConfig) {
   pstVqeConfig->s32WorkSampleRate = config.stAoConfig.s32WorkSampleRate;
   strncpy(pstVqeConfig->aParamFilePath, config.stAoConfig.aParamFilePath,
           MAX_FILE_PATH_LEN - 1);
+  pstVqeConfig->aParamFilePath[MAX_FILE_PATH_LEN - 1] = '\0';
   g_ao_mtx.unlock();
   return RK_ERR_SYS_OK;
 }
