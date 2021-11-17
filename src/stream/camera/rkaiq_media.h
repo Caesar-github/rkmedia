@@ -92,7 +92,7 @@ typedef struct {
   std::string dvp_sd_path;
   std::string mipi_luma_path;
   std::string dvp_sof_path;
-}cif_dvp_info_t;
+} cif_dvp_info_t;
 
 typedef struct {
   isp_info_t isp;
@@ -100,6 +100,12 @@ typedef struct {
   cif_info_t cif;
   cif_dvp_info_t cif_dvp;
 } media_info_t;
+
+typedef struct {
+  int cif_link = 0;
+  int dvp_link = 0;
+  int isp_link = 0;
+} link_cam_t;
 
 class RKAiqMedia {
 public:
@@ -114,6 +120,7 @@ public:
   int GetMediaInfo();
   int DumpMediaInfo();
   int LinkToIsp(bool enable = false);
+
   std::string GetVideoNode(int camera_id, const char *chn_name);
 
 public:
@@ -139,9 +146,10 @@ public:
 
 private:
   media_info_t media_info[MAX_CAM_NUM];
+  link_cam_t link_cam;
   int cam_id2ispp_id[MAX_CAM_NUM];
-  int SetCameraOrder(int idx);
+  void SetCameraOrder();
+  void FindLinkCam(int index);
   void BindCameraWithIsp();
 };
-
 #endif // _TOOL_RKAIQ_MEDIA_H_
