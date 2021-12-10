@@ -6894,7 +6894,7 @@ RK_S32 RK_MPI_VDEC_CreateChn(VDEC_CHN VdChn, const VDEC_CHN_ATTR_S *pstAttr) {
 }
 
 RK_S32 RK_MPI_VDEC_DestroyChn(VDEC_CHN VdChn) {
-  if ((VdChn < 0) || (VdChn >= VO_MAX_CHN_NUM))
+  if ((VdChn < 0) || (VdChn >= VDEC_MAX_CHN_NUM))
     return -RK_ERR_VDEC_INVALID_CHNID;
 
   g_vdec_mtx.lock();
