@@ -194,6 +194,10 @@ void FlowCoroutine::WhileRunSleep() {
     RunOnce();
     ++times;
     int64_t remain = interval * times - ad.Get() / 1000.0;
+    if (remain > 1000 || remain < -1000) {
+      times = 0;
+      continue;
+    }
     if (remain > 0)
       msleep((int)remain);
     if (times >= 10000)
