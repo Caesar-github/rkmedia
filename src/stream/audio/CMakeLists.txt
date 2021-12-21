@@ -11,7 +11,6 @@ option(ALSA_CAPTURE "compile: alsa capture" OFF)
 
 if(ALSA_PLAYBACK OR ALSA_CAPTURE)
 
-  pkg_check_modules(ALSA REQUIRED alsa)
   set(EASY_MEDIA_STREAM_ALSA_LIBS asound)
   set(EASY_MEDIA_STREAM_ALSA_SOURCE_FILES
 	  stream/audio/alsa/alsa_utils.cc

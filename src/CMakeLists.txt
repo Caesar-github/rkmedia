@@ -106,6 +106,10 @@ if(ROCKX)
   set(EASY_MEDIA_DEPENDENT_LIBS ${EASY_MEDIA_DEPENDENT_LIBS} rockx)
 endif()
 
+if(DRM_DISPLAY)
+    include_directories(${LIBDRM_HEADER_DIR})
+endif()
+
 set(LIBRARY_VERSION 1.0.1)
 set(LIBRARY_NAME easymedia)
 
