@@ -28,6 +28,7 @@ static void sigterm_handler(int sig) {
 FILE *fp = NULL;
 static RK_U32 g_enWorkSampleRate = 16000;
 static RK_U32 g_s32VqeFrameSample = 320; // 20ms;
+static RK_U32 g_s32AiLayout = AI_LAYOUT_MIC_REF;
 
 static void audio_packet_cb(MEDIA_BUFFER mb) {
   printf("Get Audio Encoded packet:ptr:%p, fd:%d, size:%zu, mode:%d\n",
@@ -51,8 +52,8 @@ static RK_VOID AI_AO() {
   ai_attr.u32NbSamples = 1152;
   ai_attr.u32SampleRate = g_enWorkSampleRate;
   ai_attr.u32Channels = 1;
-  ai_attr.enAiLayout = AI_LAYOUT_MIC_REF; // chanel layout: [ref:mic]; remove
-                                          // ref, output mic mono
+  ai_attr.enAiLayout = g_s32AiLayout; // chanel layout: [ref:mic]; remove
+                                      // ref, output mic mono
 
   AO_CHN_ATTR_S ao_attr;
   ao_attr.pcAudioNode = ALSA_PATH;
@@ -99,8 +100,8 @@ static RK_VOID AI_AENC_FILE(char *file_path) {
   ai_attr.u32NbSamples = MP3_NB_SAMPLES;
   ai_attr.u32SampleRate = g_enWorkSampleRate;
   ai_attr.u32Channels = 1;
-  ai_attr.enAiLayout = AI_LAYOUT_MIC_REF; // chanel layout: [ref:mic]; remove
-                                          // ref, output mic mono
+  ai_attr.enAiLayout = g_s32AiLayout; // chanel layout: [ref:mic]; remove
+                                      // ref, output mic mono
 
   AENC_CHN_ATTR_S aenc_attr;
   aenc_attr.enCodecType = RK_CODEC_TYPE_MP3;
@@ -279,11 +280,10 @@ RK_S32 AI_VqeProcess_AO(RK_VOID) {
   AI_CHN_ATTR_S ai_attr;
   ai_attr.pcAudioNode = ALSA_PATH;
   ai_attr.enSampleFormat = RK_SAMPLE_FMT_S16;
-  ai_attr.u32NbSamples = 1024;
+  ai_attr.u32NbSamples = g_s32VqeFrameSample;
   ai_attr.u32SampleRate = g_enWorkSampleRate;
   ai_attr.u32Channels = 1;
-  ai_attr.enAiLayout =
-      AI_LAYOUT_MIC_REF; // remove ref channel, and output mic mono
+  ai_attr.enAiLayout = g_s32AiLayout; // remove ref channel, and output mic mono
 
   AO_CHN_ATTR_S ao_attr;
   ao_attr.pcAudioNode = ALSA_PATH;
@@ -327,7 +327,8 @@ RK_S32 AI_VqeProcess_AO(RK_VOID) {
 }
 
 static RK_VOID RKMEDIA_AUDIO_Usage() {
-  printf("\n\n/Usage:./rkmdia_audio <index> <sampleRate> [filePath]/\n");
+  printf("\n\n/Usage:./rkmdia_audio <index> <sampleRate> [filePath]/ "
+         "[nbsamples] [ailayout]\n");
   printf("\tindex and its function list below\n");
   printf("\t0:  start AI to AO loop\n");
   printf("\t1:  send audio frame to AENC channel from AI, save them\n");
@@ -342,7 +343,18 @@ static RK_VOID RKMEDIA_AUDIO_Usage() {
          "sample 2.\n");
   printf("\tdefault filePath: /userdata/out.mp2\n");
   printf("\n");
-  printf("\texample: ./rkmdia_audio 0 48000\n");
+  printf("\tnbsamples, for example: 160 is 10ms at 16kHz\n");
+  printf("\n");
+  printf("\tailayout:\n");
+  printf("\t0: AI_LAYOUT_NORMAL\n");
+  printf("\t1: AI_LAYOUT_MIC_REF\n");
+  printf("\t2: AI_LAYOUT_REF_MIC\n");
+  printf("\t3: AI_LAYOUT_2MIC_REF_NONE\n");
+  printf("\t4: AI_LAYOUT_2MIC_NONE_REF\n");
+  printf("\t5: AI_LAYOUT_2MIC_2REF\n");
+  printf("\t6: AI_LAYOUT_BUTT\n");
+  printf("\n");
+  printf("\texample: ./rkmdia_audio 0 48000 480 1 /tmp/out_aiao.mp2\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -350,7 +362,7 @@ int main(int argc, char *argv[]) {
   RK_U32 u32Index;
   RK_CHAR *pFilePath = RK_NULL;
 
-  if (argc != 3 && argc != 4) {
+  if (!(argc >= 3 && argc <= 6)) {
     RKMEDIA_AUDIO_Usage();
     return -1;
   }
@@ -362,10 +374,23 @@ int main(int argc, char *argv[]) {
 
   u32Index = atoi(argv[1]);
   g_enWorkSampleRate = atoi(argv[2]);
-  if (4 == argc) {
-    pFilePath = argv[3];
-  } else {
-    pFilePath = (char *)"/userdata/out.mp2";
+
+  switch (argc) {
+  case 6:
+    pFilePath = argv[5];
+    g_s32AiLayout = atoi(argv[4]);
+    g_s32VqeFrameSample = atoi(argv[3]);
+    break;
+  case 5:
+    g_s32AiLayout = atoi(argv[4]);
+    g_s32VqeFrameSample = atoi(argv[3]);
+    break;
+  case 4:
+    g_s32VqeFrameSample = atoi(argv[3]);
+    break;
+  default:
+    pFilePath = (char *)"/tmp/out.mp2";
+    break;
   }
 
   switch (u32Index) {
