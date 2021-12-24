@@ -205,8 +205,8 @@ static SkvAgcParam *createSkvAgcConfig() {
   param->fRth1 = -30;
   param->fRth0 = -55;
 
-  param->fs = 16000;
-  param->frmlen = 160;
+  param->fs = 0;
+  param->frmlen = 0;
   param->attenuate_time = 1000;
 
   param->fRk1 = 0.8;
@@ -491,6 +491,7 @@ static void dumpSkvBeamFormConfig(SkvBeamFormParam *param) {
     RT_LOGD("   attack_time = %f, release_time = %f, attenuate_time = %f",
             agc->attack_time, agc->release_time, agc->attenuate_time);
     RT_LOGD("   max_gain = %f, max_peak = %f", agc->max_gain, agc->max_peak);
+    RT_LOGD("   fs = %d, frmlen = %d", agc->fs, agc->frmlen);
 
     RT_LOGD("   fLineGainDb = %f", agc->fLineGainDb);
     RT_LOGD("   fRth0 = %f, fRth1 = %f, fRth2 = %f", agc->fRth0, agc->fRth1,
@@ -571,14 +572,6 @@ int AI_TALKVQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {
     return -1;
   }
 
-  if (!(sample_info.fmt == SAMPLE_FMT_S16 &&
-        (sample_info.sample_rate == 8000 || sample_info.sample_rate == 16000 ||
-         sample_info.sample_rate == 48000))) {
-    RKMEDIA_LOGE("check failed: sample_info.fmt == SAMPLE_FMT_S16 && \
-			(sample_info.sample_rate == 8000 | 16000 | 48000))");
-    return -1;
-  }
-
   handle->mParam = createSkvConfigs();
   RT_ASSERT(handle->mParam != RT_NULL);
 
@@ -598,6 +591,12 @@ int AI_TALKVQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {
 
   RKMEDIA_LOGI("%s - %d, layout=%d, mic_num=%d, ref_num=%d\n", __func__,
                __LINE__, handle->layout, mic_num, ref_num);
+
+  /* FIXME: sync the AGC param fs and frmlen with runtime */
+  handle->mParam->bf->agc->fs = sample_info.sample_rate;
+  handle->mParam->bf->agc->frmlen =
+      ALGO_FRAME_TIMS_MS * sample_info.sample_rate / 1000;
+  ;
 
   handle->mSkvHandle = rkaudio_preprocess_init(
       sample_info.sample_rate, get_bit_width(sample_info.fmt), mic_num, ref_num,
