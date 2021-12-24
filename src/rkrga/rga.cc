@@ -191,20 +191,15 @@ int RgaFilter::IoCtrl(unsigned long int request, ...) {
     ImageRect *new_src_rect = &(new_rga_cfg->src_rect);
     ImageRect *new_dst_rect = &(new_rga_cfg->dst_rect);
     int new_rotation = new_rga_cfg->rotation;
-    int max_width, max_height;
-    if (new_rotation == 90 || new_rotation == 270) {
-      max_width = src_max_height;
-      max_height = src_max_width;
-    } else {
-      max_width = src_max_width;
-      max_height = src_max_height;
-    }
-    if (rga_rect_check(new_src_rect, max_width, max_height) ||
-        rga_rect_check(new_dst_rect, max_width, max_height)) {
+
+    if (rga_rect_check(new_src_rect, src_max_width, src_max_height) ||
+        rga_rect_check(new_dst_rect, dst_max_width, dst_max_height)) {
       RKMEDIA_LOGE(
-          "IoCtrl: Invalid srcRect:<%d,%d,%d,%d> or dstRect:<%d,%d,%d,%d>\n",
+          "IoCtrl: Invalid srcRect:<%d,%d,%d,%d> or dstRect:<%d,%d,%d,%d>, max "
+          "srcRect:<0,0,%d,%d>, max dstRect:<0,0,%d,%d>\n",
           new_src_rect->x, new_src_rect->y, new_src_rect->w, new_src_rect->h,
-          new_dst_rect->x, new_dst_rect->y, new_dst_rect->w, new_dst_rect->h);
+          new_dst_rect->x, new_dst_rect->y, new_dst_rect->w, new_dst_rect->h,
+          src_max_width, src_max_height, dst_max_width, dst_max_height);
       ret = -1;
       break;
     }
