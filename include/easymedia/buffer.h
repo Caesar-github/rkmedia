@@ -301,6 +301,10 @@ public:
   int GetSamples() const { return sample_info.nb_samples; }
   void SetChannels(int num) { sample_info.channels = num; }
   int GetChannels() { return sample_info.channels; }
+  void SetSampleRate(int sample_rate) { sample_info.sample_rate = sample_rate; }
+  int GetSampleRate() { return sample_info.sample_rate; }
+  void SetFormat(SampleFormat fmt) { sample_info.fmt = fmt; }
+  SampleFormat GetFormat() { return sample_info.fmt; }
 
 private:
   void ResetValues() {

@@ -43,7 +43,6 @@ bool encode(Flow *f, MediaBufferVector &input_vector) {
   std::shared_ptr<AudioEncoder> enc = af->enc;
   std::shared_ptr<MediaBuffer> &src = input_vector[0];
   std::shared_ptr<MediaBuffer> dst;
-  std::shared_ptr<MediaBuffer> mute_mb;
   bool result = true;
   bool feed_null = false;
   size_t limit_size = af->input_size;
@@ -52,10 +51,25 @@ bool encode(Flow *f, MediaBufferVector &input_vector) {
     return false;
 
   if (af->is_mute) {
-    mute_mb = MediaBuffer::Clone(*src);
-    if (mute_mb) {
-      memset((char *)mute_mb->GetPtr(), 0, mute_mb->GetValidSize());
-      src = mute_mb;
+    auto src_sb = std::static_pointer_cast<SampleBuffer>(src);
+    SampleInfo sampleinfo;
+    sampleinfo.fmt = src_sb->GetFormat();
+    sampleinfo.channels = src_sb->GetChannels();
+    sampleinfo.nb_samples = src_sb->GetSamples();
+    sampleinfo.sample_rate = src_sb->GetSampleRate();
+
+    auto mute_sb = std::make_shared<easymedia::SampleBuffer>(
+        MediaBuffer::Alloc2(src->GetValidSize()), sampleinfo);
+    if (mute_sb) {
+      mute_sb->SetValidSize(src->GetValidSize());
+      mute_sb->SetType(src->GetType());
+      mute_sb->SetUserFlag(src->GetUserFlag());
+      mute_sb->SetUSTimeStamp(src->GetUSTimeStamp());
+      mute_sb->SetEOF(src->IsEOF());
+      mute_sb->SetTsvcLevel(src->GetTsvcLevel());
+      memset((char *)mute_sb->GetPtr(), 0, mute_sb->GetValidSize());
+
+      src = mute_sb;
     }
   }
 
