@@ -20,6 +20,8 @@ typedef struct rkVMIX_CHN_INFO_S {
   IMAGE_TYPE_E enImgOutType;
   RECT_S stInRect;
   RECT_S stOutRect;
+  RK_U16 u16Rotaion;
+  RGA_FLIP_E enFlip;
 } VMIX_CHN_INFO_S;
 
 typedef struct rkVMIX_DEV_INFO_S {

@@ -6915,6 +6915,9 @@ RK_S32 RK_MPI_VDEC_DestroyChn(VDEC_CHN VdChn) {
  * VMIX api
  ********************************************************************/
 RK_S32 RK_MPI_VMIX_CreateDev(VMIX_DEV VmDev, VMIX_DEV_INFO_S *pstDevInfo) {
+  RK_U16 u16Rotaion;
+  RGA_FLIP_E enFlip;
+
   if ((VmDev < 0) || (VmDev >= VMIX_MAX_DEV_NUM))
     return -RK_ERR_VMIX_INVALID_DEVID;
 
@@ -6967,7 +6970,22 @@ RK_S32 RK_MPI_VMIX_CreateDev(VMIX_DEV VmDev, VMIX_DEV_INFO_S *pstDevInfo) {
              pstDevInfo->stChnInfo[i].stOutRect.u32Height);
     param.append(" ");
     PARAM_STRING_APPEND(param, KEY_BUFFER_RECT, rect_str);
+
+    u16Rotaion = pstDevInfo->stChnInfo[i].u16Rotaion;
+    if ((u16Rotaion != 0) && (u16Rotaion != 90) && (u16Rotaion != 180) &&
+        (u16Rotaion != 270))
+      RKMEDIA_LOGW("%s invalid rotation: %d!\n", __func__, u16Rotaion);
+    else
+      PARAM_STRING_APPEND_TO(param, KEY_BUFFER_ROTATE, u16Rotaion);
+
+    enFlip = pstDevInfo->stChnInfo[i].enFlip;
+    if ((enFlip != RGA_FLIP_H) && (enFlip != RGA_FLIP_V) &&
+        (enFlip != RGA_FLIP_HV))
+      RKMEDIA_LOGW("%s invalid flip type: %d!\n", __func__, enFlip);
+    else
+      PARAM_STRING_APPEND_TO(param, KEY_BUFFER_FLIP, enFlip);
   }
+
   RKMEDIA_LOGD("VMIX Flow: %s\n", param.c_str());
   g_vmix_dev[VmDev].rkmedia_flow = easymedia::REFLECTOR(
       Flow)::Create<easymedia::Flow>("filter", param.c_str());
