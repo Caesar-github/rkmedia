@@ -98,6 +98,7 @@ private:
   int aud_buffer_size;
   bool is_lapse_record;
   int64_t lapse_time_stamp;
+  bool change_config_split;
 };
 
 class VideoRecorder {

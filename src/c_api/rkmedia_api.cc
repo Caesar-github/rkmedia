@@ -7539,6 +7539,30 @@ RK_S32 RK_MPI_MUXER_StreamStop(MUXER_CHN VmChn) {
   return (ret == 0) ? RK_ERR_SYS_OK : RK_ERR_MUXER_ILLEGAL_PARAM;
 }
 
+RK_S32 RK_MPI_MUXER_SetFrameRate(MUXER_CHN VmChn, RK_U16 u16Fps,
+                                 RK_BOOL bSplitFile) {
+  if ((VmChn < 0) || (VmChn > MUXER_MAX_CHN_NUM))
+    return -RK_ERR_MUXER_INVALID_CHNID;
+
+  g_muxer_mtx.lock();
+  if (g_muxer_chns[VmChn].status < CHN_STATUS_OPEN) {
+    g_muxer_mtx.unlock();
+    return -RK_ERR_MUXER_NOTREADY;
+  }
+
+  if (!g_muxer_chns[VmChn].rkmedia_flow) {
+    g_muxer_mtx.unlock();
+    return -RK_ERR_MUXER_BUSY;
+  }
+
+  int split = bSplitFile ? 1 : 0;
+  int ret = g_muxer_chns[VmChn].rkmedia_flow->Control(
+      easymedia::S_MUXER_SET_FPS, u16Fps, split);
+  g_muxer_mtx.unlock();
+
+  return (ret == 0) ? RK_ERR_SYS_OK : RK_ERR_MUXER_ILLEGAL_PARAM;
+}
+
 RK_S32 RK_MPI_MUXER_ManualSplit(MUXER_CHN VmChn,
                                 MUXER_MANUAL_SPLIT_ATTR_S *pstSplitAttr) {
   if ((VmChn < 0) || (VmChn > MUXER_MAX_CHN_NUM))

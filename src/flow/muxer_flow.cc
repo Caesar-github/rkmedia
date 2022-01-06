@@ -61,7 +61,7 @@ MuxerFlow::MuxerFlow(const char *param)
       manual_split_file_duration(0), is_first_file(true),
       pre_record_mode(MUXER_PRE_RECORD_NONE), pre_record_time(0),
       pre_record_cache_time(0), vid_buffer_size(0), aud_buffer_size(0),
-      is_lapse_record(false), lapse_time_stamp(0) {
+      is_lapse_record(false), lapse_time_stamp(0), change_config_split(false) {
   std::list<std::string> separate_list;
   std::map<std::string, std::string> params;
 
@@ -363,6 +363,17 @@ int MuxerFlow::Control(unsigned long int request, ...) {
     RKMEDIA_LOGI("Muxer:: file_name_cb is %p, file_name_handle is %p\n",
                  file_name_cb, file_name_handle);
   } break;
+  case S_MUXER_SET_FPS: {
+    int fps = va_arg(vl, int);
+    int split = va_arg(vl, int);
+    if (fps > 0 && vid_enc_config.vid_cfg.frame_rate != fps) {
+      vid_enc_config.vid_cfg.frame_rate = fps;
+      if (split)
+        change_config_split = true;
+      RKMEDIA_LOGI("Muxer:: change fps: %d, change_config_split: %d\n", fps,
+                   change_config_split);
+    }
+  } break;
   default:
     ret = -1;
     break;
@@ -392,6 +403,7 @@ void MuxerFlow::StopStream() {
 
   manual_split = false;
   manual_split_record = false;
+  change_config_split = false;
   vid_cached_buffers.clear();
   aud_cached_buffers.clear();
 
@@ -418,14 +430,16 @@ void MuxerFlow::CheckRecordEnd(int duration_s,
     return;
 
   int frame_interval = 1000000 / vid_enc_config.vid_cfg.frame_rate; // us
-  if ((vid_buffer->GetUSTimeStamp() - last_ts) >=
-      (duration_s * 1000000 - frame_interval)) {
+  if (((vid_buffer->GetUSTimeStamp() - last_ts) >=
+       (duration_s * 1000000 - frame_interval)) ||
+      change_config_split) {
     real_file_duration = (vid_buffer->GetUSTimeStamp() - last_ts) / 1000;
     video_recorder.reset();
     video_recorder = nullptr;
     video_extra = nullptr;
     manual_split = false;
     manual_split_record = false;
+    change_config_split = false;
     is_first_file = false;
   }
 }
@@ -443,6 +457,7 @@ void MuxerFlow::ManualSplit(std::shared_ptr<MediaBuffer> vid_buffer) {
   is_first_file = false;
   manual_split = false;
   manual_split_record = true;
+  change_config_split = false;
 }
 
 void MuxerFlow::DequePushBack(std::deque<std::shared_ptr<MediaBuffer>> *deque,
@@ -690,11 +705,13 @@ bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
       flow->enable_streaming = false;
       flow->manual_split = false;
       flow->manual_split_record = false;
+      flow->change_config_split = false;
     } else {
       if (flow->PreRecordWrite(vid_buffer, aud_buffer)) {
         recorder.reset();
         flow->enable_streaming = false;
         flow->manual_split_record = false;
+        flow->change_config_split = false;
         return true;
       }
     }
@@ -709,6 +726,7 @@ bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
       recorder.reset();
       flow->enable_streaming = false;
       flow->manual_split_record = false;
+      flow->change_config_split = false;
       return true;
     }
   } while (0);

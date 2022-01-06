@@ -167,6 +167,7 @@ enum {
   S_MUXER_FILE_PATH,
   S_MUXER_FILE_PREFIX,
   S_MUXER_FILE_NAME_CB,
+  S_MUXER_SET_FPS,
 
   /*********************************
    *  OcclusionDetection Ctrls define

@@ -351,6 +351,8 @@ _CAPI RK_S32 RK_MPI_MUXER_UnBind(const MPP_CHN_S *pstSrcChn,
                                  const MUXER_CHN_S *pstDestChn);
 _CAPI RK_S32 RK_MPI_MUXER_StreamStart(MUXER_CHN VmChn);
 _CAPI RK_S32 RK_MPI_MUXER_StreamStop(MUXER_CHN VmChn);
+_CAPI RK_S32 RK_MPI_MUXER_SetFrameRate(MUXER_CHN VmChn, RK_U16 u16Fps,
+                                       RK_BOOL bSplitFile);
 _CAPI RK_S32 RK_MPI_MUXER_ManualSplit(MUXER_CHN VmChn,
                                       MUXER_MANUAL_SPLIT_ATTR_S *pstSplitAttr);
 
