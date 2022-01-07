@@ -2597,7 +2597,8 @@ static RK_S32 RkmediaCreateJpegSnapPipeline(RkmediaChannel *VenChn) {
       .append("/")
       .append(std::to_string(u32OutFpsDen));
   if ((stVencChnAttr->stVencAttr.imageType == IMAGE_TYPE_FBC0) ||
-      (stVencChnAttr->stVencAttr.imageType == IMAGE_TYPE_FBC2)) {
+      (stVencChnAttr->stVencAttr.imageType == IMAGE_TYPE_FBC2) ||
+      (stVencChnAttr->stVencAttr.imageType == IMAGE_TYPE_NV16)) {
     PARAM_STRING_APPEND(flow_param, KEY_NAME, "rkmpp");
     PARAM_STRING_APPEND(flow_param, KEY_INPUTDATATYPE, pixel_format);
     PARAM_STRING_APPEND(flow_param, KEY_OUTPUTDATATYPE, VIDEO_H265);
