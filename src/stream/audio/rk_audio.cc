@@ -1110,10 +1110,6 @@ AUDIO_VQE_S *RK_AUDIO_VQE_Init(const SampleInfo &sample_info,
 }
 
 int RK_AUDIO_VQE_Handle(AUDIO_VQE_S *handle, void *buffer, int bytes) {
-  // int16_t nm_samples = ALGO_FRAME_TIMS_MS * handle->sample_info.sample_rate /
-  //                      1000; // hard code 20ms
-  // int16_t frame_bytes = nm_samples * 2 * handle->sample_info.channels;
-
   int16_t algo_samples = ALGO_FRAME_TIMS_MS * handle->sample_info.sample_rate /
                          1000; // hard code 20ms
   int16_t algo_in_bytes =
@@ -1129,36 +1125,59 @@ int RK_AUDIO_VQE_Handle(AUDIO_VQE_S *handle, void *buffer, int bytes) {
   // 1. data in queue
   queue_write(handle->in_queue, (unsigned char *)buffer, bytes);
 
-  // 2. peek data from in queue, do audio process, data out queue
-  for (int i = 0; i < queue_size(handle->in_queue) / algo_in_bytes; i++) {
-    unsigned char in[in_frame_bytes] = {0};
-    unsigned char out[out_frame_bytes] = {0};
-    queue_read(handle->in_queue, in, algo_in_bytes);
-    VQE_Process(handle, in, out);
-    queue_write(handle->out_queue, out, algo_out_bytes);
-  }
-  /* Copy the rest of the sample to the beginning of the Buffer */
-  queue_tune(handle->in_queue);
-  queue_tune(handle->out_queue);
-
-  // 2. peek data from out queue
-  if (queue_size(handle->out_queue) >= out_frame_bytes) {
-    unsigned char out[out_frame_bytes] = {0}, *outp;
-    int channels = handle->sample_info.channels;
-
-    outp = out;
-    queue_read(handle->out_queue, (unsigned char *)out, out_frame_bytes);
-    /* Just fill back the front 2 channels of buffer */
-    for (int i = 0; i < frame_samples; i++) {
-      *((int16_t *)buffer + i * channels + 0) = *((int16_t *)outp + i);
-      *((int16_t *)buffer + i * channels + 1) = *((int16_t *)outp + i);
+  if (handle->stVqeConfig.u32VQEMode == VQE_MODE_AI_TALK) {
+    // 2. peek data from in queue, do audio process, data out queue
+    for (int i = 0; i < queue_size(handle->in_queue) / algo_in_bytes; i++) {
+      unsigned char in[in_frame_bytes] = {0};
+      unsigned char out[out_frame_bytes] = {0};
+      queue_read(handle->in_queue, in, algo_in_bytes);
+      VQE_Process(handle, in, out);
+      queue_write(handle->out_queue, out, algo_out_bytes);
     }
+    /* Copy the rest of the sample to the beginning of the Buffer */
+    queue_tune(handle->in_queue);
+    queue_tune(handle->out_queue);
 
-    return 0;
+    // 2. peek data from out queue
+    if (queue_size(handle->out_queue) >= out_frame_bytes) {
+      unsigned char out[out_frame_bytes] = {0}, *outp;
+      int channels = handle->sample_info.channels;
+
+      outp = out;
+      queue_read(handle->out_queue, (unsigned char *)out, out_frame_bytes);
+      /* Just fill back the front 2 channels of buffer */
+      for (int i = 0; i < frame_samples; i++) {
+        *((int16_t *)buffer + i * channels + 0) = *((int16_t *)outp + i);
+        *((int16_t *)buffer + i * channels + 1) = *((int16_t *)outp + i);
+      }
+
+      return 0;
+    } else {
+      RKMEDIA_LOGI("%s: queue size %d less than %d\n", __func__,
+                   queue_size(handle->out_queue), out_frame_bytes);
+      return -1;
+    }
   } else {
-    RKMEDIA_LOGI("%s: queue size %d less than %d\n", __func__,
-                 queue_size(handle->out_queue), out_frame_bytes);
-    return -1;
+    // 2. peek data from in queue, do audio process, data out queue
+    for (int i = 0; i < queue_size(handle->in_queue) / algo_in_bytes; i++) {
+      unsigned char in[algo_in_bytes] = {0};
+      unsigned char out[algo_in_bytes] = {0};
+      queue_read(handle->in_queue, in, algo_in_bytes);
+      VQE_Process(handle, in, out);
+      queue_write(handle->out_queue, out, algo_in_bytes);
+    }
+    /* Copy the rest of the sample to the beginning of the Buffer */
+    queue_tune(handle->in_queue);
+    // 2. peek data from out queue
+    if (queue_size(handle->out_queue) >= bytes) {
+      queue_read(handle->out_queue, (unsigned char *)buffer, bytes);
+      queue_tune(handle->out_queue);
+      return 0;
+    } else {
+      RKMEDIA_LOGI("%s: queue size %d less than %d\n", __func__,
+                   queue_size(handle->out_queue), bytes);
+      return -1;
+    }
   }
 }
 
