@@ -294,11 +294,9 @@ void make_rkraws(struct mcu_rkaiq_rkraw *mcu_rkraws, uint8_t **rkraws) {
     format.vesrion = mcu_rkraws[i].rawfmt.vesrion;
     memcpy(format.sensor, mcu_rkraws[i].rawfmt.sensor, 32);
     memcpy(format.scene, mcu_rkraws[i].rawfmt.scene, 32);
-    format.frame_id = mcu_rkraws[i].rawfmt.frame_no;
+    format.frame_id = mcu_rkraws[i].rawfmt.frame_id;
     format.width = mcu_rkraws[i].rawfmt.width;
     format.height = mcu_rkraws[i].rawfmt.height;
-    format.line_length = mcu_rkraws[i].rawfmt.row_len;
-    format.acive_line_length = mcu_rkraws[i].rawfmt.valid_row_len;
     format.byte_order = 1;
 
     memcpy(ptr, &format, sizeof(format));
