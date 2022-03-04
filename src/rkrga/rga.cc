@@ -24,6 +24,48 @@ namespace easymedia {
 
 RockchipRga RgaFilter::gRkRga;
 
+struct RgaRotationMap {
+  int rkRotation;
+  int rgaRotation;
+};
+
+struct RgaMirrorMap {
+  int rkMirror;
+  int rgaMirror;
+};
+
+static const struct RgaRotationMap sRgaRotationMap[] = {
+    {0, 0},
+    {90, HAL_TRANSFORM_ROT_90},
+    {180, HAL_TRANSFORM_ROT_180},
+    {270, HAL_TRANSFORM_ROT_270},
+};
+
+static const struct RgaMirrorMap sRgaMirrorMap[] = {
+    {FLIP_NULL, 0},
+    {FLIP_H, HAL_TRANSFORM_FLIP_H},
+    {FLIP_V, HAL_TRANSFORM_FLIP_V},
+    {FLIP_HV, HAL_TRANSFORM_FLIP_H_V},
+};
+
+static int rotate_rk_to_rga(int rotation) {
+  for (int i = 0; i < (int)ARRAY_ELEMS(sRgaRotationMap); i++) {
+    if (sRgaRotationMap[i].rkRotation == rotation)
+      return sRgaRotationMap[i].rgaRotation;
+  }
+
+  return 0;
+}
+
+static int mirror_rk_to_rga(int mirror) {
+  for (int i = 0; i < (int)ARRAY_ELEMS(sRgaMirrorMap); i++) {
+    if (sRgaMirrorMap[i].rkMirror == mirror)
+      return sRgaMirrorMap[i].rgaMirror;
+  }
+
+  return 0;
+}
+
 static int rga_rect_check(ImageRect *rect, int max_w, int max_h) {
   if (!rect)
     return -1;
@@ -351,39 +393,16 @@ int rga_blit(std::shared_ptr<ImageBuffer> src, std::shared_ptr<ImageBuffer> dst,
   if (src_info.fd < 0)
     src_info.virAddr = src->GetPtr();
   src_info.mmuFlag = 1;
-  switch (rotate) {
-  case 0:
-    src_info.rotation = 0;
-    break;
-  case 90:
-    src_info.rotation = HAL_TRANSFORM_ROT_90;
-    break;
-  case 180:
-    src_info.rotation = HAL_TRANSFORM_ROT_180;
-    break;
-  case 270:
-    src_info.rotation = HAL_TRANSFORM_ROT_270;
-    break;
-  default:
-    RKMEDIA_LOGW("rotate is not valid! use default:0");
-    src_info.rotation = 0;
-    break;
+
+  if (rotate && flip) {
+    src_info.rotation = rotate_rk_to_rga(rotate);
+    src_info.rotation |= (mirror_rk_to_rga(flip) << 4);
+  } else if (rotate) {
+    src_info.rotation = rotate_rk_to_rga(rotate);
+  } else {
+    src_info.rotation = mirror_rk_to_rga(flip);
   }
-  if (!src_info.rotation) {
-    switch (flip) {
-    case FLIP_H:
-      src_info.rotation = HAL_TRANSFORM_FLIP_H;
-      break;
-    case FLIP_V:
-      src_info.rotation = HAL_TRANSFORM_FLIP_V;
-      break;
-    case FLIP_HV:
-      src_info.rotation = HAL_TRANSFORM_ROT_180;
-      break;
-    default:
-      break;
-    }
-  }
+
   if (src_rect)
     rga_set_rect(&src_info.rect, src_rect->x, src_rect->y, src_rect->w,
                  src_rect->h, src->GetVirWidth(), src->GetVirHeight(),
