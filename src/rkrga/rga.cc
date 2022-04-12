@@ -233,6 +233,7 @@ int RgaFilter::IoCtrl(unsigned long int request, ...) {
     ImageRect *new_src_rect = &(new_rga_cfg->src_rect);
     ImageRect *new_dst_rect = &(new_rga_cfg->dst_rect);
     int new_rotation = new_rga_cfg->rotation;
+    FlipEnum new_flip = (FlipEnum)new_rga_cfg->flip;
 
     if (rga_rect_check(new_src_rect, src_max_width, src_max_height) ||
         rga_rect_check(new_dst_rect, dst_max_width, dst_max_height)) {
@@ -263,6 +264,7 @@ int RgaFilter::IoCtrl(unsigned long int request, ...) {
     vec_rect[1].w = new_dst_rect->w;
     vec_rect[1].h = new_dst_rect->h;
     rotate = new_rotation;
+    flip = new_flip;
     param_mtx.unlock();
     break;
   }
@@ -271,6 +273,7 @@ int RgaFilter::IoCtrl(unsigned long int request, ...) {
     ImageRect *rd_src_rect = &(rd_rga_cfg->src_rect);
     ImageRect *rd_dst_rect = &(rd_rga_cfg->dst_rect);
     int *rd_rotation = &(rd_rga_cfg->rotation);
+    FlipEnum *rd_flip = (FlipEnum *)&(rd_rga_cfg->flip);
 
     param_mtx.lock();
     rd_src_rect->x = vec_rect[0].x;
@@ -282,6 +285,7 @@ int RgaFilter::IoCtrl(unsigned long int request, ...) {
     rd_dst_rect->w = vec_rect[1].w;
     rd_dst_rect->h = vec_rect[1].h;
     *rd_rotation = rotate;
+    *rd_flip = flip;
     param_mtx.unlock();
     break;
   }

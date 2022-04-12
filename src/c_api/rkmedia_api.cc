@@ -6306,6 +6306,7 @@ RK_S32 RK_MPI_RGA_SetChnAttr(RGA_CHN RgaChn, const RGA_ATTR_S *pstAttr) {
   RkmediaRgaCfg.dst_rect.w = (int)pstAttr->stImgOut.u32Width;
   RkmediaRgaCfg.dst_rect.h = (int)pstAttr->stImgOut.u32Height;
   RkmediaRgaCfg.rotation = (int)pstAttr->u16Rotaion;
+  RkmediaRgaCfg.flip = (int)pstAttr->enFlip;
   int ret = g_rga_chns[RgaChn].rkmedia_flow->Control(S_RGA_CFG, &RkmediaRgaCfg);
   g_rga_mtx.unlock();
 
@@ -6347,6 +6348,7 @@ RK_S32 RK_MPI_RGA_GetChnAttr(RGA_CHN RgaChn, RGA_ATTR_S *pstAttr) {
   pstAttr->stImgOut.u32Width = (RK_U32)RkmediaRgaCfg.dst_rect.w;
   pstAttr->stImgOut.u32Height = (RK_U32)RkmediaRgaCfg.dst_rect.h;
   pstAttr->u16Rotaion = (RK_U32)RkmediaRgaCfg.rotation;
+  pstAttr->enFlip = (RGA_FLIP_E)RkmediaRgaCfg.flip;
   // The following two attributes do not support dynamic acquisition.
   pstAttr->bEnBufPool = RK_FALSE;
   pstAttr->u16BufPoolCnt = 0;

@@ -195,6 +195,7 @@ typedef struct RgaConfig_ {
   ImageRect src_rect;
   ImageRect dst_rect;
   int rotation;
+  int flip;
 } RgaConfig;
 
 #include <map>
