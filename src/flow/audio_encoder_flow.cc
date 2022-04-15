@@ -198,7 +198,7 @@ AudioEncoderFlow::AudioEncoderFlow(const char *param) {
   sm.process = encode;
   sm.thread_model = Model::ASYNCCOMMON;
   sm.mode_when_full = InputMode::DROPFRONT;
-  sm.input_maxcachenum.push_back(3);
+  sm.input_maxcachenum.push_back(20);
   if (!InstallSlotMap(sm, "AudioEncoderFlow", 40)) {
     RKMEDIA_LOGI("Fail to InstallSlotMap for AudioEncoderFlow\n");
     SetError(-EINVAL);
