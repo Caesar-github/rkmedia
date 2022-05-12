@@ -125,6 +125,7 @@ typedef struct _RkmediaChannel {
     RkmediaVDECAttr vdec_attr;
   };
 
+  RK_U16 chn_ref_cnt;
   RK_S16 bind_ref_pre;
   RK_S16 bind_ref_nxt;
   std::mutex buffer_list_mtx;
@@ -343,6 +344,7 @@ static void Reset_Channel_Table(RkmediaChannel *tbl, int cnt, MOD_ID_E mid) {
     tbl[i].out_handle = nullptr;
     tbl[i].event_cb = nullptr;
     tbl[i].event_handle = nullptr;
+    tbl[i].chn_ref_cnt = 0;
     tbl[i].bind_ref_pre = 0;
     tbl[i].bind_ref_nxt = 0;
     tbl[i].bColorTblInit = RK_FALSE;
@@ -4565,6 +4567,14 @@ RK_S32 RK_MPI_VENC_DestroyChn(VENC_CHN VeChn) {
     g_venc_mtx.unlock();
     return -RK_ERR_VENC_BUSY;
   }
+  while (g_venc_chns[VeChn].chn_ref_cnt) {
+    g_venc_mtx.unlock();
+    RKMEDIA_LOGI("%s: Wait VENC[%d] chn_ref_cnt to be zero...\n", __func__,
+                 VeChn);
+    msleep(100);
+    g_venc_mtx.lock();
+  }
+
   RKMEDIA_LOGI("%s: Disable VENC[%d] Start...\n", __func__, VeChn);
   std::shared_ptr<easymedia::Flow> ptrFlowHead = NULL;
   while (!g_venc_chns[VeChn].rkmedia_flow_list.empty()) {
@@ -4803,9 +4813,15 @@ RK_S32 RK_MPI_VENC_RGN_SetBitMap(VENC_CHN VeChn,
   if ((VeChn < 0) || (VeChn >= VENC_MAX_CHN_NUM))
     return -RK_ERR_VENC_INVALID_CHNID;
 
+  g_venc_mtx.lock();
   if ((g_venc_chns[VeChn].status < CHN_STATUS_OPEN) ||
-      (g_venc_chns[VeChn].bColorTblInit == RK_FALSE))
+      (g_venc_chns[VeChn].bColorTblInit == RK_FALSE)) {
+    g_venc_mtx.unlock();
     return -RK_ERR_VENC_NOTREADY;
+  } else {
+    g_venc_chns[VeChn].chn_ref_cnt++;
+  }
+  g_venc_mtx.unlock();
 
   RK_U8 u8Align = 16;
   RK_BOOL bIsJpegLight = RK_FALSE;
@@ -4838,22 +4854,28 @@ RK_S32 RK_MPI_VENC_RGN_SetBitMap(VENC_CHN VeChn,
 
     if (ret)
       ret = -RK_ERR_VENC_NOT_PERM;
-    return ret;
+
+    goto deref;
   }
 
   if (!pstBitmap || !pstBitmap->pData || !pstBitmap->u32Width ||
-      !pstBitmap->u32Height)
-    return -RK_ERR_VENC_ILLEGAL_PARAM;
+      !pstBitmap->u32Height) {
+    ret = -RK_ERR_VENC_ILLEGAL_PARAM;
+    goto deref;
+  }
 
-  if (!pstRgnInfo || !pstRgnInfo->u32Width || !pstRgnInfo->u32Height)
-    return -RK_ERR_VENC_ILLEGAL_PARAM;
+  if (!pstRgnInfo || !pstRgnInfo->u32Width || !pstRgnInfo->u32Height) {
+    ret = -RK_ERR_VENC_ILLEGAL_PARAM;
+    goto deref;
+  }
 
   if ((pstRgnInfo->u32PosX % u8Align) || (pstRgnInfo->u32PosY % u8Align) ||
       (pstRgnInfo->u32Width % u8Align) || (pstRgnInfo->u32Height % u8Align)) {
     RKMEDIA_LOGE("<x, y, w, h> = <%d, %d, %d, %d> must be %u aligned!\n",
                  pstRgnInfo->u32PosX, pstRgnInfo->u32PosY, pstRgnInfo->u32Width,
                  pstRgnInfo->u32Height, u8Align);
-    return -RK_ERR_VENC_ILLEGAL_PARAM;
+    ret = -RK_ERR_VENC_ILLEGAL_PARAM;
+    goto deref;
   }
 
   if (!bIsJpegLight) {
@@ -4861,7 +4883,8 @@ RK_S32 RK_MPI_VENC_RGN_SetBitMap(VENC_CHN VeChn,
     rkmedia_osd_data = (RK_U8 *)malloc(total_pix_num);
     if (!rkmedia_osd_data) {
       RKMEDIA_LOGE("No space left! RgnInfo pixels(%d)\n", total_pix_num);
-      return -RK_ERR_VENC_NOMEM;
+      ret = -RK_ERR_VENC_NOMEM;
+      goto deref;
     }
 
     switch (pstBitmap->enPixelFormat) {
@@ -4873,7 +4896,7 @@ RK_S32 RK_MPI_VENC_RGN_SetBitMap(VENC_CHN VeChn,
       RKMEDIA_LOGE("Not support bitmap pixel format:%d\n",
                    pstBitmap->enPixelFormat);
       ret = -RK_ERR_VENC_NOT_SUPPORT;
-      break;
+      goto deref;
     }
   } else {
     if ((pstBitmap->u32Width != pstRgnInfo->u32Width) ||
@@ -4882,7 +4905,8 @@ RK_S32 RK_MPI_VENC_RGN_SetBitMap(VENC_CHN VeChn,
           "JpegLight:RgnInfo<%ux%u> should be equal to BitMap<%ux%u>\n",
           pstRgnInfo->u32Width, pstRgnInfo->u32Height, pstBitmap->u32Width,
           pstBitmap->u32Height);
-      return -RK_ERR_VENC_ILLEGAL_PARAM;
+      ret = -RK_ERR_VENC_ILLEGAL_PARAM;
+      goto deref;
     }
     rkmedia_osd_data = (RK_U8 *)pstBitmap->pData;
   }
@@ -4911,6 +4935,11 @@ RK_S32 RK_MPI_VENC_RGN_SetBitMap(VENC_CHN VeChn,
 
   if (!bIsJpegLight && rkmedia_osd_data)
     free(rkmedia_osd_data);
+
+deref:
+  g_venc_mtx.lock();
+  g_venc_chns[VeChn].chn_ref_cnt--;
+  g_venc_mtx.unlock();
 
   return ret;
 }
