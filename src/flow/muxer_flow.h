@@ -34,6 +34,7 @@ typedef enum {
 class VideoRecorder;
 
 static bool save_buffer(Flow *f, MediaBufferVector &input_vector);
+static bool save_buffer_lapse(Flow *f, MediaBufferVector &input_vector);
 static int muxer_buffer_callback(void *handler, uint8_t *buf, int buf_size);
 
 class MuxerFlow : public Flow {
@@ -46,18 +47,19 @@ public:
   virtual int Control(unsigned long int request, ...) final;
 
 private:
+  void FlushThread();
   void StartStream();
   void StopStream();
-  void ManualSplit(std::shared_ptr<MediaBuffer> vid_buffer);
   std::shared_ptr<VideoRecorder> NewRecorder(const char *path);
   std::string GenFilePath();
   int GetVideoExtradata(std::shared_ptr<MediaBuffer> vid_buffer);
-  void CheckRecordEnd(int duration_s, std::shared_ptr<MediaBuffer> vid_buffer);
+  void CheckRecordEnd(std::shared_ptr<MediaBuffer> vid_buffer);
   void DequePushBack(std::deque<std::shared_ptr<MediaBuffer>> *deque,
                      std::shared_ptr<MediaBuffer> buffer, bool is_video);
-  int PreRecordWrite(std::shared_ptr<MediaBuffer> vid_buffer,
-                     std::shared_ptr<MediaBuffer> aud_buffer);
+  int PreRecordWrite();
+  void Reset();
   friend bool save_buffer(Flow *f, MediaBufferVector &input_vector);
+  friend bool save_buffer_lapse(Flow *f, MediaBufferVector &input_vector);
   friend int muxer_buffer_callback(void *handler, uint8_t *buf, int buf_size);
 
 private:
@@ -92,13 +94,21 @@ private:
   PRE_RECORD_MODE_E pre_record_mode;
   unsigned int pre_record_time;
   unsigned int pre_record_cache_time;
+  std::deque<std::shared_ptr<MediaBuffer>> vid_prerecord_buffers;
+  std::deque<std::shared_ptr<MediaBuffer>> aud_prerecord_buffers;
+  int vid_prerecord_size;
+  int aud_prerecord_size;
   std::deque<std::shared_ptr<MediaBuffer>> vid_cached_buffers;
   std::deque<std::shared_ptr<MediaBuffer>> aud_cached_buffers;
-  int vid_buffer_size;
-  int aud_buffer_size;
+  ConditionLockMutex cached_cond_mtx;
+  ConditionLockMutex pre_record_cond_mtx;
+  bool pre_record_writing;
   bool is_lapse_record;
   int64_t lapse_time_stamp;
   bool change_config_split;
+  bool io_error;
+  std::thread *flush_thread;
+  bool flush_thread_quit;
 };
 
 class VideoRecorder {
