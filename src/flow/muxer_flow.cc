@@ -772,12 +772,12 @@ void MuxerFlow::FlushThread() {
         enable_streaming = false;
         request_stop_stream = false;
         RKMEDIA_LOGW("%d: Flush Thread Stopped\n", muxer_id);
-
-        cached_cond_mtx.unlock();
-        continue;
+      } else {
+        cached_cond_mtx.wait();
       }
-
-      cached_cond_mtx.wait();
+      cached_cond_mtx.unlock();
+      //shall continue to re-check everything, including deque sizes, stopping, quit
+      continue;
     }
 
     if (!aud_deque->empty()) {
