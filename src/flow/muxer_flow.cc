@@ -730,6 +730,8 @@ void MuxerFlow::FlushThread() {
   auto &&recorder = video_recorder;
   std::deque<std::shared_ptr<MediaBuffer>> *vid_deque, *aud_deque;
   int64_t t1, t2;
+  int cache_warning = 0;
+  int cache_level = 40;
 
   aud_deque = &aud_cached_buffers;
   vid_deque = &vid_cached_buffers;
@@ -738,15 +740,24 @@ void MuxerFlow::FlushThread() {
   while (1) {
     std::shared_ptr<MediaBuffer> aud_buffer = nullptr;
     std::shared_ptr<MediaBuffer> vid_buffer = nullptr;
+    int size;
 
     if (flush_thread_quit) {
       RKMEDIA_LOGW("%d: To quit Flush Thread\n", muxer_id);
       break;
     }
 
-    if (vid_deque->size() >= 40 && vid_deque->size() % 40 == 0) {
+    size = vid_deque->size();
+    if (size >= cache_level && size % cache_level == 0) {
       RKMEDIA_LOGE("%d: cached size(aud:%d, vid:%d)\n",
-                   muxer_id, aud_deque->size(), vid_deque->size());
+                   muxer_id, aud_deque->size(), size);
+      if (size >= 2 * cache_level) {
+        cache_warning++;
+        recorder->ProcessEvent(MUX_EVENT_WARN_FILE_WRITING_SLOW, size);
+      }
+    } else if (size < cache_level / 2 && cache_warning > 0) {
+      cache_warning = 0;
+      recorder->ProcessEvent(MUX_EVENT_WARN_FILE_WRITING_NORMAL, size);
     }
 
     cached_cond_mtx.lock();
