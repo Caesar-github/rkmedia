@@ -720,7 +720,7 @@ int MPPEncoder::Process(const std::shared_ptr<MediaBuffer> &input,
   output->SetValidSize(packet_len);
   output->SetUserFlag(packet_flag | output_mb_flags);
   output->SetTsvcLevel(temporal_id);
-  output->SetUSTimeStamp(pts);
+  output->SetUSTimeStamp(input->GetUSTimeStamp());
   output->SetEOF(out_eof ? true : false);
   out_type = output->GetType();
   if (out_type == Type::Image) {
@@ -743,7 +743,7 @@ int MPPEncoder::Process(const std::shared_ptr<MediaBuffer> &input,
     }
     extra_output->SetValidSize(mpp_buffer_get_size(mv_buf));
     extra_output->SetUserFlag(packet_flag);
-    extra_output->SetUSTimeStamp(pts);
+    extra_output->SetUSTimeStamp(input->GetUSTimeStamp());
   }
 
 ENCODE_OUT:
