@@ -210,6 +210,16 @@ MuxerFlow::MuxerFlow(const char *param)
     RKMEDIA_LOGI("Fail to InstallSlotMap for MuxerFlow\n");
     return;
   }
+
+  if (!is_lapse_record) {
+    flush_thread_quit = false;
+    flush_thread = new std::thread(&MuxerFlow::FlushThread, this);
+    if (!flush_thread) {
+      RKMEDIA_LOGE("FATAL: Create FluashThread fail\n");
+      request_stop_stream = true;
+    }
+  }
+
   SetFlowTag("MuxerFlow");
 }
 
@@ -218,8 +228,10 @@ MuxerFlow::~MuxerFlow() {
   if (flush_thread != nullptr) {
     flush_thread_quit = true;
     RKMEDIA_LOGW("Waiting for flush thread quit\n");
+    pthread_yield();
     cached_cond_mtx.notify();
     flush_thread->join();
+    delete flush_thread;
     flush_thread = nullptr;
   }
   StopAllThread();
@@ -421,15 +433,6 @@ void MuxerFlow::StartStream() {
     is_first_file = true;
   }
   enable_streaming = true;
-  //TODO moving to Constructor
-  if (!is_lapse_record && flush_thread == nullptr) {
-    flush_thread = new std::thread(&MuxerFlow::FlushThread, this);
-    flush_thread_quit = false;
-    if (!flush_thread) {
-      RKMEDIA_LOGE("FATAL: Create FluashThread fail\n");
-      request_stop_stream = true;
-    }
-  }
 }
 
 void MuxerFlow::StopStream() {
@@ -509,53 +512,28 @@ void MuxerFlow::CheckRecordEnd(std::shared_ptr<MediaBuffer> vid_buffer) {
 }
 
 void MuxerFlow::DequePushBack(std::deque<std::shared_ptr<MediaBuffer>> *deque,
-                              std::shared_ptr<MediaBuffer> buffer,
-                              bool is_video) {
+                              std::shared_ptr<MediaBuffer> buffer) {
+  unsigned int max_size;
+
+  max_size = vid_enc_config.vid_cfg.frame_rate * pre_record_cache_time + 1;
+
   if (buffer == nullptr) {
-    RKMEDIA_LOGE("clone mb failed");
+    RKMEDIA_LOGE("%s: clone mb failed", __func__);
     return;
   }
 
-  if (deque->size() > 2) {
+  deque->push_back(buffer);
+  while (1) {
     auto front = deque->front();
     auto back = deque->back();
-    if (back->GetUSTimeStamp() - front->GetUSTimeStamp() >=
-        pre_record_cache_time * 1000000) {
+    int64_t cache_duration = back->GetUSTimeStamp() - front->GetUSTimeStamp();
+
+    if (deque->size() > max_size * 2 ||
+        cache_duration > pre_record_cache_time * 1000000) {
       deque->pop_front();
-      deque->push_back(buffer);
-
-      if (is_video) {
-#if PRE_RECORD_DEBUG
-        vid_prerecord_size += buffer->GetValidSize() - front->GetValidSize();
-        printf("video0: buffer cnt: %d, vid_prerecord_size: %d\n", deque->size(),
-               aud_prerecord_size);
-#endif
-      } else {
-#if PRE_RECORD_DEBUG
-        aud_prerecord_size += buffer->GetValidSize() - front->GetValidSize();
-        printf("audio0: buffer cnt: %d, aud_prerecord_size: %d\n", deque->size(),
-               aud_prerecord_size);
-#endif
-      }
-
-      return;
+    } else {
+      break;
     }
-  }
-
-  deque->push_back(buffer);
-
-  if (is_video) {
-#if PRE_RECORD_DEBUG
-    vid_prerecord_size += buffer->GetValidSize();
-    printf("video1: buffer cnt: %d, vid_prerecord_size: %d\n", deque->size(),
-           vid_prerecord_size);
-#endif
-  } else {
-#if PRE_RECORD_DEBUG
-    aud_prerecord_size += buffer->GetValidSize();
-    printf("audio1: buffer cnt: %d, aud_prerecord_size: %d\n", deque->size(),
-           aud_prerecord_size);
-#endif
   }
 }
 
@@ -698,6 +676,7 @@ static bool save_buffer_lapse(Flow *f, MediaBufferVector &input_vector) {
 
 bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
   MuxerFlow *flow = static_cast<MuxerFlow *>(f);
+  bool overflow = false;
   auto &vid_buffer = input_vector[0];
   auto &aud_buffer = input_vector[1];
 
@@ -705,10 +684,10 @@ bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
   if ((flow->pre_record_mode != MUXER_PRE_RECORD_NONE) &&
       (flow->pre_record_time > 0)) {
     if (flow->audio_in && aud_buffer != nullptr)
-      flow->DequePushBack(&(flow->aud_prerecord_buffers), aud_buffer, false);
+      flow->DequePushBack(&(flow->aud_prerecord_buffers), aud_buffer);
 
     if (flow->video_in && vid_buffer != nullptr)
-      flow->DequePushBack(&(flow->vid_prerecord_buffers), vid_buffer, true);
+      flow->DequePushBack(&(flow->vid_prerecord_buffers), vid_buffer);
   }
 
   if (flow->request_stop_stream || !flow->enable_streaming) {
@@ -726,6 +705,31 @@ bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
     flow->cached_cond_mtx.notify();
   }
 
+  //Check cache overflow here to in case FlushThread quit/hung
+  //and then OOM.
+  while (!flow->vid_cached_buffers.empty()) {
+    int64_t t1, t2;
+    int size = flow->vid_cached_buffers.size();
+    int cache_seconds = 10;
+    // If cache is very big, then io writing must be very slow,
+    // throwing write err event and clear all cache
+    t1 = flow->vid_cached_buffers.back()->GetUSTimeStamp();
+    t2 = flow->vid_cached_buffers.front()->GetUSTimeStamp();
+    if (t2 - t1 >= cache_seconds * 1000 * 1000 ||
+        size >= cache_seconds * flow->vid_enc_config.vid_cfg.frame_rate) {
+      RKMEDIA_LOGE("%d: cached size more than %d seconds. Data writing too slow\n",
+                   flow->muxer_id, cache_seconds);
+
+      overflow = true;
+      flow->vid_cached_buffers.pop_front();
+    } else {
+      break;
+    }
+  }
+
+  if (flow->video_recorder != nullptr && overflow)
+    flow->video_recorder->ProcessEvent(MUX_EVENT_ERR_WRITE_FILE_FAIL, 0);
+
   flow->cached_cond_mtx.unlock();
 
   return true;
@@ -734,13 +738,14 @@ bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
 void MuxerFlow::FlushThread() {
   auto &&recorder = video_recorder;
   std::deque<std::shared_ptr<MediaBuffer>> *vid_deque, *aud_deque;
-  int64_t t1, t2;
   int cache_warning = 0;
   int cache_level = 40;
 
   aud_deque = &aud_cached_buffers;
   vid_deque = &vid_cached_buffers;
   RKMEDIA_LOGW("Flush Thread Running\n");
+
+  pthread_yield();
 
   while (1) {
     std::shared_ptr<MediaBuffer> aud_buffer = nullptr;
@@ -766,20 +771,6 @@ void MuxerFlow::FlushThread() {
     }
 
     cached_cond_mtx.lock();
-
-    if (!vid_deque->empty()) {
-      // If cache is very big, then io writing must be very slow,
-      // throwing write err event and clear all cache
-      t1 = vid_deque->back()->GetUSTimeStamp();
-      t2 = vid_deque->front()->GetUSTimeStamp();
-      if (t2 - t1 >= 10 * 1000 * 1000) {
-        RKMEDIA_LOGE("%d: Cache more than 10 seconds. Data writing too slow\n",
-                     muxer_id);
-        recorder->ProcessEvent(MUX_EVENT_ERR_WRITE_FILE_FAIL, 0);
-        vid_cached_buffers.clear();
-        aud_cached_buffers.clear();
-      }
-    }
 
     if (aud_deque->empty() && vid_deque->empty()) {
       // Before stopping stream, all cached buffer shall be written.

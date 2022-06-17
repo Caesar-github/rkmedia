@@ -55,7 +55,7 @@ private:
   int GetVideoExtradata(std::shared_ptr<MediaBuffer> vid_buffer);
   void CheckRecordEnd(std::shared_ptr<MediaBuffer> vid_buffer);
   void DequePushBack(std::deque<std::shared_ptr<MediaBuffer>> *deque,
-                     std::shared_ptr<MediaBuffer> buffer, bool is_video);
+                     std::shared_ptr<MediaBuffer> buffer);
   int PreRecordWrite();
   void Reset();
   friend bool save_buffer(Flow *f, MediaBufferVector &input_vector);
