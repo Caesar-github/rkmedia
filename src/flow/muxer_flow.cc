@@ -226,11 +226,13 @@ MuxerFlow::MuxerFlow(const char *param)
 MuxerFlow::~MuxerFlow() {
   //TODO: why must stop flush thread before StopAllThread?
   if (flush_thread != nullptr) {
+    cached_cond_mtx.lock();
     flush_thread_quit = true;
-    RKMEDIA_LOGW("Waiting for flush thread quit\n");
-    pthread_yield();
+    RKMEDIA_LOGW("Ask flush thread to quit\n");
     cached_cond_mtx.notify();
+    cached_cond_mtx.unlock();
     flush_thread->join();
+    RKMEDIA_LOGW("join(quit) flush thread completely\n");
     delete flush_thread;
     flush_thread = nullptr;
   }
@@ -356,11 +358,9 @@ int MuxerFlow::Control(unsigned long int request, ...) {
     cached_cond_mtx.unlock();
   } break;
   case S_STOP_SRTEAM: {
-    RKMEDIA_LOGI("Muxer: request to stop stream, getting lock\n");
-    //cached_cond_mtx.lock();
+    // Just to stop new frames, not need to hold the lock
     request_stop_stream = true;
     cached_cond_mtx.notify();
-    //cached_cond_mtx.unlock();
     RKMEDIA_LOGI("Muxer: request to stop stream\n");
   } break;
   case S_MANUAL_SPLIT_STREAM: {
@@ -753,7 +753,7 @@ void MuxerFlow::FlushThread() {
     int size;
 
     if (flush_thread_quit) {
-      RKMEDIA_LOGW("%d: To quit Flush Thread\n", muxer_id);
+      RKMEDIA_LOGW("%d: Flush Thread quit now\n", muxer_id);
       break;
     }
 
