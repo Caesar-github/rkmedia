@@ -4,6 +4,8 @@
 
 #include <sys/mman.h>
 #include <vector>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "buffer.h"
 #include "utils.h"
@@ -95,14 +97,17 @@ int V4L2CaptureStream::BufferExport(enum v4l2_buf_type bt, int index,
     return -1;
   }
   *dmafd = expbuf.fd;
+  fcntl(expbuf.fd, F_SETFD, FD_CLOEXEC);
 
   return 0;
 }
 
 class V4L2Buffer {
 public:
-  V4L2Buffer() : dmafd(-1), ptr(nullptr), length(0), munmap_f(nullptr) {}
+  V4L2Buffer() : dmafd(-1), ptr(nullptr), length(0), length1(0), munmap_f(nullptr) {}
   ~V4L2Buffer() {
+    RKMEDIA_LOGI("free v4l2 bufs fd: %d, unmap: size1 %d, size2: %d\n",
+                 dmafd, length, length1);
     if (dmafd >= 0)
       close(dmafd);
     if (ptr && ptr != MAP_FAILED && munmap_f)
@@ -310,12 +315,13 @@ int V4L2CaptureStream::Open() {
         buffer->length1 = len_lane1;
       }
 
-      RKMEDIA_LOGD("query buf.length=%zu\n", len_lane0);
       int dmafd = -1;
       if (!BufferExport(capture_type, i, &dmafd)) {
         buffer->dmafd = dmafd;
         mb.SetFD(dmafd);
       }
+      RKMEDIA_LOGI("query v4l2 buf fd=%d, size1: %d, size2: %d\n",
+                   buffer->dmafd, buffer->length, buffer->length1);
     }
 
     for (size_t i = 0; i < req.count; ++i) {
@@ -340,7 +346,23 @@ int V4L2CaptureStream::Open() {
   return 0;
 }
 int V4L2CaptureStream::Close() {
+  struct v4l2_requestbuffers req;
+
+  RKMEDIA_LOGI("free(close/munmap) v4l2 bufs explicitly\n");
+  buffer_vec.clear();
+
   started = false;
+
+  memset(&req, 0, sizeof(req));
+  req.type = capture_type;
+  req.count = 0;
+  req.memory = memory_type;
+  if (v4l2_ctx->IoCtrl(VIDIOC_REQBUFS, &req) < 0) {
+    RKMEDIA_LOGE("%s, Free v4l2 bufs by ioctl(VIDIOC_REQBUFS) failed %d,"
+                 "something wrong badly! Open %s may fail(busy) next time.\n",
+                 device.c_str(), errno, device.c_str());
+  }
+
   return V4L2Stream::Close();
 }
 
