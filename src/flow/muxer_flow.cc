@@ -480,7 +480,7 @@ void MuxerFlow::CheckRecordEnd(std::shared_ptr<MediaBuffer> vid_buffer) {
   if (!video_in || video_recorder == nullptr || vid_buffer == nullptr)
     return;
 
-  if (!is_lapse_record && !(vid_buffer->GetUserFlag() & MediaBuffer::kIntra))
+  if (!(vid_buffer->GetUserFlag() & MediaBuffer::kIntra))
     return;
 
   if (manual_split) {
@@ -493,11 +493,16 @@ void MuxerFlow::CheckRecordEnd(std::shared_ptr<MediaBuffer> vid_buffer) {
   } else if (last_ts != 0) {
     int frame_interval = 1000000 / vid_enc_config.vid_cfg.frame_rate; // us
     int64_t total_time = vid_buffer->GetUSTimeStamp() - last_ts;
-    int64_t max_time = duration_s * 1000000 - frame_interval;
+    bool is_end;
 
-    if (total_time >= max_time || change_config_split) {
-      RKMEDIA_LOGW("%d: duration: %lld, total_time: %lld, max_time: %lld, change_config_split: %d\n",
-                   muxer_id, real_file_duration, total_time, max_time, change_config_split);
+    /*
+     * FIXME: why always lost the last frame?
+     */
+    is_end = total_time > duration_s * 1000000 - frame_interval;
+
+    if (is_end || change_config_split) {
+      RKMEDIA_LOGW("%d: duration: %lld, total_time: %lld, change_config_split: %d\n",
+                   muxer_id, real_file_duration, total_time, change_config_split);
       Reset();
     }
   }
