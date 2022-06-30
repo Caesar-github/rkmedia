@@ -38,11 +38,13 @@ if(V4L2_OUTPUT OR V4L2_CAPTURE)
   if(USE_RKAIQ)
     set(EASY_MEDIA_STREAM_V4L2_SOURCE_FILES
         ${EASY_MEDIA_STREAM_V4L2_SOURCE_FILES}
-        stream/camera/rkaiq_media.cc)
+        stream/camera/rkaiq_media.cc
+	stream/camera/mediactl/mediactl.c)
     if(COMPILES_MINIMEDIA)
       set(MINI_MEDIA_STREAM_V4L2_SOURCE_FILES
         ${MINI_MEDIA_STREAM_V4L2_SOURCE_FILES}
-        stream/camera/rkaiq_media.cc)
+        stream/camera/rkaiq_media.cc
+	stream/camera/mediactl/mediactl.c)
     endif()
   endif()
 

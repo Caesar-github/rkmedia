@@ -14,9 +14,9 @@
 #include <linux/videodev2.h>
 #include <string>
 
-#include "rkaiq/common/mediactl/mediactl-priv.h"
-#include "rkaiq/common/mediactl/mediactl.h"
-#include "rkaiq/common/mediactl/v4l2subdev.h"
+#include "mediactl-priv.h"
+#include "mediactl.h"
+#include "v4l2subdev.h"
 
 #define MAX_MEDIA_NUM 10
 #define MAX_CAM_NUM 4
