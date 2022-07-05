@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <inttypes.h>
 #include <sys/time.h>
-#include <assert.h>
 
 #include "buffer.h"
 #include "codec.h"
@@ -224,7 +224,7 @@ MuxerFlow::MuxerFlow(const char *param)
 }
 
 MuxerFlow::~MuxerFlow() {
-  //TODO: why must stop flush thread before StopAllThread?
+  // TODO: why must stop flush thread before StopAllThread?
   if (flush_thread != nullptr) {
     cached_cond_mtx.lock();
     flush_thread_quit = true;
@@ -504,8 +504,9 @@ void MuxerFlow::CheckRecordEnd(std::shared_ptr<MediaBuffer> vid_buffer) {
     is_end = total_time > duration_s * 1000000 - frame_interval;
 
     if (is_end || change_config_split) {
-      RKMEDIA_LOGW("%d: duration: %lld, total_time: %lld, change_config_split: %d\n",
-                   muxer_id, real_file_duration, total_time, change_config_split);
+      RKMEDIA_LOGW(
+          "%d: duration: %lld, total_time: %lld, change_config_split: %d\n",
+          muxer_id, real_file_duration, total_time, change_config_split);
       Reset();
     }
   }
@@ -566,12 +567,14 @@ int MuxerFlow::PreRecordWrite() {
 
   size = vid_prerecord_buffers.size();
 
-  RKMEDIA_LOGW("%d: to pre_record by: mode: %d, manual_split: %d, pre_record_time: %d, first_file: %d",
-               muxer_id, pre_record_mode, manual_split_record, pre_record_time, is_first_file);
+  RKMEDIA_LOGW("%d: to pre_record by: mode: %d, manual_split: %d,"
+               "pre_record_time: %d, first_file: %d",
+               muxer_id, pre_record_mode, manual_split_record, pre_record_time,
+               is_first_file);
 
   RKMEDIA_LOGI("video pre_record size: %d\n", size);
 
-  //pre record cache already contains buffers in normal cached.
+  // pre record cache already contains buffers in normal cached.
   vid_cached_buffers.clear();
   aud_cached_buffers.clear();
 
@@ -652,7 +655,7 @@ static bool save_buffer_lapse(Flow *f, MediaBufferVector &input_vector) {
         if (flow->GetVideoExtradata(vid_buffer))
           break;
       } else {
-        //RKMEDIA_LOGW("Muxer: wait I frame\n");
+        // RKMEDIA_LOGW("Muxer: wait I frame\n");
         break;
       }
     }
@@ -705,8 +708,8 @@ bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
     flow->cached_cond_mtx.notify();
   }
 
-  //Check cache overflow here to in case FlushThread quit/hung
-  //and then OOM.
+  // Check cache overflow here to in case FlushThread quit/hung
+  // and then OOM.
   while (!flow->vid_cached_buffers.empty()) {
     int64_t t1, t2;
     int size = flow->vid_cached_buffers.size();
@@ -717,8 +720,9 @@ bool save_buffer(Flow *f, MediaBufferVector &input_vector) {
     t2 = flow->vid_cached_buffers.front()->GetUSTimeStamp();
     if (t2 - t1 >= cache_seconds * 1000 * 1000 ||
         size >= cache_seconds * flow->vid_enc_config.vid_cfg.frame_rate) {
-      RKMEDIA_LOGE("%d: cached size more than %d seconds. Data writing too slow\n",
-                   flow->muxer_id, cache_seconds);
+      RKMEDIA_LOGE(
+          "%d: cached size more than %d seconds. Data writing too slow\n",
+          flow->muxer_id, cache_seconds);
 
       overflow = true;
       flow->vid_cached_buffers.pop_front();
@@ -752,15 +756,10 @@ void MuxerFlow::FlushThread() {
     std::shared_ptr<MediaBuffer> vid_buffer = nullptr;
     int size;
 
-    if (flush_thread_quit) {
-      RKMEDIA_LOGW("%d: Flush Thread quit now\n", muxer_id);
-      break;
-    }
-
     size = vid_deque->size();
     if (size >= cache_level && size % cache_level == 0) {
-      RKMEDIA_LOGE("%d: cached size(aud:%d, vid:%d)\n",
-                   muxer_id, aud_deque->size(), size);
+      RKMEDIA_LOGE("%d: cached size(aud:%d, vid:%d)\n", muxer_id,
+                   aud_deque->size(), size);
       if (size >= 2 * cache_level) {
         cache_warning++;
         recorder->ProcessEvent(MUX_EVENT_WARN_FILE_WRITING_SLOW, size);
@@ -771,6 +770,12 @@ void MuxerFlow::FlushThread() {
     }
 
     cached_cond_mtx.lock();
+
+    if (flush_thread_quit) {
+      RKMEDIA_LOGW("%d: Flush Thread quit now\n", muxer_id);
+      cached_cond_mtx.unlock();
+      break;
+    }
 
     if (aud_deque->empty() && vid_deque->empty()) {
       // Before stopping stream, all cached buffer shall be written.
@@ -783,7 +788,8 @@ void MuxerFlow::FlushThread() {
         cached_cond_mtx.wait();
       }
       cached_cond_mtx.unlock();
-      //shall continue to re-check everything, including deque sizes, stopping, quit
+      // shall continue to re-check everything,
+      // including deque sizes, stopping, quit
       continue;
     }
 
@@ -793,7 +799,7 @@ void MuxerFlow::FlushThread() {
     }
     if (!vid_deque->empty()) {
       vid_buffer = vid_deque->front();
-      //Save aud_buffer first
+      // Save aud_buffer first
       if (aud_buffer != nullptr && vid_buffer != nullptr &&
           aud_buffer->GetUSTimeStamp() < vid_buffer->GetUSTimeStamp()) {
         vid_buffer = nullptr;
@@ -808,22 +814,13 @@ void MuxerFlow::FlushThread() {
       std::string path = GenFilePath();
 
       if (path.empty()) {
-        //RKMEDIA_LOGW("%d: empty file path, drop & retry\n", muxer_id);
         cached_cond_mtx.unlock();
         continue;
       }
       recorder = NewRecorder(path.c_str());
       last_ts = 0;
       real_file_duration = 0;
-      //PreRecordWrite shall be protected/mutex against save_buffer()
       if (PreRecordWrite() == 1) {
-        //recorder.reset();
-        //manual_split_record = false;
-        //change_config_split = false;
-
-        //cached_cond_mtx.unlock();
-        //continue;
-        //
         if (!aud_deque->empty()) {
           aud_buffer = aud_deque->front();
           aud_deque->pop_front();
@@ -832,7 +829,6 @@ void MuxerFlow::FlushThread() {
           vid_buffer = vid_deque->front();
           vid_deque->pop_front();
         }
-
       }
     }
     cached_cond_mtx.unlock();
