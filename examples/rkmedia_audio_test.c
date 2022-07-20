@@ -27,7 +27,7 @@ static void sigterm_handler(int sig) {
 
 FILE *fp = NULL;
 static RK_U32 g_enWorkSampleRate = 16000;
-static RK_U32 g_s32VqeFrameSample = 320; // 20ms;
+static RK_U32 g_s32VqeFrameSample = 256; // 20ms;
 static RK_U32 g_s32AiLayout = AI_LAYOUT_MIC_REF;
 
 static void audio_packet_cb(MEDIA_BUFFER mb) {
@@ -280,7 +280,7 @@ RK_S32 AI_VqeProcess_AO(RK_VOID) {
   AI_CHN_ATTR_S ai_attr;
   ai_attr.pcAudioNode = ALSA_PATH;
   ai_attr.enSampleFormat = RK_SAMPLE_FMT_S16;
-  ai_attr.u32NbSamples = g_s32VqeFrameSample;
+  ai_attr.u32NbSamples = 1024;
   ai_attr.u32SampleRate = g_enWorkSampleRate;
   ai_attr.u32Channels = 1;
   ai_attr.enAiLayout = g_s32AiLayout; // remove ref channel, and output mic mono
