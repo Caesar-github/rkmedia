@@ -22,11 +22,9 @@ extern "C" {
 
 #define RK_AUDIO_BUFFER_MAX_SIZE 12288
 #define ALGO_FRAME_TIMS_MS 20 // 20ms
+#define USE_DEEP_DUMP 0       // For your deep debugging and enabling it
 
 #if USE_RKAPPLUS
-#undef ALGO_FRAME_TIMS_MS
-#define ALGO_FRAME_TIMS_MS 10 // 10ms
-
 #define rt_malloc(x) calloc(1, x)
 #define rt_safe_free free
 #define RT_NULL NULL
@@ -146,7 +144,9 @@ static int queue_write(AUDIO_QUEUE_S *queue, const unsigned char *buffer,
     return -1;
   }
   if (queue->buffer_size + bytes > RK_AUDIO_BUFFER_MAX_SIZE) {
-    RKMEDIA_LOGI("unexpected cap buffer size too big!! return!");
+    RKMEDIA_LOGI(
+        "unexpected cap buffer size too big!! buffer_size:%d, bytes:%d",
+        queue->buffer_size, bytes);
     return -1;
   }
 
@@ -589,14 +589,14 @@ int AI_TALKVQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {
     break;
   }
 
-  RKMEDIA_LOGI("%s - %d, layout=%d, mic_num=%d, ref_num=%d\n", __func__,
-               __LINE__, handle->layout, mic_num, ref_num);
-
   /* FIXME: sync the AGC param fs and frmlen with runtime */
   handle->mParam->bf->agc->fs = sample_info.sample_rate;
   handle->mParam->bf->agc->frmlen =
-      ALGO_FRAME_TIMS_MS * sample_info.sample_rate / 1000;
-  ;
+      handle->stVqeConfig.stAiTalkConfig.s32FrameSample;
+
+  RKMEDIA_LOGI("%s - %d, layout=%d, mic_num=%d, ref_num=%d, frmlen=%d\n",
+               __func__, __LINE__, handle->layout, mic_num, ref_num,
+               handle->mParam->bf->agc->frmlen);
 
   handle->mSkvHandle = rkaudio_preprocess_init(
       sample_info.sample_rate, get_bit_width(sample_info.fmt), mic_num, ref_num,
@@ -653,9 +653,12 @@ int AI_TALKVQE_Init(AUDIO_VQE_S *handle, VQE_CONFIG_S *config) {
 
 #endif
 
-  RKMEDIA_LOGI("sample_info: %d|%d|%d|%d, ALGO: %dms\n", sample_info.fmt,
-               sample_info.channels, sample_info.sample_rate,
-               sample_info.nb_samples, ALGO_FRAME_TIMS_MS);
+  RKMEDIA_LOGI("sample_info - fmt:%d ch:%d rate:%d nb:%d frm:%d ALGO: %dms\n",
+               sample_info.fmt, sample_info.channels, sample_info.sample_rate,
+               sample_info.nb_samples,
+               handle->stVqeConfig.stAiTalkConfig.s32FrameSample,
+               handle->stVqeConfig.stAiTalkConfig.s32FrameSample * 1000 /
+                   sample_info.sample_rate);
 
   return 0;
 }
@@ -676,14 +679,14 @@ static int AI_TALKVQE_Process(AUDIO_VQE_S *handle, unsigned char *in,
   FILE *fp;
   char filename[64] = {0};
 #if USE_RKAPPLUS
-  int nb_samples = ALGO_FRAME_TIMS_MS * handle->sample_info.sample_rate / 1000;
+  int nb_samples = handle->stVqeConfig.stAiTalkConfig.s32FrameSample;
   int channels = handle->sample_info.channels;
   int sorted_channels = channels;
   int16_t *sigin_skv;
   int16_t *sigout_skv;
   unsigned char skvbuf_in[nb_samples * channels * sizeof(int16_t)] = {
       0}; // FIXME: 1mic or 2mic
-  unsigned char skvbuf_out[nb_samples * 2 * sizeof(int16_t)] = {0};
+  unsigned char skvbuf_out[nb_samples * 1 * sizeof(int16_t)] = {0};
   bool only_anr = false;
   int is_wakeup = 0;
   int in_short = nb_samples * channels; /* Based 1mic channel bytes */
@@ -793,8 +796,10 @@ static int AI_TALKVQE_Process(AUDIO_VQE_S *handle, unsigned char *in,
 
   int16_t *tmp2 = (int16_t *)sigout_skv;
   int16_t *tmp1 = (int16_t *)out;
-  for (int j = 0; j < nb_samples; j++) {
-    *tmp1++ = *tmp2++; // need 2ch for output
+  // need to export 2ch to output buffer
+  for (int i = 0; i < nb_samples; i++) {
+    tmp1[i * channels + 0] = tmp2[i * 1 + 0];
+    tmp1[i * channels + 1] = tmp2[i * 1 + 0];
   }
 
 #else
@@ -1110,74 +1115,60 @@ AUDIO_VQE_S *RK_AUDIO_VQE_Init(const SampleInfo &sample_info,
 }
 
 int RK_AUDIO_VQE_Handle(AUDIO_VQE_S *handle, void *buffer, int bytes) {
-  int16_t algo_samples = ALGO_FRAME_TIMS_MS * handle->sample_info.sample_rate /
-                         1000; // hard code 20ms
-  int16_t algo_in_bytes =
-      algo_samples * sizeof(short) * handle->sample_info.channels;
-  int16_t algo_out_bytes =
-      algo_samples * sizeof(short) * 2; // fixed 2ch for algo output
-  int16_t frame_samples = handle->stVqeConfig.stAiTalkConfig.s32FrameSample;
-  int16_t in_frame_bytes =
-      frame_samples * sizeof(short) * handle->sample_info.channels;
-  int16_t out_frame_bytes =
-      frame_samples * sizeof(short) * 2; // fixed 2ch for algo output
+  int16_t algo_in_bytes = handle->sample_info.channels * sizeof(short) *
+                          handle->stVqeConfig.stAiTalkConfig.s32FrameSample;
+
+#if USE_DEEP_DUMP
+  if (handle->stVqeConfig.u32VQEMode == VQE_MODE_AI_TALK &&
+      (RK_AUDIO_VQE_Dumping() == true)) {
+    char filename[64] = {0};
+    FILE *fp;
+
+    memset(filename, 0, sizeof(filename));
+    sprintf(filename, "/tmp/vqe-rkap-plus-buffer-in.pcm");
+    fp = fopen(filename, "ab+");
+    fwrite(buffer, 1, bytes, fp);
+    fclose(fp);
+  }
+#endif
 
   // 1. data in queue
   queue_write(handle->in_queue, (unsigned char *)buffer, bytes);
 
-  if (handle->stVqeConfig.u32VQEMode == VQE_MODE_AI_TALK) {
-    // 2. peek data from in queue, do audio process, data out queue
-    for (int i = 0; i < queue_size(handle->in_queue) / algo_in_bytes; i++) {
-      unsigned char in[in_frame_bytes] = {0};
-      unsigned char out[out_frame_bytes] = {0};
-      queue_read(handle->in_queue, in, algo_in_bytes);
-      VQE_Process(handle, in, out);
-      queue_write(handle->out_queue, out, algo_out_bytes);
-    }
-    /* Copy the rest of the sample to the beginning of the Buffer */
-    queue_tune(handle->in_queue);
+  // 2. peek data from in queue, do audio process, data out queue
+  for (int i = 0; i < queue_size(handle->in_queue) / algo_in_bytes; i++) {
+    unsigned char in[algo_in_bytes] = {0};
+    unsigned char out[algo_in_bytes] = {0};
+    queue_read(handle->in_queue, in, algo_in_bytes);
+    VQE_Process(handle, in, out);
+    queue_write(handle->out_queue, out, algo_in_bytes);
+  }
+
+  // 3. copy the rest of the sample to the beginning of the buffer
+  queue_tune(handle->in_queue);
+
+  // 4. try to peek data from out queue
+  if (queue_size(handle->out_queue) >= bytes) {
+    queue_read(handle->out_queue, (unsigned char *)buffer, bytes);
     queue_tune(handle->out_queue);
 
-    // 2. peek data from out queue
-    if (queue_size(handle->out_queue) >= out_frame_bytes) {
-      unsigned char out[out_frame_bytes] = {0}, *outp;
-      int channels = handle->sample_info.channels;
+#if USE_DEEP_DUMP
+    if (handle->stVqeConfig.u32VQEMode == VQE_MODE_AI_TALK) {
+      char filename[64] = {0};
+      FILE *fp;
 
-      outp = out;
-      queue_read(handle->out_queue, (unsigned char *)out, out_frame_bytes);
-      /* Just fill back the front 2 channels of buffer */
-      for (int i = 0; i < frame_samples; i++) {
-        *((int16_t *)buffer + i * channels + 0) = *((int16_t *)outp + i);
-        *((int16_t *)buffer + i * channels + 1) = *((int16_t *)outp + i);
-      }
-
-      return 0;
-    } else {
-      RKMEDIA_LOGI("%s: queue size %d less than %d\n", __func__,
-                   queue_size(handle->out_queue), out_frame_bytes);
-      return -1;
+      memset(filename, 0, sizeof(filename));
+      sprintf(filename, "/tmp/vqe-rkap-plus-buffer-out.pcm");
+      fp = fopen(filename, "ab+");
+      fwrite(buffer, 1, bytes, fp);
+      fclose(fp);
     }
+#endif
+    return 0;
   } else {
-    // 2. peek data from in queue, do audio process, data out queue
-    for (int i = 0; i < queue_size(handle->in_queue) / algo_in_bytes; i++) {
-      unsigned char in[algo_in_bytes] = {0};
-      unsigned char out[algo_in_bytes] = {0};
-      queue_read(handle->in_queue, in, algo_in_bytes);
-      VQE_Process(handle, in, out);
-      queue_write(handle->out_queue, out, algo_in_bytes);
-    }
-    /* Copy the rest of the sample to the beginning of the Buffer */
-    queue_tune(handle->in_queue);
-    // 2. peek data from out queue
-    if (queue_size(handle->out_queue) >= bytes) {
-      queue_read(handle->out_queue, (unsigned char *)buffer, bytes);
-      queue_tune(handle->out_queue);
-      return 0;
-    } else {
-      RKMEDIA_LOGI("%s: queue size %d less than %d\n", __func__,
-                   queue_size(handle->out_queue), bytes);
-      return -1;
-    }
+    RKMEDIA_LOGE("%s: queue size %d less than %d\n", __func__,
+                 queue_size(handle->out_queue), bytes);
+    return -1;
   }
 }
 
