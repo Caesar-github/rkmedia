@@ -197,13 +197,13 @@ static SkvAgcParam *createSkvAgcConfig() {
     return RT_NULL;
 
   param->attack_time = 200.0;
-  param->release_time = 600.0;
-  param->max_gain = 10.0;
+  param->release_time = 300.0;
+  param->max_gain = 12.0;
   param->max_peak = -1.0;
   param->fRk0 = 2;
   param->fRth2 = -15;
-  param->fRth1 = -30;
-  param->fRth0 = -55;
+  param->fRth1 = -35;
+  param->fRth0 = -45;
 
   param->fs = 0;
   param->frmlen = 0;
@@ -304,8 +304,8 @@ static SkvAesParam *createSkvAesconfig() {
   if (param == RT_NULL)
     return RT_NULL;
 
-  param->beta_up = 0.001f;
-  param->beta_down = 0.005f;
+  param->beta_up = 0.002f;
+  param->beta_down = 0.001f;
   return param;
 }
 
@@ -345,7 +345,7 @@ static SkvBeamFormParam *createSkvBeamFormConfig() {
   if (param == RT_NULL)
     return RT_NULL;
 
-  param->model_en = BF_EN_ANR | BF_EN_AGC | BF_EN_EQ | BF_EN_CNG;
+  param->model_en = BF_EN_AES | BF_EN_ANR | BF_EN_AGC | BF_EN_STDT;
   param->targ = 2;
   param->ref_pos = 1;
   param->num_ref_channel = 1;
